@@ -41,12 +41,15 @@ the windows using your controller. Soooo, kinda.
 ### Does this work with shaders?
 The windows are rendered into the world by themselves (not like blocks or entities) so a lot of shaders will break the functionality.
 
-## Compilation
+## Building and Running
 You need a Rust development environment and a Java 25 SDK.
-Change into the `native` subdirectory and run `cargo build`.
-This compiles the native code and puts the shared library into `native/target/debug/libwaylandcraft.so`.
-From here you can just return to the main directory and then run `./gradlew build` to produce the jar file
-in `build/libs/` or run `./gradlew runClient` to run it in a development environment.
+```sh
+./build.sh #all arguments are passed to cargo build
+```
+
+The final jar file will be in `build/libs`, or run `./gradlew runClient`
+for a development environment
+
 
 ## Images
 ![screenshot](/assets/screenshot.png)
