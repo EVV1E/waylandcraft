@@ -1746,6 +1746,7 @@ pub extern "system" fn execApp<'l>(
         ("WAYLAND_DISPLAY".into(), instance.state.socket.clone()),
         ("QT_QPA_PLATFORM".into(), "wayland".into()),
         ("ELECTRON_OZONE_PLATFORM_HINT".into(), "auto".into()),
+        ("GDK_BACKEND".into(), "wayland".into())
     ];
     instance.xdg.exec_app(app_id, env_vars) as jboolean
 }
