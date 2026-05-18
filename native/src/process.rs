@@ -17,8 +17,7 @@ pub fn spawn(
     command
         .env_remove("DISPLAY")
         .env_remove("WAYLAND_DISPLAY")
-        .env_remove("LD_LIBRARY_PATH")
-        .env_remove("GDK_BACKEND");
+        .env_remove("LD_LIBRARY_PATH");
 
     command.envs(env);
 
