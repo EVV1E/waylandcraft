@@ -144,14 +144,21 @@ public class WindowFramebuffer {
 		GpuBufferSlice alphaUniforms = uniformStorage.writeUniform(new WindowInfoUniform(poseStack.last().pose(), true));
 		GpuBufferSlice opaqueUniforms = uniformStorage.writeUniform(new WindowInfoUniform(poseStack.last().pose(), false));
 		
-		try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer", target.getColorTextureView(), OptionalInt.of(0x00000000))) {
-			pass.setPipeline(WINDOW_PIPELINE);
+		try {
+			try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer", target.getColorTextureView(), OptionalInt.of(0x00000000))) {
+				pass.setPipeline(WINDOW_PIPELINE);
+				for(CompiledBufferDraw element : elements) {
+					pass.setUniform("window_info", element.alpha ? alphaUniforms : opaqueUniforms);
+					pass.bindTexture("sampler", element.textureView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+					pass.setVertexBuffer(0, element.vertexBuffer);
+					pass.setIndexBuffer(element.indexBuffer, element.indexType);
+					pass.drawIndexed(0, 0, element.indexCount, 1);
+				}
+			}
+		}
+		finally {
 			for(CompiledBufferDraw element : elements) {
-				pass.setUniform("window_info", element.alpha ? alphaUniforms : opaqueUniforms);
-				pass.bindTexture("sampler", element.textureView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-				pass.setVertexBuffer(0, element.vertexBuffer);
-				pass.setIndexBuffer(element.indexBuffer, element.indexType);
-				pass.drawIndexed(0, 0, element.indexCount, 1);
+				element.vertexBuffer.close();
 			}
 		}
 	}
