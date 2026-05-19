@@ -43,8 +43,6 @@ public class MoveGrab extends PointerGrab {
 	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up) throws GrabDroppedException {
 		if(!window.isValid()) this.drop();
 		wlc.cursorShape = CursorShape.ALL_RESIZE;
-
-		// i cant believe i went out of my way to lower the amount of variables here for this basic stuff
 		if (Minecraft.getInstance().options.keyShift.isDown()) {
 			if (wlc.keyRotateWindowLeft.isDown() && !lastRotateState[0]) {
 				rotationAngle -= 45.0f;
@@ -55,7 +53,7 @@ public class MoveGrab extends PointerGrab {
 		} 
 		lastRotateState[0] = wlc.keyRotateWindowLeft.isDown();
 		lastRotateState[1] = wlc.keyRotateWindowRight.isDown();
-		Vec3 to = pos.add(view.scale(Minecraft.getInstance().player.blockInteractionRange()*2)); // i see no problem with multiplying it by 2
+		Vec3 to = pos.add(view.scale(Minecraft.getInstance().player.blockInteractionRange()*2));
 		BlockHitResult blockHit = Minecraft.getInstance().level.clip(
 			new ClipContext(
 				pos,
@@ -65,16 +63,16 @@ public class MoveGrab extends PointerGrab {
 				Minecraft.getInstance().player
 			)
 		);
-		if (Minecraft.getInstance().options.keyShift.isDown()) { // this seemed like a better way to do it till i uhm... did it..
+		if (Minecraft.getInstance().options.keyShift.isDown()) {
 			if(blockHit.getType() == BlockHitResult.Type.BLOCK) {
 				Vec3 faceDir = new Vec3(blockHit.getDirection().getStepX(), blockHit.getDirection().getStepY(), blockHit.getDirection().getStepZ());
 				lPos = blockHit.getBlockPos().getCenter().add(faceDir.scale(2.55));
-				lView = faceDir.reverse(); // if only all code was like this
+				lView = faceDir.reverse();
 
-				if (Math.abs(faceDir.y) > 0.5) { // is the window at the bottom or top of a block
+				if (Math.abs(faceDir.y) > 0.5) { // is the window facing up or down
 					lUp = new Vec3(Math.sin(Math.toRadians(rotationAngle)), 0, Math.cos(Math.toRadians(rotationAngle)));
 				} else {
-					lUp = new Vec3(0, 1, 0); // nu uh you dont get to rotate
+					lUp = new Vec3(0, 1, 0);
 					rotationAngle = 0.0f;
 				}
 
@@ -83,7 +81,7 @@ public class MoveGrab extends PointerGrab {
 			} else {
 				this.init();
 				lPos = pos.add(view.scale(1));
-				lView = view; // again, the C macro system i need it so much
+				lView = view; 
 				lUp = up;
 
 				window.anchorToPosView(lPos, lView, lUp);
@@ -91,7 +89,7 @@ public class MoveGrab extends PointerGrab {
 		} else {
 			this.init();
 			lPos = pos.add(view.scale(1));
-			lView = view; // where are C macro system when its really useful
+			lView = view;
 			lUp = up;
 
 			window.anchorToPosView(lPos, lView, lUp);
