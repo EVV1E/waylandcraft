@@ -95,21 +95,23 @@ public class WindowDisplay {
 		int yoff = window.framebuffer.getYOff();
 		int bufWidth = window.framebuffer.getWidth();
 		int bufHeight = window.framebuffer.getHeight();
-		
-		Vec3 origin = origin();
+
 		Vec3 localX = localX();
 		Vec3 localY = localY();
-		
-		Vec3 bufOrigin = origin.add(localX.scale(-xoff)).add(localY.scale(-yoff));
-		
-		Vec3 tl = bufOrigin;
-		Vec3 bl = bufOrigin.add(localY.scale(bufHeight));
+
+		Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
+		Vec3 originRel = origin().subtract(cameraPos);
+
+		Vec3 bufOffset = localX.scale(-xoff).add(localY.scale(-yoff));
+
+		Vec3 tl = bufOffset;
+		Vec3 bl = bufOffset.add(localY.scale(bufHeight));
 		Vec3 br = bl.add(localX.scale(bufWidth));
 		Vec3 tr = tl.add(localX.scale(bufWidth));
 		
 		PoseStack poseStack = ctx.poseStack();
 		poseStack.pushPose();
-		RenderUtils.cameraTransform(poseStack, ctx.levelState().cameraRenderState);
+		poseStack.translate(originRel.x, originRel.y, originRel.z);
 		RenderUtils.renderFramebuffer(window.framebuffer, poseStack, ctx.submitNodeCollector(), true, tl, bl, br, tr);
 		poseStack.popPose();
 	}
