@@ -80,6 +80,8 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	public KeyMapping keyOpenScreen;
 	public KeyMapping keyOpenAppLauncher;
 	public KeyMapping keyCaptureKeyboard;
+	public KeyMapping keyRotateWindowLeft;
+	public KeyMapping keyRotateWindowRight;
 	
 	public WindowInHandRenderer windowInHandRenderer = new WindowInHandRenderer();
 	public WindowInItemFrameRenderer windowInItemFrameRenderer = new WindowInItemFrameRenderer();
@@ -113,6 +115,8 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 		keyOpenScreen = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.windowManager", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, KEYBIND_CATEGORY));
 		keyOpenAppLauncher = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.appLauncher", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, KEYBIND_CATEGORY));
 		keyCaptureKeyboard = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.captureKeyboard", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, KEYBIND_CATEGORY));
+		keyRotateWindowLeft = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rotateWindowLeft", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_BRACKET, KEYBIND_CATEGORY));
+		keyRotateWindowRight = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.rotateWindowRight", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_BRACKET, KEYBIND_CATEGORY));
 		
 		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
 		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
