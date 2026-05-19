@@ -148,8 +148,4 @@ public class RenderUtils {
 		((IGuiGraphicsExtractor) context).invokeInnerBlit(WINDOW_BLIT, framebuffer.getTextureLocation(), x, x + w, y, y + h, 0.0f, 1.0f, 0.0f, 1.0f, -1);
 	}
 	
-	public static void cameraTransform(PoseStack poseStack, CameraRenderState camera) {
-		poseStack.translate(-camera.pos.x, -camera.pos.y, -camera.pos.z);
-	}
-	
 }
