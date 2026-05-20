@@ -108,6 +108,16 @@ public class PointerGrabMap {
 			}
 		}
 	}
+
+	public void onScroll(double scrollX, double scrollY) {
+		if (exclusiveGrab != null) {
+			try {
+				exclusiveGrab.onScroll(scrollX, scrollY);
+			} catch (GrabDroppedException e) {
+				exclusiveGrab = null;
+			}
+		}
+	}
 	
 	public void release(int button) {
 		if(exclusiveGrab != null && exclusiveGrab.button == button) {
@@ -151,7 +161,7 @@ public class PointerGrabMap {
 		}
 		exclusiveGrab = null;
 	}
-	
+
 	/* Drop an active implicit pointer grab that matches the given serial.
 	 * This method is supposed to be used to upgrade implicit grabs to exclusive ones.
 	 * A button release event is not forwarded to the client.

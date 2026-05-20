@@ -35,5 +35,8 @@ public abstract class PointerGrab {
 	
 	// Called every time the pointer is moved in the world but does not hover any surfaces
 	public void hoverNone() throws GrabDroppedException {}
+
+	// Called every time the player scrolls while grabbing a window
+	public void onScroll(double scrollX, double scrollY) throws GrabDroppedException {}
 	
 }

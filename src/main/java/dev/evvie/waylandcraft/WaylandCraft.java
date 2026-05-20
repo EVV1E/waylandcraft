@@ -542,7 +542,21 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	 * Returns true when the mouse scroll action has been consumed
 	 */
 	public boolean onScroll(long windowHandle, double scrollX, double scrollY) {
-		if(pointerGrabs.isExclusiveGrabActive()) return true;
+		if(playerUsingWindowItem) {
+			WLCToplevel toplevel = WindowItem.getToplevel(Minecraft.getInstance().player.getUseItem());
+			if(toplevel != null) {
+				WindowDisplay display = getDisplay(toplevel);
+				if(display != null) {
+					display.adjustAnchorDistance(scrollY);
+					return true;
+				}
+			}
+		}
+
+		if(pointerGrabs.isExclusiveGrabActive()) {
+			pointerGrabs.onScroll(scrollX, scrollY);
+			return true;
+		}
 		
 		if(hoveredDisplay != null) {
 			if(hoveredDisplay.dist < 0) return true;

@@ -28,7 +28,9 @@ public class WindowDisplay {
 	
 	// Window orientation downwards vector, has to be orthogonal to `normal` and normalized
 	private Vec3 down = new Vec3(0, -1, 0);
-	
+
+	public double anchorDistance = 2.0;
+
 	private int width;
 	private int height;
 	
@@ -183,9 +185,13 @@ public class WindowDisplay {
 		
 		return new DisplayHitResult(this, hitSurface, hitPos, localCoords, localCoordsRelative, dist);
 	}
+
+	public void adjustAnchorDistance(double delta) {
+		this.anchorDistance = Math.clamp(this.anchorDistance + delta * 0.1d, 0.5d, 20d);
+	}
 	
 	public void anchorToPosView(Vec3 pos, Vec3 look, Vec3 up) {
-		this.pivot = pos.add(look.scale(2));
+		this.pivot = pos.add(look.scale(this.anchorDistance));
 		this.rotate(look.reverse(), up.reverse());
 	}
 	
