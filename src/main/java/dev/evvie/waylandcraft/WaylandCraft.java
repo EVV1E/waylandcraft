@@ -95,7 +95,8 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	
 	public PointerCapture pointerCapture = null;
 	
-	public boolean playerUsingWindowItem = false;
+	private boolean playerUsingWindowItem = false;
+	private boolean playerWasUsingWindowItem = false;
 	
 	public @Nullable CursorShape cursorShape = null;
 	
@@ -194,14 +195,23 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 				WLCToplevel toplevel = WindowItem.getToplevel(item);
 				
 				if(toplevel != null) {
-					getOrCreateDisplay(toplevel).anchorToCamera(camera);
+					WindowDisplay display = getOrCreateDisplay(toplevel);
+					if(!playerWasUsingWindowItem) {
+						display.anchorDistance = 2.0;
+					}
+					display.anchorToCamera(camera);
 					WaylandCraft.instance.bridge.focusSurface(toplevel);
 				}
 			}
 			else playerUsingWindowItem = false;
 		}
+		playerWasUsingWindowItem = playerUsingWindowItem;
 		
 		updateOutputSize(inWMScreen);
+	}
+	
+	public void startUsingWindowItem() {
+		playerUsingWindowItem = true;
 	}
 	
 	public void enableKeyboardCapture(boolean hardCapture) {
