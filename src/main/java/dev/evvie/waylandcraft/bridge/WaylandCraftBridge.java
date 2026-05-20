@@ -12,7 +12,6 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeEGL;
 
@@ -22,7 +21,6 @@ import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
-import net.minecraft.client.Minecraft;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 
@@ -80,12 +78,8 @@ public class WaylandCraftBridge {
 	
 	public static WaylandCraftBridge start() {
 		long eglDisplay = GLFWNativeEGL.glfwGetEGLDisplay();
-		PointerBuffer eglConfigBuf = PointerBuffer.allocateDirect(1);
-		GLFWNativeEGL.glfwGetEGLConfig(Minecraft.getInstance().getWindow().handle(), eglConfigBuf);
-		long eglConfig = eglConfigBuf.get();
-		
-		if(eglDisplay == 0 || eglConfig == 0) {
-			throw new RuntimeException("Failed to get EGL display or config!");
+		if(eglDisplay == 0) {
+			throw new RuntimeException("Failed to get EGL display!");
 		}
 		
 		long handle = init(GLFW.Functions.GetProcAddress, eglDisplay);
