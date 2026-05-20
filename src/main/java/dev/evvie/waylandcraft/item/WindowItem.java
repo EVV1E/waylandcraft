@@ -2,6 +2,7 @@ package dev.evvie.waylandcraft.item;
 
 import java.util.List;
 
+import dev.evvie.waylandcraft.WindowDisplay;
 import org.jetbrains.annotations.Nullable;
 
 import com.mojang.serialization.Codec;
@@ -92,6 +93,12 @@ public class WindowItem extends Item {
 		if(toplevel == null) return InteractionResult.PASS;
 		
 		player.startUsingItem(interactionHand);
+
+		if (level.isClientSide()) {
+			WindowDisplay display = WaylandCraft.instance.getOrCreateDisplay(toplevel);
+			display.anchorDistance = 2.0;
+		}
+
 		return InteractionResult.CONSUME;
 	}
 	

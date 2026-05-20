@@ -10,6 +10,7 @@ public class WindowGrab extends PointerGrab {
 	public WindowGrab(WindowDisplay window, int button) {
 		super(button);
 		this.window = window;
+		window.anchorDistance = 2.0;
 	}
 	
 	private void checkValid() throws GrabDroppedException {
