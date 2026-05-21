@@ -1,13 +1,49 @@
-name: Project build
+name: Build waylandcraft release
 on:
   workflow_dispatch:
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  compile-native-libs:
+    strategy:
+      matrix:
+        platform:
+          - name: linux-gnu-x86_64
+            runs-on: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - name: linux-gnu-arm64
+            runs-on: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.platform.runs-on }}
     steps:
     - uses: actions/checkout@v6
     - name: Install dependencies
       run: sudo apt install -y libxkbcommon-dev
+    - name: Setup rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+    - name: Compile native library
+      working-directory: native/
+      run: cargo build --target=${{ matrix.platform.target }}
+    - name: Move native library
+      run: |
+        mkdir native-libs
+        mv native/target/${{ matrix.platform.target }}/debug/libwaylandcraft.so \
+          native-libs/libwaylandcraft-${{ matrix.platform.name }}.so
+    - name: Upload artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: native-lib-${{ matrix.platform.name }}
+        path: native-libs/libwaylandcraft-${{ matrix.platform.name }}.so
+        archive: false
+  build-java:
+    runs-on: ubuntu-22.04
+    needs: compile-native-libs
+    steps:
+    - uses: actions/checkout@v6
+    - name: Download native libs
+      uses: actions/download-artifact@v8
+      with:
+        path: native-libs
+        pattern: native-lib-*
+        merge-multiple: true
     - name: Set up JDK 25
       uses: actions/setup-java@v5
       with:
@@ -15,11 +51,6 @@ jobs:
         distribution: 'temurin'
     - name: Setup gradle
       uses: gradle/actions/setup-gradle@v6
-    - name: Setup rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-    - name: Compile native library
-      working-directory: native/
-      run: cargo build
     - name: Build java code
       run: ./gradlew build
     - name: Upload artifact

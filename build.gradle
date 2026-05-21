@@ -58,9 +58,36 @@ jar {
 		rename { "${it}_${inputs.properties.archivesName}"}
 	}
 
+	// Human readable list of compiled native libraries that were found
+	def natives = []
+
+	// Host-specific native library
 	def nativeFile = file("native/target/debug/libwaylandcraft.so")
-	if(!nativeFile.exists()) { ant.fail("native library not built!") }
-	from(nativeFile)
+	if(nativeFile.exists()) {
+		from(nativeFile)
+		natives.add("host")
+	}
+
+	// Packaging of libraries in directory `native-libs`
+	// Used by the actions runner for releases
+	def targets = [
+		"linux-gnu-x86_64",
+		"linux-gnu-arm64"
+	];
+
+	for(def target in targets) {
+		def f = file("native-libs/libwaylandcraft-${target}.so")
+		if(!f.exists()) continue;
+
+		with(copySpec {
+			from(f)
+		})
+		natives.add("${target}")
+	}
+
+	if(natives.size() < 1) {
+		ant.fail("native library not built!")
+	}
 }
 
 loom {
