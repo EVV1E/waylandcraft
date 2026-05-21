@@ -1,6 +1,6 @@
 {
 	"key.category.waylandcraft.keys": "Waylandcraft",
-	"key.appLauncher": "App Launcher",
-	"key.windowManager": "Window Manager",
-	"key.captureKeyboard": "Capture Keyboard"
+	"waylandcraft.key.appLauncher": "App Launcher",
+	"waylandcraft.key.windowManager": "Window Manager",
+	"waylandcraft.key.captureKeyboard": "Capture Keyboard"
 }
