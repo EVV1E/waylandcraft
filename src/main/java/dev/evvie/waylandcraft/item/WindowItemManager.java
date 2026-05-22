@@ -97,7 +97,7 @@ public class WindowItemManager {
 						double dx = ((level.getRandom().nextDouble() * 2) - 1) * 0.15;
 						double dy = level.getRandom().nextDouble() * 0.2;
 						double dz = ((level.getRandom().nextDouble() * 2) - 1) * 0.15;
-						Minecraft.getInstance().level.addParticle(ParticleTypes.FLAME, e.getX(), e.getY(), e.getZ(), dx, dy, dz);
+						if(Minecraft.getInstance().level != null) Minecraft.getInstance().level.addParticle(ParticleTypes.FLAME, e.getX(), e.getY(), e.getZ(), dx, dy, dz);
 					}
 					e.discard();
 				});
