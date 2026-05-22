@@ -16,7 +16,8 @@
 		"ItemFrameRenderStateMixin",
 		"IGlTextureMixin",
 		"IGuiGraphicsExtractor",
-		"FramerateLimitTrackerMixin"
+		"FramerateLimitTrackerMixin",
+		"TitleScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
