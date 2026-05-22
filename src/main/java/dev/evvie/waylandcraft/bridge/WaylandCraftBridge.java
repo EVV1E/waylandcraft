@@ -27,7 +27,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 
 public class WaylandCraftBridge {
 	
-	private long instance;
+	private long wlcBridgeHandle;
 	private ArrayList<WLCToplevel> toplevels = new ArrayList<WLCToplevel>();
 	private ArrayList<WLCPopup> popups = new ArrayList<WLCPopup>();
 	private ArrayList<WLCSurface> surfaces = new ArrayList<WLCSurface>();
@@ -102,8 +102,8 @@ public class WaylandCraftBridge {
 		return null;
 	}
 	
-	private WaylandCraftBridge(long handle) {
-		this.instance = handle;
+	private WaylandCraftBridge(long wlcBridgeHandle) {
+		this.wlcBridgeHandle = wlcBridgeHandle;
 	}
 	
 	public static WaylandCraftBridge start() {
@@ -116,13 +116,13 @@ public class WaylandCraftBridge {
 		return new WaylandCraftBridge(handle);
 	}
 	
-	protected WLCToplevel getOrCreateToplevel(long handle) {
+	protected WLCToplevel getOrCreateToplevel(long topLevelHandle) {
 		for(WLCToplevel toplevel : toplevels) {
-			if(toplevel.getHandle() == handle) return toplevel;
+			if(toplevel.getHandle() == topLevelHandle) return toplevel;
 		}
-		WLCToplevel toplevel = new WLCToplevel(handle);
+		WLCToplevel toplevel = new WLCToplevel(topLevelHandle);
 		
-		long surfaceHandle = toplevelSurface(this.instance, handle);
+		long surfaceHandle = toplevelSurface(this.wlcBridgeHandle, topLevelHandle);
 		WLCSurface surface = getOrCreateSurface(surfaceHandle);
 		toplevel.surface = surface;
 		
@@ -143,11 +143,11 @@ public class WaylandCraftBridge {
 		}
 		WLCPopup popup = new WLCPopup(handle);
 		
-		long surfaceHandle = popupSurface(this.instance, handle);
+		long surfaceHandle = popupSurface(this.wlcBridgeHandle, handle);
 		WLCSurface surface = getOrCreateSurface(surfaceHandle);
 		popup.surface = surface;
 		
-		popup.parentHandle = popupParent(this.instance, handle);
+		popup.parentHandle = popupParent(this.wlcBridgeHandle, handle);
 		
 		popups.add(popup);
 		return popup;
@@ -180,7 +180,7 @@ public class WaylandCraftBridge {
 				toplevels_new.add(toplevel);
 			}
 			else {
-				freeToplevel(this.instance, toplevel.takeHandle());
+				freeToplevel(this.wlcBridgeHandle, toplevel.takeHandle());
 			}
 		}
 		this.toplevels = toplevels_new;
@@ -193,7 +193,7 @@ public class WaylandCraftBridge {
 				popups_new.add(popup);
 			}
 			else {
-				freePopup(this.instance, popup.takeHandle());
+				freePopup(this.wlcBridgeHandle, popup.takeHandle());
 			}
 		}
 		this.popups = popups_new;
@@ -206,7 +206,7 @@ public class WaylandCraftBridge {
 				surfaces_new.add(surface);
 			}
 			else {
-				freeSurface(this.instance, surface.takeHandle());
+				freeSurface(this.wlcBridgeHandle, surface.takeHandle());
 			}
 		}
 		this.surfaces = surfaces_new;
@@ -237,30 +237,30 @@ public class WaylandCraftBridge {
 		
 		profiler.push("update");
 		// Update wayland clients
-		update(this.instance);
+		update(this.wlcBridgeHandle);
 		profiler.pop();
 		
 		// Find all available toplevels and delete ones that no longer exist
-		long[] toplevelHandles = toplevels(instance);
+		long[] toplevelHandles = toplevels(wlcBridgeHandle);
 		deleteNonExistingToplevels(toplevelHandles);
 		
 		// Find all available popups and delete ones that no longer exist
-		long[] popupHandles = popups(instance);
+		long[] popupHandles = popups(wlcBridgeHandle);
 		deleteNonExistingPopups(popupHandles);
 		
-		long[] minimizeRequests = minimizeReq(instance);
-		long[] maximizeRequests = maximizeReq(instance);
-		long[] unmaximizeRequests = unmaximizeReq(instance);
-		long[] fullscreenRequests = fullscreenReq(instance);
-		long[] unfullscreenRequests = unfullscreenReq(instance);
-		long[] fullscreened = fullscreened(instance);
+		long[] minimizeRequests = minimizeReq(wlcBridgeHandle);
+		long[] maximizeRequests = maximizeReq(wlcBridgeHandle);
+		long[] unmaximizeRequests = unmaximizeReq(wlcBridgeHandle);
+		long[] fullscreenRequests = fullscreenReq(wlcBridgeHandle);
+		long[] unfullscreenRequests = unfullscreenReq(wlcBridgeHandle);
+		long[] fullscreened = fullscreened(wlcBridgeHandle);
 		
-		int[] moveRequest = moveRequest(instance);
+		int[] moveRequest = moveRequest(wlcBridgeHandle);
 		if(moveRequest != null) {
 			lastMoveRequestSerial = moveRequest[0];
 		}
 		
-		int[] resizeRequest = resizeRequest(instance);
+		int[] resizeRequest = resizeRequest(wlcBridgeHandle);
 		if(resizeRequest != null) {
 			lastResizeRequest = new ResizeRequest(resizeRequest[0], resizeRequest[1]);
 		}
@@ -276,7 +276,7 @@ public class WaylandCraftBridge {
 		for(long handle : toplevelHandles) {
 			WLCToplevel toplevel = getOrCreateToplevel(handle);
 			WLCSurface root = toplevel.getSurfaceTree();
-			toplevel.lastChild = updateSurfaceTree(root);
+			toplevel.lastChild = updateSurfaceTree(this.wlcBridgeHandle, root);
 			
 			updateGeometry(toplevel);
 			toplevel.title = toplevelTitle(toplevel.getHandle());
@@ -302,17 +302,17 @@ public class WaylandCraftBridge {
 			popup.offsetY = offset[1];
 			
 			WLCSurface root = popup.getSurfaceTree();
-			popup.lastChild = updateSurfaceTree(root);
+			popup.lastChild = updateSurfaceTree(this.wlcBridgeHandle, root);
 			updateGeometry(popup);
 		}
 		
-		long dndIconHandle = dndIcon(instance);
+		long dndIconHandle = dndIcon(wlcBridgeHandle);
 		if(dndIconHandle != 0) {
 			WLCSurface dndIconSurface = getOrCreateSurface(dndIconHandle);
 			if(dndIcon != null && dndIcon.surface != dndIconSurface) dndIcon = null;
 			if(dndIcon == null) dndIcon = new IconSurface(dndIconSurface);
 			
-			updateSurfaceData(instance, dndIcon.surface);
+			updateSurfaceData(wlcBridgeHandle, dndIcon.surface);
 			dndIcon.surface.visited = true;
 		}
 		else {
@@ -339,7 +339,7 @@ public class WaylandCraftBridge {
 		for(WLCAbstractWindow window : allWindows) {
 			WLCSurface root = window.getSurfaceTree();
 			for(WLCSurface surface = root; surface != null; surface = surface.getNextChild()) {
-				updateSurfaceData(instance, surface);
+				updateSurfaceData(wlcBridgeHandle, surface);
 				calculateSubpos(surface);
 			}
 		}
@@ -383,7 +383,7 @@ public class WaylandCraftBridge {
 		dmabufs.removeAll(unusedDmabufs);
 		for(DmabufTexture dmabuf : unusedDmabufs) {
 			dmabuf.free();
-			deleteDmabuf(instance, dmabuf.handle);
+			deleteDmabuf(wlcBridgeHandle, dmabuf.handle);
 		}
 	}
 	
@@ -470,7 +470,7 @@ public class WaylandCraftBridge {
 	}
 	
 	public String getSocket() {
-		return socket(this.instance);
+		return socket(this.wlcBridgeHandle);
 	}
 	
 	public boolean inputRegionContains(WLCSurface surface, double x, double y) {
@@ -478,39 +478,39 @@ public class WaylandCraftBridge {
 	}
 	
 	public void sendMotion(double x, double y) {
-		pointerMotion(instance, x, y);
+		pointerMotion(wlcBridgeHandle, x, y);
 	}
 	
 	public void sendMotionRefocus(WLCSurface surface, double x, double y) {
-		pointerMotionFocus(instance, surface.getHandle(), x, y);
+		pointerMotionFocus(wlcBridgeHandle, surface.getHandle(), x, y);
 	}
 	
 	public void sendRelativeMotion(double dx, double dy) {
-		pointerRelMotion(instance, dx, dy);
+		pointerRelMotion(wlcBridgeHandle, dx, dy);
 	}
 	
 	public void sendMotionOutside() {
-		pointerLeave(instance);
+		pointerLeave(wlcBridgeHandle);
 	}
 	
 	public boolean maybeLockPointer(WLCSurface surface) {
-		return maybePointerLock(instance, surface.getHandle());
+		return maybePointerLock(wlcBridgeHandle, surface.getHandle());
 	}
 	
 	public void unlockPointer() {
-		pointerUnlock(instance);
+		pointerUnlock(wlcBridgeHandle);
 	}
 	
 	public int sendButton(int button, int state) {
-		return pointerButton(instance, button, state);
+		return pointerButton(wlcBridgeHandle, button, state);
 	}
 	
 	public void sendScroll(int axis, double value) {
-		pointerAxis(instance, axis, value);
+		pointerAxis(wlcBridgeHandle, axis, value);
 	}
 	
 	public CursorShape getCursorShape() {
-		return CursorShape.fromId(cursorShape(instance));
+		return CursorShape.fromId(cursorShape(wlcBridgeHandle));
 	}
 	
 	public void focusSurface(@Nullable WLCToplevel toplevel) {
@@ -519,7 +519,7 @@ public class WaylandCraftBridge {
 			handle = toplevel.getHandle();
 		}
 		
-		keyboardFocus(instance, handle);
+		keyboardFocus(wlcBridgeHandle, handle);
 		
 		// Make toplevel most recently focused
 		if(toplevel != null) {
@@ -529,11 +529,11 @@ public class WaylandCraftBridge {
 	}
 	
 	public void activateKeyboard() {
-		keyboardActivate(instance);
+		keyboardActivate(wlcBridgeHandle);
 	}
 	
 	public void deactivateKeyboard() {
-		keyboardDeactivate(instance);
+		keyboardDeactivate(wlcBridgeHandle);
 	}
 	
 	private void updateFocusOrder() {
@@ -556,15 +556,15 @@ public class WaylandCraftBridge {
 	}
 	
 	public void pressKey(int scancode) {
-		keyboardInput(instance, scancode, 1);
+		keyboardInput(wlcBridgeHandle, scancode, 1);
 	}
 	
 	public void releaseKey(int scancode) {
-		keyboardInput(instance, scancode, 0);
+		keyboardInput(wlcBridgeHandle, scancode, 0);
 	}
 	
 	public void internalKeyUpdate(int scancode, boolean pressed) {
-		keyboardUpdate(instance, scancode, pressed);
+		keyboardUpdate(wlcBridgeHandle, scancode, pressed);
 	}
 	
 	public void resizeToplevelInteractive(WLCToplevel toplevel, int width, int height) {
@@ -580,11 +580,11 @@ public class WaylandCraftBridge {
 	}
 	
 	public void maximizeToplevel(WLCToplevel toplevel) {
-		toplevelMaximize(instance, toplevel.getHandle());
+		toplevelMaximize(wlcBridgeHandle, toplevel.getHandle());
 	}
 	
 	public void fullscreenToplevel(WLCToplevel toplevel) {
-		toplevelFullscreen(instance, toplevel.getHandle());
+		toplevelFullscreen(wlcBridgeHandle, toplevel.getHandle());
 	}
 	
 	public Integer checkMoveRequest() {
@@ -602,68 +602,68 @@ public class WaylandCraftBridge {
 	}
 	
 	public void resizeOutput(int width, int height) {
-		outputResize(instance, width, height);
+		outputResize(wlcBridgeHandle, width, height);
 	}
 	
 	public void setOutputBounds(int width, int height) {
-		outputSetBounds(instance, width, height);
+		outputSetBounds(wlcBridgeHandle, width, height);
 	}
 	
 	public Size getOutputSize() {
-		int[] size = outputSize(instance);
+		int[] size = outputSize(wlcBridgeHandle);
 		return new Size(size[0], size[1]);
 	}
 	
 	public Size getOutputBounds() {
-		int[] size = outputBounds(instance);
+		int[] size = outputBounds(wlcBridgeHandle);
 		return new Size(size[0], size[1]);
 	}
 	
 	public RawDesktopEntry loadDesktopEntry(File path) {
-		return loadDesktopEntry(instance, path.getAbsolutePath());
+		return loadDesktopEntry(wlcBridgeHandle, path.getAbsolutePath());
 	}
 	
 	public RawDesktopEntry[] loadSystemDesktopEntries() {
-		return loadDesktopEntries(instance);
+		return loadDesktopEntries(wlcBridgeHandle);
 	}
 	
-	public boolean renderSVG(File file, int width, int height, long ptr) {
-		return renderSVG(file.getAbsolutePath(), width, height, ptr);
+	public boolean renderSVG(File file, int width, int height, long bufferPtr) {
+		return renderSVG(file.getAbsolutePath(), width, height, bufferPtr);
 	}
 	
 	public boolean execApp(String appId) {
-		return execApp(instance, appId);
+		return execApp(wlcBridgeHandle, appId);
 	}
 	
 	public void setKeymapDefault() {
-		setKeymapDefault(instance);
+		setKeymapDefault(wlcBridgeHandle);
 	}
 	
 	public String exportKeymap() {
-		return exportKeymap(instance);
+		return exportKeymap(wlcBridgeHandle);
 	}
 	
 	public boolean setKeymapFromStr(String keymap) {
-		return setKeymapFromStr(instance, keymap);
+		return setKeymapFromStr(wlcBridgeHandle, keymap);
 	}
 	
 	public Integer checkDndRequest() {
-		int[] serial = checkDndRequest(instance);
+		int[] serial = checkDndRequest(wlcBridgeHandle);
 		if(serial == null) return null;
 		return serial[0];
 	}
 	
 	public void dndCancel() {
-		dndCancel(instance);
+		dndCancel(wlcBridgeHandle);
 	}
 	
 	public void dndDrop() {
-		dndDrop(instance);
+		dndDrop(wlcBridgeHandle);
 	}
 	
 	public void sendDndMotion(WLCSurface surface, double x, double y) {
 		long handle = surface == null ? 0 : surface.getHandle();
-		dndMotion(instance, handle, x, y);
+		dndMotion(wlcBridgeHandle, handle, x, y);
 	}
 	
 	public static record Size(int width, int height) {}
@@ -671,134 +671,134 @@ public class WaylandCraftBridge {
 	public static record ResizeRequest(int serial, int edges) {}
 	
 	private static native long init(long glfwGetProcAddress, long eglDisplay);
-	private static native void update(long instance);
-	private static native String socket(long instance);
-	private static native void sendFrame(long handle);
+	private static native void update(long wlcBridgeHandle);
+	private static native String socket(long wlcBridgeHandle);
+	private static native void sendFrame(long surfaceHandle);
 	
-	private static native void updateSurfaceData(long instance, WLCSurface surface);
+	private static native void updateSurfaceData(long wlcBridgeHandle, WLCSurface surface);
 	
-	private static native long[] toplevels(long instance);
-	private static native long toplevelSurface(long instance, long handle);
-	private static native String toplevelTitle(long handle);
-	private static native String toplevelAppID(long handle);
+	private static native long[] toplevels(long wlcBridgeHandle);
+	private static native long toplevelSurface(long wlcBridgeHandle, long topLevelHandle);
+	private static native String toplevelTitle(long topLevelHandle);
+	private static native String toplevelAppID(long topLevelHandle);
 	// Resize toplevel
-	private static native void toplevelResize(long handle, int width, int height, boolean interactive);
+	private static native void toplevelResize(long topLevelHandle, int width, int height, boolean interactive);
 	// Resize toplevel override, keep maximized and fullscreen state, stop interactive resize
-	private static native void toplevelResizeOvr(long handle, int width, int height);
+	private static native void toplevelResizeOvr(long topLevelHandle, int width, int height);
 	
 	// Collect all toplevels that have sent a minimize request and clear the list
-	private static native long[] minimizeReq(long instance);
+	private static native long[] minimizeReq(long wlcBridgeHandle);
 	// Collect all toplevels that have sent a maximize request and clear the list
-	private static native long[] maximizeReq(long instance);
+	private static native long[] maximizeReq(long wlcBridgeHandle);
 	// Collect all toplevels that have sent an unmaximize request and clear the list
-	private static native long[] unmaximizeReq(long instance);
+	private static native long[] unmaximizeReq(long wlcBridgeHandle);
 	// Collect all toplevels that have sent a fullscreen request and clear the list
-	private static native long[] fullscreenReq(long instance);
+	private static native long[] fullscreenReq(long wlcBridgeHandle);
 	// Collect all toplevels that have sent an unfullscreen request and clear the list
-	private static native long[] unfullscreenReq(long instance);
+	private static native long[] unfullscreenReq(long wlcBridgeHandle);
 	
 	// Collect up to one serial of a sent interactive move request
-	private static native int[] moveRequest(long instance);
+	private static native int[] moveRequest(long wlcBridgeHandle);
 	// Collect up to one serial of a sent interactive resize request
-	private static native int[] resizeRequest(long instance);
+	private static native int[] resizeRequest(long wlcBridgeHandle);
 	
 	// All toplevels that are currently in fullscreen
-	private static native long[] fullscreened(long instance);
+	private static native long[] fullscreened(long wlcBridgeHandle);
 	
-	private static native void toplevelMaximize(long instance, long handle);
-	private static native void toplevelFullscreen(long instance, long handle);
+	private static native void toplevelMaximize(long wlcBridgeHandle, long topLevelHandle);
+	private static native void toplevelFullscreen(long wlcBridgeHandle, long topLevelHandle);
 	
-	private static native long[] popups(long instance);
-	private static native long popupSurface(long instance, long handle);
+	private static native long[] popups(long wlcBridgeHandle);
+	private static native long popupSurface(long wlcBridgeHandle, long topLevelHandle);
 	// Query the parent of a popup
 	// Returned handle is a handle either to a toplevel or another popup
-	private static native long popupParent(long instance, long handle);
+	private static native long popupParent(long wlcBridgeHandle, long topLevelHandle);
 	// Query popup local offset coordinates
 	// Returns two-element list containing x,y
-	private static native int[] popupOffset(long handle);
+	private static native int[] popupOffset(long popupHandle);
 	
 	// Query the xdg_surface window geometry of a toplevel or popup.
 	// handle should be the handle to the root WLCSurface
 	// Returns four-element array containing x,y,width,height which could be null
-	private static native int[] surfaceXDGGeometry(long handle);
+	private static native int[] surfaceXDGGeometry(long surfaceHandle);
 	
 	// Release a dmabuf wl_buffer
-	private static native void deleteDmabuf(long instance, long handle);
+	private static native void deleteDmabuf(long wlcBridgeHandle, long dmabufHandle);
 	
 	// Updates the surface tree given by the root surface
 	// This changes the doubly linked list of the WLCSurfaces.
 	// The returned surface is the last (most deeply nested) child
-	private native WLCSurface updateSurfaceTree(WLCSurface root);
+	private native WLCSurface updateSurfaceTree(long wlcBridgeHandle, WLCSurface root);
 	
 	// Check if point in surface input region
 	private static native boolean checkInputRegion(long surfaceHandle, double x, double y);
 	
 	// Create pointer motion event
-	private static native void pointerMotion(long instance, double x, double y);
+	private static native void pointerMotion(long wlcBridgeHandle, double x, double y);
 	
 	// Create pointer motion event
-	private static native void pointerMotionFocus(long instance, long handle, double x, double y);
+	private static native void pointerMotionFocus(long wlcBridgeHandle, long surfaceHandle, double x, double y);
 	
 	// Send relative pointer motion to surface with pointer focus
-	private static native void pointerRelMotion(long instance, double dx, double dy);
+	private static native void pointerRelMotion(long wlcBridgeHandle, double dx, double dy);
 	
-	private static native boolean maybePointerLock(long instance, long handle);
+	private static native boolean maybePointerLock(long wlcBridgeHandle, long surfaceHandle);
 	
-	private static native void pointerUnlock(long instance);
+	private static native void pointerUnlock(long wlcBridgeHandle);
 	
 	// Remove pointer focus from all surfaces
-	private static native void pointerLeave(long instance);
+	private static native void pointerLeave(long wlcBridgeHandle);
 	
 	// Create pointer button event. `button` has to be the linux button code, state is 1 for pressed, 0 for released
-	private static native int pointerButton(long instance, int button, int state);
+	private static native int pointerButton(long wlcBridgeHandle, int button, int state);
 	
 	// Create pointer axis event. `axis` is the scroll axis (0 for vertical, 1 for horizontal)
-	private static native void pointerAxis(long instance, int axis, double value);
+	private static native void pointerAxis(long wlcBridgeHandle, int axis, double value);
 	
 	// Get active cursor image
-	private static native int cursorShape(long instance);
+	private static native int cursorShape(long wlcBridgeHandle);
 	
 	// Set keyboard focus to a wayland surface. The handle may be 0 to unfocus any surfaces
-	private static native void keyboardFocus(long instance, long surfaceHandle);
+	private static native void keyboardFocus(long wlcBridgeHandle, long surfaceHandle);
 	
-	private static native void keyboardActivate(long instance);
-	private static native void keyboardDeactivate(long instance);
+	private static native void keyboardActivate(long wlcBridgeHandle);
+	private static native void keyboardDeactivate(long wlcBridgeHandle);
 	
 	// Keyboard input. scancode is the raw keycode. action: 0 is released, 1 is pressed.
-	private static native void keyboardInput(long instance, int scancode, int action);
+	private static native void keyboardInput(long wlcBridgeHandle, int scancode, int action);
 	
 	// Update internal key state
-	private static native void keyboardUpdate(long instance, int scancode, boolean pressed);
+	private static native void keyboardUpdate(long wlcBridgeHandle, int scancode, boolean pressed);
 	
-	private static native int[] outputSize(long instance);
-	private static native int[] outputBounds(long instance);
+	private static native int[] outputSize(long wlcBridgeHandle);
+	private static native int[] outputBounds(long wlcBridgeHandle);
 	
 	// Update virtual output dimensions
-	private static native void outputResize(long instance, int width, int height);
+	private static native void outputResize(long wlcBridgeHandle, int width, int height);
 	
 	// Update virtual output maximum window bounds
-	private static native void outputSetBounds(long instance, int width, int height);
+	private static native void outputSetBounds(long wlcBridgeHandle, int width, int height);
 	
-	private static native void freeSurface(long instance, long handle);
-	private static native void freeToplevel(long instance, long handle);
-	private static native void freePopup(long instance, long handle);
+	private static native void freeSurface(long wlcBridgeHandle, long surfaceHandle);
+	private static native void freeToplevel(long wlcBridgeHandle, long toplevelHandle);
+	private static native void freePopup(long wlcBridgeHandle, long popupHandle);
 	
-	private static native RawDesktopEntry loadDesktopEntry(long instance, String path);
-	private static native RawDesktopEntry[] loadDesktopEntries(long instance);
+	private static native RawDesktopEntry loadDesktopEntry(long wlcBridgeHandle, String path);
+	private static native RawDesktopEntry[] loadDesktopEntries(long wlcBridgeHandle);
 	
-	private static native boolean renderSVG(String path, int width, int height, long ptr);
+	private static native boolean renderSVG(String path, int width, int height, long bufferPtr);
 	
-	private static native boolean execApp(long instance, String appId);
+	private static native boolean execApp(long wlcBridgeHandle, String appId);
 	
-	private static native void setKeymapDefault(long instance);
-	private static native String exportKeymap(long instance);
-	private static native boolean setKeymapFromStr(long instance, String keymap);
+	private static native void setKeymapDefault(long wlcBridgeHandle);
+	private static native String exportKeymap(long wlcBridgeHandle);
+	private static native boolean setKeymapFromStr(long wlcBridgeHandle, String keymap);
 	
-	private static native int[] checkDndRequest(long instance);
-	private static native boolean checkDndActive(long instance);
-	private static native void dndCancel(long instance);
-	private static native void dndDrop(long instance);
-	private static native void dndMotion(long instance, long surface, double x, double y);
-	private static native long dndIcon(long instance);
+	private static native int[] checkDndRequest(long wlcBridgeHandle);
+	private static native boolean checkDndActive(long wlcBridgeHandle);
+	private static native void dndCancel(long wlcBridgeHandle);
+	private static native void dndDrop(long wlcBridgeHandle);
+	private static native void dndMotion(long wlcBridgeHandle, long surfaceHandle, double x, double y);
+	private static native long dndIcon(long wlcBridgeHandle);
 	
 }

@@ -9,10 +9,11 @@ crate-type = [ "cdylib" ]
 
 [dependencies]
 smithay = { git = "https://github.com/Smithay/smithay.git", rev = "89e58f7", default-features = false, features = [ "wayland_frontend", "backend_drm" ] }
-jni = "0.21.1"
+jni = "0.22.4"
 libc = { version = "0.2.176", default-features = false }
 xkbcommon = "0.8.0"
 cosmic-freedesktop-icons = { git = "https://github.com/pop-os/freedesktop-icons.git", rev = "7a61a70" }
 freedesktop-desktop-entry = "0.8.1"
 resvg = { version = "0.47.0", default-features = false, features = ["text", "memmap-fonts"] }
 shlex = "1.3.0"
+thiserror = "2.0"

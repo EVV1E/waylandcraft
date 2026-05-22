@@ -224,7 +224,7 @@ impl WLCDataState {
 
     pub fn dnd_motion(
         &mut self,
-        mut surface: Option<WlSurface>,
+        mut surface: Option<&WlSurface>,
         x: f64,
         y: f64,
     ) {
@@ -251,14 +251,14 @@ impl WLCDataState {
             }
         }
 
-        if surface != focus {
+        if surface != focus.as_ref() {
             // Reset the accepted type when moving to different surface
             if let Some(s) = &source {
                 s.target(None);
             }
             self.dnd.as_mut().unwrap().mime = None;
         }
-        self.dnd.as_mut().unwrap().focus = surface.clone();
+        self.dnd.as_mut().unwrap().focus = surface.cloned();
 
         // Unfocus devices focused on wrong surface
         self.for_all_devices(|device, data| {
@@ -266,7 +266,7 @@ impl WLCDataState {
                 Some(s) => s,
                 None => return,
             };
-            let unfocus = match &surface {
+            let unfocus = match surface {
                 Some(s) => s != focus,
                 None => true,
             };

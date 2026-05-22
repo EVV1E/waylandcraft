@@ -47,6 +47,7 @@ use std::time::Duration;
 mod bridge;
 mod ddm;
 mod egl;
+mod java_types;
 mod output;
 mod process;
 mod seat;

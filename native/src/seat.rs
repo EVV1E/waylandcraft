@@ -250,13 +250,13 @@ impl WLCSeatState {
     // Focus the pointer on the given surface and register movement
     pub fn pointer_motion_focus(
         &mut self,
-        surface: Option<WlSurface>,
+        surface: Option<&WlSurface>,
         x: f64,
         y: f64,
     ) {
         let surface = surface.filter(|s| s.is_alive());
 
-        self.pointer_focus(surface.as_ref(), x, y);
+        self.pointer_focus(surface, x, y);
         if surface.is_none() {
             return;
         }
