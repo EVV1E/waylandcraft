@@ -126,7 +126,7 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	}
 	
 	/* Update bridge and clients. May be called at any state of the game, even outside of a level
-	 * Called before game render in Minecraft::runTick
+	 * Called after game render in Minecraft::runTick
 	 */
 	public void update() {
 		if(bridge == null) {
