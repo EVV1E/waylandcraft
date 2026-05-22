@@ -2,7 +2,11 @@ package dev.evvie.waylandcraft.settings;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+
+import com.google.gson.Gson;
 
 import dev.evvie.waylandcraft.WaylandCraft;
 import net.minecraft.client.Minecraft;
@@ -10,9 +14,11 @@ import net.minecraft.client.Minecraft;
 public class WaylandCraftSettingsManager {
 	
 	private final WaylandCraft wlc;
+	private final Gson gson = new Gson();
 	
 	private File settingsDir;
 	private File keymapFile;
+	private File settingsFile;
 	
 	public WaylandCraftSettingsManager(WaylandCraft wlc) {
 		this.wlc = wlc;
@@ -26,6 +32,7 @@ public class WaylandCraftSettingsManager {
 	}
 	
 	private void init() throws IOException {
+		/* Ensure settings directory */
 		settingsDir = new File(Minecraft.getInstance().gameDirectory, "waylandcraft");
 		if(!settingsDir.exists()) {
 			settingsDir.mkdir();
@@ -34,6 +41,7 @@ public class WaylandCraftSettingsManager {
 			throw new IOException("Waylandcraft settings directory exists but is not a directory");
 		}
 		
+		/* Read keymap override */
 		keymapFile = new File(settingsDir, "keymap.txt");
 		
 		String keymap = tryReadKeymapFromFile();
@@ -46,6 +54,25 @@ public class WaylandCraftSettingsManager {
 				WaylandCraft.LOGGER.error("Failed to load keymap!");
 			}
 		}
+		
+		/* Ensure settings file */
+		boolean createSettings = false;
+		settingsFile = new File(settingsDir, "settings.json");
+		if(!settingsFile.exists()) {
+			settingsFile.createNewFile();
+			createSettings = true;
+		}
+		else if(!settingsFile.isFile()) {
+			throw new IOException("Waylandcraft settings.json exists but is not a file");
+		}
+		
+		if(createSettings) {
+			// Create default settings
+			wlc.settings = new WaylandCraftSettings();
+			writeSettings();
+		}
+		
+		readSettings();
 	}
 	
 	private String tryReadKeymapFromSystem() {
@@ -82,6 +109,23 @@ public class WaylandCraftSettingsManager {
 		} catch(IOException e) {
 			WaylandCraft.LOGGER.info("Error reading keymap file!", e);
 			return null;
+		}
+	}
+	
+	public void readSettings() {
+		try(FileReader reader = new FileReader(settingsFile)) {
+			wlc.settings = gson.fromJson(reader, WaylandCraftSettings.class);
+		} catch(IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void writeSettings() {
+		String json = gson.toJson(wlc.settings, WaylandCraftSettings.class);
+		try(FileWriter writer = new FileWriter(settingsFile)) {
+			writer.write(json);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 	}
 	

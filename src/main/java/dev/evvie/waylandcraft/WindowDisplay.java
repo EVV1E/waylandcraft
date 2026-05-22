@@ -16,8 +16,6 @@ import net.minecraft.world.phys.Vec3;
 
 public class WindowDisplay {
 	
-	private static final float PIXEL_SCALE = 1.0f / 500;
-	
 	public final WLCAbstractWindow window;
 	
 	// World position of window
@@ -60,12 +58,16 @@ public class WindowDisplay {
 		return normal.cross(down);
 	}
 	
+	public float pixelScale() {
+		return 1.0f / WaylandCraft.instance.settings.pixelsPerBlock;
+	}
+	
 	public Vec3 localX() {
-		return right().scale(PIXEL_SCALE);
+		return right().scale(pixelScale());
 	}
 	
 	public Vec3 localY() {
-		return down.scale(PIXEL_SCALE);
+		return down.scale(pixelScale());
 	}
 	
 	// World coordinates of the origin of the root surface surface-local coordinate space

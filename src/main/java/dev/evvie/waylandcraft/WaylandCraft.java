@@ -34,6 +34,7 @@ import dev.evvie.waylandcraft.item.WindowItemManager;
 import dev.evvie.waylandcraft.render.WindowInHandRenderer;
 import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
 import dev.evvie.waylandcraft.render.model.WindowItemModel;
+import dev.evvie.waylandcraft.settings.WaylandCraftSettings;
 import dev.evvie.waylandcraft.settings.WaylandCraftSettingsManager;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.ModInitializer;
@@ -63,6 +64,9 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	
 	public static WaylandCraft instance;
 	
+	public WaylandCraftSettingsManager settingsManager;
+	public WaylandCraftSettings settings;
+	
 	public WaylandCraftBridge bridge = null;
 	public String waylandSocket = "";
 	
@@ -75,7 +79,6 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	
 	public WindowItemManager itemManager = new WindowItemManager(this);
 	public XDGDesktopManager xdgManager;
-	public WaylandCraftSettingsManager settingsManager;
 	
 	public KeyMapping keyOpenScreen;
 	public KeyMapping keyOpenAppLauncher;
