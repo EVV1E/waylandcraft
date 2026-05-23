@@ -59,7 +59,7 @@ public class WindowDisplay {
 	}
 	
 	public float pixelScale() {
-		return 1.0f / WaylandCraft.instance.settings.pixelsPerBlock;
+		return 1.0f / WaylandCraft.instance.settings.getPixelsPerBlock();
 	}
 	
 	public Vec3 localX() {

@@ -129,4 +129,16 @@ public class WaylandCraftSettingsManager {
 		}
 	}
 	
+	// Set an int setting and write it to file
+	public void setIntSetting(String name, int value) {
+		wlc.settings.setIntSetting(name, value);
+		writeSettings();
+	}
+	
+	// Set a boolean setting and write it to file
+	public void setBooleanSetting(String name, boolean value) {
+		wlc.settings.setBooleanSetting(name, value);
+		writeSettings();
+	}
+	
 }
