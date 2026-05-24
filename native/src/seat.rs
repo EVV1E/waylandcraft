@@ -826,15 +826,15 @@ fn has_existing_constraint(
         }
     });
     state.seat.for_all_pointers(|_pointer, data| {
-        if let Some(lock) = &data.lock
-            && lock.surface == *surface
-        {
-            err = true;
+        if let Some(lock) = &data.lock {
+            if lock.surface == *surface {
+                err = true;
+            }
         }
-        if let Some(lsurf) = &data.confined
-            && lsurf == surface
-        {
-            err = true;
+        if let Some(lsurf) = &data.confined {
+            if lsurf == surface {
+                err = true;
+            }
         }
     });
     err

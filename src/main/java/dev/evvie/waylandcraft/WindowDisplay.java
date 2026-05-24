@@ -161,6 +161,7 @@ public class WindowDisplay {
 		
 		WLCSurface hitSurface = null;
 		Vec3 localCoordsRelative = null;
+		if(WaylandCraft.instance.bridge == null) return null;
 		
 		for(WLCSurface surface = window.getSurfaceTreeLast(); surface != null; surface = surface.getPrevChild()) {
 			Vec3 rel = localCoords.subtract(surface.xSubpos, surface.ySubpos, 0);

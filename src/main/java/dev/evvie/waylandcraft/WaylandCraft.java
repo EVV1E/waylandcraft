@@ -20,6 +20,7 @@ import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.ResizeRequest;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
+import dev.evvie.waylandcraft.bridge.X11Window;
 import dev.evvie.waylandcraft.desktop.XDGDesktopManager;
 import dev.evvie.waylandcraft.grabs.DNDGrab;
 import dev.evvie.waylandcraft.grabs.MoveGrab;
@@ -130,10 +131,12 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	 */
 	public void update() {
 		if(bridge == null) {
-			bridge = WaylandCraftBridge.start();
+			bridge = WaylandCraftBridge.startSelected();
 			waylandSocket = bridge.getSocket();
 			xdgManager = new XDGDesktopManager(this);
-			settingsManager = new WaylandCraftSettingsManager(this);
+			if(!bridge.isX11Backend()) {
+				settingsManager = new WaylandCraftSettingsManager(this);
+			}
 			
 			LOGGER.info("Server started on " + waylandSocket);
 		}
@@ -147,6 +150,11 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	}
 	
 	public void updateWorld(LevelExtractionContext ctx) {
+		if(bridge.isX11Backend()) {
+			updateWorldX11(ctx);
+			return;
+		}
+
 		for(WLCPopup popup : bridge.getMappedPopups()) {
 			WLCAbstractWindow root = popup;
 			while((root = ((WLCPopup) root).getParent()) instanceof WLCPopup);
@@ -251,8 +259,28 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	}
 	
 	private void onClientJoin(ClientPacketListener listener, PacketSender sender, Minecraft minecraft) {
-		minecraft.getChatListener().handleSystemMessage(Component.literal("Wayland compositor running on " + waylandSocket), false);
+		String bridgeName = bridge.isX11Backend() ? "X11 bridge" : "Wayland compositor";
+		minecraft.getChatListener().handleSystemMessage(Component.literal(bridgeName + " running on " + waylandSocket), false);
 		itemManager.giveItemsIfMissing(bridge.getMappedToplevels());
+	}
+
+	private void updateWorldX11(LevelExtractionContext ctx) {
+		X11Window[] windows = bridge.syncX11Windows();
+		Camera camera = ctx.camera();
+
+		displays.removeIf((d) -> d.window instanceof X11Window && !d.window.isMapped());
+
+		for(X11Window window : windows) {
+			boolean created = !hasDisplayFor(window);
+			WindowDisplay display = getOrCreateDisplay(window);
+			if(created) {
+				display.anchorDistance = 2.0;
+				display.anchorToCamera(camera);
+			}
+		}
+
+		displays.removeIf((d) -> !d.isValid());
+		displays.forEach((d) -> d.updateGeometry());
 	}
 	
 	private void updateDisplayRequests() {

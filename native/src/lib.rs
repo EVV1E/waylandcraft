@@ -52,6 +52,7 @@ mod process;
 mod seat;
 mod svg;
 mod utils;
+mod x11;
 mod xdg_spec;
 
 pub(crate) struct WaylandCraft<'a> {

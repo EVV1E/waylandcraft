@@ -241,13 +241,13 @@ impl WLCDataState {
         let source = self.dnd.as_ref().unwrap().source.clone();
         let focus = self.dnd.as_ref().unwrap().focus.clone();
 
-        if source.is_none()
-            && let Some(ref s) = surface
-        {
-            let surface_client = s.client().unwrap();
-            if surface_client != client {
-                // Non-source drag and focus is on a different client
-                surface = None;
+        if source.is_none() {
+            if let Some(ref s) = surface {
+                let surface_client = s.client().unwrap();
+                if surface_client != client {
+                    // Non-source drag and focus is on a different client
+                    surface = None;
+                }
             }
         }
 
@@ -508,11 +508,11 @@ impl Dispatch<WlDataSource, WLCDataSource> for WLCState {
         if state.data.clipboard.as_ref().is_some_and(|c| c == source) {
             state.data.clipboard = None;
         }
-        if let Some(dnd) = &state.data.dnd
-            && Some(source) == dnd.source.as_ref()
-        {
-            state.data.unfocus_devices();
-            state.data.dnd = None;
+        if let Some(dnd) = &state.data.dnd {
+            if Some(source) == dnd.source.as_ref() {
+                state.data.unfocus_devices();
+                state.data.dnd = None;
+            }
         }
     }
 }

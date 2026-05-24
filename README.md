@@ -33,12 +33,16 @@ the windows, `B` opens the window manager screen.
 Instead of using `G` to capture the keyboard, use `ALT+Q` instead. The only way to turn it off is to press `ALT-Q` again,
 so the `ESC` key is forwarded to the application.
 
-### How do I run X11 apps?
-Right now Xwayland isn't directly integrated yet. Instead you'll need to install
-[xwayland-satellite](https://github.com/Supreeeme/xwayland-satellite). Just run `xwayland-sateliite :2`
-(or choose a different number than two) in a terminal inside of the game. Then
-when launching X11 apps you need to specify the DISPLAY environment variable. For example if you want to run Steam,
-run `DISPLAY=:2 steam` (in another terminal tab or window).
+### Native X11 backend
+We now also have an in-mod X11 backend path that can discover and capture X11 windows directly.
+That means you can run normal X11 programs like `xclock`, `xterm`, etc. on your X display and see
+them inside the game without relying on the old xwayland-satellite-only workflow.
+
+Current setup for this path:
+- Start Minecraft with `WAYLANDCRAFT_BACKEND=x11`
+- or set `WAYLANDCRAFT_X11_DISPLAY` (for example `:0`) if you want to force a specific X display
+- Run an X11 app on that same display if that dosent work also works if you (`DISPLAY=:0 xclock`)
+- WaylandCraft itself can talk to X11 and render those windows in Minecraft
 
 ### How to do the relative mouse movement thing for 3D games?
 Move your mouse over the window, then activate the hard keyboard capture mode. (`ALT-Q`)

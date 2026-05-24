@@ -15,6 +15,7 @@ import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.bridge.WLCPopup;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
+import dev.evvie.waylandcraft.bridge.X11Window;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
 import dev.evvie.waylandcraft.desktop.DesktopEntry;
@@ -38,7 +39,7 @@ public class WindowManagerScreen extends Screen {
 	
 	private WaylandCraft wlc;
 	
-	private SelectorWidget<WLCToplevel> selector;
+	private SelectorWidget<WLCAbstractWindow> selector;
 	private ArrayList<Button> buttons = new ArrayList<Button>();
 	private Button grabButton;
 	private Button resizeButton;
@@ -61,8 +62,8 @@ public class WindowManagerScreen extends Screen {
 	private int areaHeight;
 	private int guiScale;
 	
-	private WLCToplevel focused = null;
-	private WLCToplevel lastFocused = null;
+	private WLCAbstractWindow focused = null;
+	private WLCAbstractWindow lastFocused = null;
 	
 	// All window elements currently displayed, sorted by depth from bottom-most (root) to top-most (last leaf)
 	public ArrayList<WindowElement> windows = new ArrayList<WindowElement>();
@@ -82,20 +83,29 @@ public class WindowManagerScreen extends Screen {
 		int buttonWidth = width / 3 - 5;
 		int buttonHeight = 17;
 		
-		selector = new SelectorWidget<WLCToplevel>(leftMargin - 1, topMargin - 17, areaWidth + 2, 17) {
+		selector = new SelectorWidget<WLCAbstractWindow>(leftMargin - 1, topMargin - 17, areaWidth + 2, 17) {
 			@Override
-			public Component titleForElement(WLCToplevel element) {
-				return Component.literal(Optional.ofNullable(element.title).or(() -> Optional.ofNullable(element.appID)).orElse(""));
+			public Component titleForElement(WLCAbstractWindow element) {
+				if(element instanceof WLCToplevel toplevel) {
+					return Component.literal(Optional.ofNullable(toplevel.title).or(() -> Optional.ofNullable(toplevel.appID)).orElse(""));
+				}
+				if(element instanceof X11Window window) {
+					return Component.literal(Optional.ofNullable(window.title).or(() -> Optional.ofNullable(window.appID)).orElse(""));
+				}
+				return Component.literal("");
 			}
 			
 			@Override
-			public boolean elementDimColor(WLCToplevel element) {
+			public boolean elementDimColor(WLCAbstractWindow element) {
 				return !wlc.hasDisplayFor(element);
 			}
 			
 			@Override
-			public @Nullable Identifier iconForElement(WLCToplevel element) {
-				DesktopEntry entry = wlc.xdgManager.forAppId(element.appID);
+			public @Nullable Identifier iconForElement(WLCAbstractWindow element) {
+				String appId = null;
+				if(element instanceof WLCToplevel toplevel) appId = toplevel.appID;
+				else if(element instanceof X11Window window) appId = window.appID;
+				DesktopEntry entry = wlc.xdgManager.forAppId(appId);
 				if(entry == null) return null;
 				
 				Identifier icon = entry.getIcon();
@@ -155,9 +165,9 @@ public class WindowManagerScreen extends Screen {
 	}
 	
 	private void onGrabPressed(Button button) {
-		if(focused == null) return;
+		if(!(focused instanceof WLCToplevel toplevel)) return;
 		
-		wlc.pointerGrabs.startExclusive(new WindowGrab(wlc.getOrCreateDisplay(focused), 0));
+		wlc.pointerGrabs.startExclusive(new WindowGrab(wlc.getOrCreateDisplay(toplevel), 0));
 		this.onClose();
 	}
 	
@@ -168,32 +178,32 @@ public class WindowManagerScreen extends Screen {
 	}
 	
 	private void onResizePressed(Button button) {
-		if(focused == null || focused.fullscreen) return;
+		if(!(focused instanceof WLCToplevel toplevel) || toplevel.fullscreen) return;
 		
 		wlc.bridge.sendMotionOutside();
 		GLFW.glfwSetInputMode(Minecraft.getInstance().getWindow().handle(), GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
 		
 		resizeMode = true;
-		resizeToplevel = focused;
-		resizeWidth = focused.geometry.width();
-		resizeHeight = focused.geometry.height();
+		resizeToplevel = toplevel;
+		resizeWidth = toplevel.geometry.width();
+		resizeHeight = toplevel.geometry.height();
 		resizeLastX = resizeLastY = Double.NaN;
 	}
 	
 	private void onPinPressed(Button button) {
-		if(focused == null) return;
+		if(!(focused instanceof WLCToplevel toplevel)) return;
 		
-		if(wlc.pinnedToplevel != focused) wlc.pinnedToplevel = focused;
+		if(wlc.pinnedToplevel != toplevel) wlc.pinnedToplevel = toplevel;
 		else wlc.pinnedToplevel = null;
 	}
 	
 	private void onItemPressed(Button button) {
-		if(focused == null) return;
-		wlc.itemManager.giveItem(focused);
+		if(!(focused instanceof WLCToplevel toplevel)) return;
+		wlc.itemManager.giveItem(toplevel);
 	}
 	
 	private void exitResizeMode() {
-		if(resizeToplevel != null && resizeToplevel.isAlive()) wlc.bridge.resizeToplevel(resizeToplevel, resizeWidth, resizeHeight);
+		if(resizeToplevel instanceof WLCToplevel toplevel && toplevel.isAlive()) wlc.bridge.resizeToplevel(toplevel, resizeWidth, resizeHeight);
 		
 		long window = Minecraft.getInstance().getWindow().handle();
 		GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
@@ -225,22 +235,32 @@ public class WindowManagerScreen extends Screen {
 		context.outline(leftMargin - 1, topMargin - 1, areaWidth + 2, areaHeight + 2, Color.white.getRGB());
 		
 		guiScale = (int) Minecraft.getInstance().getWindow().getGuiScale();
-		wlc.bridge.setOutputBounds(areaWidth * guiScale, areaHeight * guiScale);
+		if(!wlc.bridge.isX11Backend()) {
+			wlc.bridge.setOutputBounds(areaWidth * guiScale, areaHeight * guiScale);
+		}
 		
-		WLCToplevel[] toplevels = wlc.bridge.getMappedToplevels();
-		selector.setEntries(toplevels);
+		WLCAbstractWindow[] windowsForMenu = wlc.bridge.isX11Backend()
+			? wlc.bridge.syncX11Windows()
+			: wlc.bridge.getMappedToplevels();
+		selector.setEntries(windowsForMenu);
 		
 		if(resizeMode && !resizeToplevel.isAlive()) {
 			exitResizeMode();
 		}
 		
-		WLCToplevel renderToplevel = null;
+		WLCAbstractWindow renderToplevel = null;
 		lastFocused = focused;
 		
 		if(!resizeMode) {
 			// Update focus to toplevel that has highest focus priority
-			focused = wlc.bridge.getMostRecentFocus();
-			wlc.bridge.focusSurface(focused);
+			if(wlc.bridge.isX11Backend()) {
+				if(selector.selection() == null && windowsForMenu.length > 0) selector.select(windowsForMenu[0]);
+				focused = selector.selection();
+			}
+			else {
+				focused = wlc.bridge.getMostRecentFocus();
+				wlc.bridge.focusSurface((WLCToplevel) focused);
+			}
 			
 			// Update selected toplevel in selector to currently focused toplevel, only if it changed
 			if(selector.selection() == null || focused != lastFocused) {
@@ -250,7 +270,7 @@ public class WindowManagerScreen extends Screen {
 			// When the selection has changed, change the currently focused toplevel
 			if(selector.selection() != focused) {
 				focused = selector.selection();
-				wlc.bridge.focusSurface(focused);
+				if(!wlc.bridge.isX11Backend()) wlc.bridge.focusSurface((WLCToplevel) focused);
 			}
 			
 			renderToplevel = focused;
@@ -271,7 +291,7 @@ public class WindowManagerScreen extends Screen {
 		poseStack.scale(1 / guiScale, 1 / guiScale);
 		
 		if(renderToplevel != null) {
-			prepareToplevel(renderToplevel);
+			prepareWindow(renderToplevel);
 			
 			for(WindowElement element : windows) {
 				WindowFramebuffer buf = element.window.framebuffer;
@@ -308,7 +328,7 @@ public class WindowManagerScreen extends Screen {
 		buttons.forEach((b) -> b.visible = true);
 		selector.visible = true;
 		
-		if(focused != null && focused.fullscreen) {
+		if(focused instanceof WLCToplevel toplevel && toplevel.fullscreen) {
 			buttons.forEach((b) -> b.visible = false);
 			selector.visible = false;
 		}
@@ -523,26 +543,28 @@ public class WindowManagerScreen extends Screen {
 		wlc.bridge.deactivateKeyboard();
 	}
 	
-	private void prepareToplevel(WLCToplevel toplevel) {
+	private void prepareWindow(WLCAbstractWindow window) {
 		float x;
 		float y;
 		
-		if(!toplevel.fullscreen) {
-			x = leftMargin * guiScale + Math.max(0, areaWidth * guiScale / 2 - toplevel.geometry.width() / 2);
-			y = topMargin * guiScale + Math.max(0, areaHeight * guiScale / 2 - toplevel.geometry.height() / 2);
-		}
-		else {
+		if(window instanceof WLCToplevel toplevel && toplevel.fullscreen) {
 			x = 0;
 			y = 0;
 		}
+		else {
+			x = leftMargin * guiScale + Math.max(0, areaWidth * guiScale / 2 - window.geometry.width() / 2);
+			y = topMargin * guiScale + Math.max(0, areaHeight * guiScale / 2 - window.geometry.height() / 2);
+		}
 		
-		x -= toplevel.geometry.x();
-		y -= toplevel.geometry.y();
+		x -= window.geometry.x();
+		y -= window.geometry.y();
 		
-		windows.add(new WindowElement(toplevel, x, y));
+		windows.add(new WindowElement(window, x, y));
 		
-		WindowTree tree = WindowTree.constructTree(wlc.bridge, toplevel);
-		preparePopupTree(tree, x, y);
+		if(window instanceof WLCToplevel toplevel) {
+			WindowTree tree = WindowTree.constructTree(wlc.bridge, toplevel);
+			preparePopupTree(tree, x, y);
+		}
 	}
 	
 	private void preparePopupTree(WindowTree tree, float x, float y) {

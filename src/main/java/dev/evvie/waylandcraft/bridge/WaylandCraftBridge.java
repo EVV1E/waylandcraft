@@ -27,8 +27,10 @@ import net.minecraft.util.profiling.ProfilerFiller;
 public class WaylandCraftBridge {
 	
 	private long instance;
+	private final Backend backend;
 	private ArrayList<WLCToplevel> toplevels = new ArrayList<WLCToplevel>();
 	private ArrayList<WLCPopup> popups = new ArrayList<WLCPopup>();
+	private ArrayList<X11Window> x11Toplevels = new ArrayList<X11Window>();
 	private ArrayList<WLCSurface> surfaces = new ArrayList<WLCSurface>();
 	private ArrayList<DmabufTexture> dmabufs = new ArrayList<DmabufTexture>();
 	private ArrayList<WindowFramebuffer> framebuffers = new ArrayList<WindowFramebuffer>();
@@ -36,6 +38,7 @@ public class WaylandCraftBridge {
 	public IconSurface dndIcon = null;
 	
 	private LinkedList<WLCToplevel> focusOrder = new LinkedList<WLCToplevel>();
+	private long lastX11DebugLogMs = 0;
 	
 	private ArrayList<WLCToplevel> newToplevels = new ArrayList<WLCToplevel>();
 	
@@ -72,8 +75,25 @@ public class WaylandCraftBridge {
 		}
 	}
 	
-	private WaylandCraftBridge(long handle) {
+	private WaylandCraftBridge(long handle, Backend backend) {
 		this.instance = handle;
+		this.backend = backend;
+	}
+
+	private enum Backend {
+		WAYLAND,
+		X11;
+
+		static Backend fromEnvironment() {
+			String raw = System.getenv("WAYLANDCRAFT_BACKEND");
+			if(raw == null || raw.isBlank()) return WAYLAND;
+
+			return switch(raw.trim().toLowerCase()) {
+				case "x11" -> X11;
+				case "wayland" -> WAYLAND;
+				default -> throw new IllegalArgumentException("Unknown WAYLANDCRAFT_BACKEND: " + raw);
+			};
+		}
 	}
 	
 	public static WaylandCraftBridge start() {
@@ -83,7 +103,17 @@ public class WaylandCraftBridge {
 		}
 		
 		long handle = init(GLFW.Functions.GetProcAddress, eglDisplay);
-		return new WaylandCraftBridge(handle);
+		return new WaylandCraftBridge(handle, Backend.WAYLAND);
+	}
+
+	public static WaylandCraftBridge startX11() {
+		long handle = initX11();
+		return new WaylandCraftBridge(handle, Backend.X11);
+	}
+
+	public static WaylandCraftBridge startSelected() {
+		Backend backend = Backend.fromEnvironment();
+		return backend == Backend.X11 ? startX11() : start();
 	}
 	
 	protected WLCToplevel getOrCreateToplevel(long handle) {
@@ -215,6 +245,12 @@ public class WaylandCraftBridge {
 	}
 	
 	public void update() {
+		if(backend == Backend.X11) {
+			updateX11(this.instance);
+			updateFramebuffers();
+			return;
+		}
+
 		ProfilerFiller profiler = Profiler.get();
 		profiler.push("wayland");
 		
@@ -353,6 +389,9 @@ public class WaylandCraftBridge {
 	
 	private void updateFramebuffers() {
 		List<WLCAbstractWindow> allWindows = Stream.of(toplevels, popups).flatMap((l) -> l.stream()).collect(Collectors.toList());
+		if(backend == Backend.X11) {
+			allWindows.addAll(x11Toplevels);
+		}
 		
 		// Render windows
 		for(WLCAbstractWindow window : allWindows) {
@@ -414,70 +453,179 @@ public class WaylandCraftBridge {
 	}
 	
 	public WLCToplevel[] getToplevels() {
+		if(backend == Backend.X11) return new WLCToplevel[0];
 		return toplevels.toArray(new WLCToplevel[toplevels.size()]);
 	}
 	
 	public WLCToplevel[] getMappedToplevels() {
+		if(backend == Backend.X11) return new WLCToplevel[0];
 		return toplevels.stream().filter((t) -> t.isMapped()).toArray(WLCToplevel[]::new);
 	}
 	
 	public WLCToplevel getToplevel(long handle) {
+		if(backend == Backend.X11) return null;
 		return toplevels.stream().filter((w) -> w.getHandle() == handle).findAny().orElse(null);
 	}
 	
 	public WLCPopup[] getPopups() {
+		if(backend == Backend.X11) return new WLCPopup[0];
 		return popups.toArray(new WLCPopup[popups.size()]);
 	}
 	
 	public WLCPopup[] getMappedPopups() {
+		if(backend == Backend.X11) return new WLCPopup[0];
 		return popups.stream().filter((t) -> t.isMapped()).toArray(WLCPopup[]::new);
 	}
 	
 	public String getSocket() {
+		if(backend == Backend.X11) {
+			return socketX11(this.instance);
+		}
 		return socket(this.instance);
+	}
+
+	public boolean isX11Backend() {
+		return backend == Backend.X11;
+	}
+
+	public long[] getX11Windows() {
+		if(backend != Backend.X11) return new long[0];
+		return x11Windows(this.instance);
+	}
+
+	public @Nullable String getX11WindowTitle(long handle) {
+		if(backend != Backend.X11) return null;
+		return x11WindowTitle(this.instance, handle);
+	}
+
+	public @Nullable String getX11WindowAppID(long handle) {
+		if(backend != Backend.X11) return null;
+		return x11WindowAppID(this.instance, handle);
+	}
+
+	public int[] getX11WindowGeometry(long handle) {
+		if(backend != Backend.X11) return null;
+		return x11WindowGeometry(this.instance, handle);
+	}
+
+	public boolean isX11WindowMapped(long handle) {
+		if(backend != Backend.X11) return false;
+		return x11WindowMapped(this.instance, handle);
+	}
+
+	private X11Window getOrCreateX11Window(long handle) {
+		for(X11Window window : x11Toplevels) {
+			if(window.getHandle() == handle) return window;
+		}
+
+		X11Window window = new X11Window(handle);
+		x11Toplevels.add(window);
+		return window;
+	}
+
+	public X11Window[] syncX11Windows() {
+		if(backend != Backend.X11) return new X11Window[0];
+
+		long[] handles = getX11Windows();
+		int capturedCount = 0;
+		x11Toplevels.removeIf((window) -> {
+			boolean keep = ArrayUtils.contains(handles, window.getHandle());
+			if(!keep) window.takeHandle();
+			return !keep;
+		});
+
+		for(long handle : handles) {
+			X11Window window = getOrCreateX11Window(handle);
+
+			window.title = getX11WindowTitle(handle);
+			window.appID = getX11WindowAppID(handle);
+
+			int[] geom = getX11WindowGeometry(handle);
+			if(geom != null && geom.length >= 4) {
+				window.updateGeometry(geom[0], geom[1], geom[2], geom[3]);
+			}
+
+			long[] capture = x11WindowCapture(this.instance, handle);
+			if(capture != null && capture.length >= 5) {
+				capturedCount++;
+				window.getSurfaceTree().attachShmBuffer(
+					capture[0],
+					(int) capture[2],
+					(int) capture[3],
+					0,
+					(int) capture[4]
+				);
+			}
+			else if(!isX11WindowMapped(handle)) {
+				window.getSurfaceTree().removeBuffer();
+			}
+		}
+
+		long now = System.currentTimeMillis();
+		if(now - lastX11DebugLogMs >= 2000) {
+			String names = x11Toplevels.stream()
+				.map((w) -> w.title != null ? w.title : "<untitled>")
+				.limit(4)
+				.collect(Collectors.joining(", "));
+			WaylandCraft.LOGGER.info("X11 sync: discovered=" + handles.length + ", captured=" + capturedCount + ", windows=[" + names + "]");
+			lastX11DebugLogMs = now;
+		}
+
+		return x11Toplevels.stream().filter(X11Window::isMapped).toArray(X11Window[]::new);
 	}
 	
 	public boolean inputRegionContains(WLCSurface surface, double x, double y) {
+		if(backend == Backend.X11) return false;
 		return checkInputRegion(surface.getHandle(), x, y);
 	}
 	
 	public void sendMotion(double x, double y) {
+		if(backend == Backend.X11) return;
 		pointerMotion(instance, x, y);
 	}
 	
 	public void sendMotionRefocus(WLCSurface surface, double x, double y) {
+		if(backend == Backend.X11) return;
 		pointerMotionFocus(instance, surface.getHandle(), x, y);
 	}
 	
 	public void sendRelativeMotion(double dx, double dy) {
+		if(backend == Backend.X11) return;
 		pointerRelMotion(instance, dx, dy);
 	}
 	
 	public void sendMotionOutside() {
+		if(backend == Backend.X11) return;
 		pointerLeave(instance);
 	}
 	
 	public boolean maybeLockPointer(WLCSurface surface) {
+		if(backend == Backend.X11) return false;
 		return maybePointerLock(instance, surface.getHandle());
 	}
 	
 	public void unlockPointer() {
+		if(backend == Backend.X11) return;
 		pointerUnlock(instance);
 	}
 	
 	public int sendButton(int button, int state) {
+		if(backend == Backend.X11) return 0;
 		return pointerButton(instance, button, state);
 	}
 	
 	public void sendScroll(int axis, double value) {
+		if(backend == Backend.X11) return;
 		pointerAxis(instance, axis, value);
 	}
 	
 	public CursorShape getCursorShape() {
+		if(backend == Backend.X11) return null;
 		return CursorShape.fromId(cursorShape(instance));
 	}
 	
 	public void focusSurface(@Nullable WLCToplevel toplevel) {
+		if(backend == Backend.X11) return;
 		long handle = 0;
 		if(toplevel != null) {
 			handle = toplevel.getHandle();
@@ -493,10 +641,12 @@ public class WaylandCraftBridge {
 	}
 	
 	public void activateKeyboard() {
+		if(backend == Backend.X11) return;
 		keyboardActivate(instance);
 	}
 	
 	public void deactivateKeyboard() {
+		if(backend == Backend.X11) return;
 		keyboardDeactivate(instance);
 	}
 	
@@ -509,25 +659,30 @@ public class WaylandCraftBridge {
 	
 	// Find the most recently focused toplevel that exists
 	public WLCToplevel getMostRecentFocus() {
+		if(backend == Backend.X11) return null;
 		updateFocusOrder();
 		return focusOrder.peekLast();
 	}
 	
 	// Find the most recently focused toplevel that exists
 	public Stream<WLCToplevel> getMostToLeastRecentFocus() {
+		if(backend == Backend.X11) return Stream.empty();
 		updateFocusOrder();
 		return focusOrder.reversed().stream();
 	}
 	
 	public void pressKey(int scancode) {
+		if(backend == Backend.X11) return;
 		keyboardInput(instance, scancode, 1);
 	}
 	
 	public void releaseKey(int scancode) {
+		if(backend == Backend.X11) return;
 		keyboardInput(instance, scancode, 0);
 	}
 	
 	public void internalKeyUpdate(int scancode, boolean pressed) {
+		if(backend == Backend.X11) return;
 		keyboardUpdate(instance, scancode, pressed);
 	}
 	
@@ -566,28 +721,42 @@ public class WaylandCraftBridge {
 	}
 	
 	public void resizeOutput(int width, int height) {
+		if(backend == Backend.X11) return;
 		outputResize(instance, width, height);
 	}
 	
 	public void setOutputBounds(int width, int height) {
+		if(backend == Backend.X11) return;
 		outputSetBounds(instance, width, height);
 	}
 	
 	public Size getOutputSize() {
+		if(backend == Backend.X11) {
+			int width = net.minecraft.client.Minecraft.getInstance().getWindow().getWidth();
+			int height = net.minecraft.client.Minecraft.getInstance().getWindow().getHeight();
+			return new Size(width, height);
+		}
 		int[] size = outputSize(instance);
 		return new Size(size[0], size[1]);
 	}
 	
 	public Size getOutputBounds() {
+		if(backend == Backend.X11) {
+			int width = net.minecraft.client.Minecraft.getInstance().getWindow().getWidth();
+			int height = net.minecraft.client.Minecraft.getInstance().getWindow().getHeight();
+			return new Size(width, height);
+		}
 		int[] size = outputBounds(instance);
 		return new Size(size[0], size[1]);
 	}
 	
 	public RawDesktopEntry loadDesktopEntry(File path) {
+		if(backend == Backend.X11) return loadDesktopEntryX11(instance, path.getAbsolutePath());
 		return loadDesktopEntry(instance, path.getAbsolutePath());
 	}
-	
+
 	public RawDesktopEntry[] loadSystemDesktopEntries() {
+		if(backend == Backend.X11) return loadDesktopEntriesX11(instance);
 		return loadDesktopEntries(instance);
 	}
 	
@@ -596,18 +765,22 @@ public class WaylandCraftBridge {
 	}
 	
 	public boolean execApp(String appId) {
+		if(backend == Backend.X11) return execAppX11(instance, appId);
 		return execApp(instance, appId);
 	}
 	
 	public void setKeymapDefault() {
+		if(backend == Backend.X11) return;
 		setKeymapDefault(instance);
 	}
 	
 	public String exportKeymap() {
+		if(backend == Backend.X11) return "";
 		return exportKeymap(instance);
 	}
 	
 	public boolean setKeymapFromStr(String keymap) {
+		if(backend == Backend.X11) return true;
 		return setKeymapFromStr(instance, keymap);
 	}
 	
@@ -635,8 +808,17 @@ public class WaylandCraftBridge {
 	public static record ResizeRequest(int serial, int edges) {}
 	
 	private static native long init(long glfwGetProcAddress, long eglDisplay);
+	private static native long initX11();
 	private static native void update(long instance);
+	private static native void updateX11(long instance);
 	private static native String socket(long instance);
+	private static native String socketX11(long instance);
+	private static native long[] x11Windows(long instance);
+	private static native String x11WindowTitle(long instance, long handle);
+	private static native String x11WindowAppID(long instance, long handle);
+	private static native int[] x11WindowGeometry(long instance, long handle);
+	private static native boolean x11WindowMapped(long instance, long handle);
+	private static native long[] x11WindowCapture(long instance, long handle);
 	private static native void sendFrame(long handle);
 	
 	private static native void updateSurfaceData(long instance, WLCSurface surface);
@@ -748,10 +930,13 @@ public class WaylandCraftBridge {
 	
 	private static native RawDesktopEntry loadDesktopEntry(long instance, String path);
 	private static native RawDesktopEntry[] loadDesktopEntries(long instance);
-	
+	private static native RawDesktopEntry loadDesktopEntryX11(long instance, String path);
+	private static native RawDesktopEntry[] loadDesktopEntriesX11(long instance);
+
 	private static native boolean renderSVG(String path, int width, int height, long ptr);
-	
+
 	private static native boolean execApp(long instance, String appId);
+	private static native boolean execAppX11(long instance, String appId);
 	
 	private static native void setKeymapDefault(long instance);
 	private static native String exportKeymap(long instance);

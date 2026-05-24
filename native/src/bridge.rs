@@ -3,6 +3,7 @@
 use crate::egl::{EGLDisplay, EGLHelper};
 use crate::svg::render_svg;
 use crate::utils::get_time;
+use crate::x11::X11Craft;
 use crate::xdg_spec::RawDesktopEntry;
 use crate::{WaylandCraft, wlc_init};
 use jni::{
@@ -47,6 +48,7 @@ use smithay::{
 };
 use std::ops::DerefMut;
 use std::path::PathBuf;
+use x11rb::protocol::xproto::Window as X11WindowHandle;
 
 #[allow(clippy::vec_box)]
 pub(crate) struct BridgeState {
@@ -70,6 +72,11 @@ impl BridgeState {
 
 fn jptr_to_instance(ptr: jlong) -> &'static mut WaylandCraft<'static> {
     let ptr: *mut WaylandCraft = (ptr as usize) as *mut WaylandCraft;
+    unsafe { &mut *ptr }
+}
+
+fn jptr_to_x11(ptr: jlong) -> &'static mut X11Craft {
+    let ptr: *mut X11Craft = (ptr as usize) as *mut X11Craft;
     unsafe { &mut *ptr }
 }
 
@@ -100,6 +107,27 @@ pub extern "system" fn init<'l>(
 }
 
 #[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    initX11")]
+pub extern "system" fn initX11<'l>(mut env: JNIEnv<'l>, _class: JClass<'l>) -> jlong {
+    let display = std::env::var("WAYLANDCRAFT_X11_DISPLAY")
+        .unwrap_or_else(|_| ":2".to_string());
+
+    let instance = match X11Craft::init(display) {
+        Ok(i) => i,
+        Err(err) => {
+            let _ =
+                env.throw_new("java/lang/RuntimeException", err.to_string());
+            return 0;
+        }
+    };
+
+    let instance_box: Box<X11Craft> = Box::new(instance);
+    let ptr: *mut X11Craft = Box::into_raw(instance_box);
+    let addr: u64 = ptr.addr() as u64;
+    addr as i64
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
     update")]
 pub extern "system" fn update<'l>(
     _env: JNIEnv<'l>,
@@ -107,6 +135,17 @@ pub extern "system" fn update<'l>(
     ptr: jlong,
 ) {
     let instance = jptr_to_instance(ptr);
+    instance.update();
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    updateX11")]
+pub extern "system" fn updateX11<'l>(
+    _env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+) {
+    let instance = jptr_to_x11(ptr);
     instance.update();
 }
 
@@ -120,6 +159,154 @@ pub extern "system" fn socket<'l>(
     let instance = jptr_to_instance(ptr);
     let socket = instance.state.socket.to_str().unwrap();
     env.new_string(socket).unwrap().into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    socketX11")]
+pub extern "system" fn socketX11<'l>(
+    env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+) -> jstring {
+    let instance = jptr_to_x11(ptr);
+    env.new_string(&instance.display).unwrap().into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    x11Windows")]
+pub extern "system" fn x11Windows<'l>(
+    env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+) -> jarray {
+    let instance = jptr_to_x11(ptr);
+    let windows: Vec<jlong> = instance
+        .mapped_windows()
+        .into_iter()
+        .map(|w| w as jlong)
+        .collect();
+
+    let array = env.new_long_array(windows.len() as jsize).unwrap();
+    env.set_long_array_region(&array, 0, &windows).unwrap();
+    array.into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    x11WindowTitle")]
+pub extern "system" fn x11WindowTitle<'l>(
+    env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+    handle: jlong,
+) -> jstring {
+    let instance = jptr_to_x11(ptr);
+    let handle = handle as X11WindowHandle;
+
+    let Some(window) = instance.get_window(handle) else {
+        return std::ptr::null_mut();
+    };
+
+    let Some(title) = window.title.as_ref() else {
+        return std::ptr::null_mut();
+    };
+
+    env.new_string(title).unwrap().into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    x11WindowAppID")]
+pub extern "system" fn x11WindowAppID<'l>(
+    env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+    handle: jlong,
+) -> jstring {
+    let instance = jptr_to_x11(ptr);
+    let handle = handle as X11WindowHandle;
+
+    let Some(window) = instance.get_window(handle) else {
+        return std::ptr::null_mut();
+    };
+
+    let Some(app_id) = window.app_id.as_ref() else {
+        return std::ptr::null_mut();
+    };
+
+    env.new_string(app_id).unwrap().into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    x11WindowGeometry")]
+pub extern "system" fn x11WindowGeometry<'l>(
+    env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+    handle: jlong,
+) -> jarray {
+    let instance = jptr_to_x11(ptr);
+    let handle = handle as X11WindowHandle;
+
+    let Some(window) = instance.get_window(handle) else {
+        return std::ptr::null_mut();
+    };
+
+    let data: [jint; 4] = [
+        window.x as jint,
+        window.y as jint,
+        window.width as jint,
+        window.height as jint,
+    ];
+
+    let array = env.new_int_array(4).unwrap();
+    env.set_int_array_region(&array, 0, &data).unwrap();
+    array.into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    x11WindowMapped")]
+pub extern "system" fn x11WindowMapped<'l>(
+    _env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+    handle: jlong,
+) -> jboolean {
+    let instance = jptr_to_x11(ptr);
+    let handle = handle as X11WindowHandle;
+
+    instance
+        .get_window(handle)
+        .map(|w| if w.mapped { JNI_TRUE } else { 0 })
+        .unwrap_or(0)
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    x11WindowCapture")]
+pub extern "system" fn x11WindowCapture<'l>(
+    env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+    handle: jlong,
+) -> jarray {
+    let instance = jptr_to_x11(ptr);
+    let handle = handle as X11WindowHandle;
+
+    let Some((data_ptr, len, width, height, stride)) =
+        instance.capture_window(handle)
+    else {
+        return std::ptr::null_mut();
+    };
+
+    let out: [jlong; 5] = [
+        data_ptr as jlong,
+        len as jlong,
+        width as jlong,
+        height as jlong,
+        stride as jlong,
+    ];
+
+    let array = env.new_long_array(out.len() as jsize).unwrap();
+    env.set_long_array_region(&array, 0, &out).unwrap();
+    array.into_raw()
 }
 
 #[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
@@ -1710,6 +1897,74 @@ pub extern "system" fn loadDesktopEntries<'l>(
     }
 
     array.into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    loadDesktopEntryX11")]
+pub extern "system" fn loadDesktopEntryX11<'l>(
+    mut env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+    jpath: JString<'l>,
+) -> jobject {
+    let instance = jptr_to_x11(ptr);
+    let path: String =
+        unsafe { env.get_string_unchecked(&jpath).unwrap() }.into();
+    let path: PathBuf = path.into();
+    let entry = match instance.xdg.load_entry(path) {
+        Some(e) => e,
+        None => return std::ptr::null_mut(),
+    };
+
+    raw_desktop_entry_to_java(&mut env, &entry).into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    loadDesktopEntriesX11")]
+pub extern "system" fn loadDesktopEntriesX11<'l>(
+    mut env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+) -> jarray {
+    let instance = jptr_to_x11(ptr);
+    let entries = instance.xdg.get_raw_entries();
+    let entries: Vec<JObject<'l>> = entries
+        .iter()
+        .map(|e| raw_desktop_entry_to_java(&mut env, e))
+        .collect();
+
+    let array = env
+        .new_object_array(
+            entries.len() as jsize,
+            RawDesktopEntry_class,
+            JObject::null(),
+        )
+        .unwrap();
+
+    for (i, ent) in entries.iter().enumerate() {
+        env.set_object_array_element(&array, i as jsize, ent)
+            .unwrap();
+    }
+
+    array.into_raw()
+}
+
+#[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
+    execAppX11")]
+pub extern "system" fn execAppX11<'l>(
+    env: JNIEnv<'l>,
+    _class: JClass<'l>,
+    ptr: jlong,
+    app_id: JString<'l>,
+) -> jboolean {
+    let instance = jptr_to_x11(ptr);
+    let app_id: String =
+        unsafe { env.get_string_unchecked(&app_id).unwrap() }.into();
+
+    let env_vars = vec![
+        ("DISPLAY".into(), instance.display.clone().into()),
+    ];
+    instance.xdg.exec_app(app_id, env_vars) as jboolean
 }
 
 #[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
