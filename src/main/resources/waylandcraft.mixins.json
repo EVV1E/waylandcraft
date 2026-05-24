@@ -17,7 +17,8 @@
 		"IGlTextureMixin",
 		"IGuiGraphicsExtractor",
 		"FramerateLimitTrackerMixin",
-		"TitleScreenMixin"
+		"TitleScreenMixin",
+		"PauseScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
