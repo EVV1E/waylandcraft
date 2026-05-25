@@ -179,7 +179,7 @@ impl WLCSeatState {
     }
 
     pub fn create_globals(&self, disp: &DisplayHandle) {
-        disp.create_global::<WLCState, WlSeat, ()>(10, ());
+        disp.create_global::<WLCState, WlSeat, ()>(8, ());
         disp.create_global::<WLCState, ZwpRelativePointerManagerV1, ()>(1, ());
         disp.create_global::<WLCState, ZwpPointerConstraintsV1, ()>(1, ());
         disp.create_global::<WLCState, WpCursorShapeManagerV1, ()>(2, ());
@@ -649,7 +649,7 @@ impl Dispatch<WlSeat, ()> for WLCState {
                     keymap.size() as u32,
                 );
 
-                keyboard.repeat_info(25, 200);
+                keyboard.repeat_info(25, 600);
             }
             _ => {
                 seat_resource.post_error(
