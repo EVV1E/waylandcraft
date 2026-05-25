@@ -597,7 +597,9 @@ impl GlobalDispatch<WlSeat, ()> for WLCState {
         data_init: &mut DataInit<'_, Self>,
     ) {
         let seat: WlSeat = data_init.init(resource, ());
-        seat.name("waylandcraft-seat".into());
+        if seat.version() >= wl_seat::EVT_NAME_SINCE {
+            seat.name("waylandcraft-seat".into());
+        }
 
         let mut caps: wl_seat::Capability = wl_seat::Capability::empty();
         caps.insert(wl_seat::Capability::Pointer);
@@ -649,7 +651,9 @@ impl Dispatch<WlSeat, ()> for WLCState {
                     keymap.size() as u32,
                 );
 
-                keyboard.repeat_info(25, 600);
+                if keyboard.version() >= wl_keyboard::EVT_REPEAT_INFO_SINCE {
+                    keyboard.repeat_info(25, 600);
+                }
             }
             _ => {
                 seat_resource.post_error(
