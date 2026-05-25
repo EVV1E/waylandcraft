@@ -25,7 +25,7 @@ public abstract class BufferTexture {
 	public final int width;
 	public final int height;
 	public final int format;
-	public final GpuTextureView textureView;
+	public GpuTextureView textureView;
 	
 	public BufferTexture(int width, int height, int format) {
 		this.width = width;
@@ -38,6 +38,7 @@ public abstract class BufferTexture {
 	
 	public void release() {
 		GlStateManager._deleteTexture(id);
+		textureView = null;
 	}
 	
 	public static class ShmBufferTexture extends BufferTexture {
@@ -146,11 +147,12 @@ public abstract class BufferTexture {
 		}
 		
 		public void free() {
+			super.release();
+			
 			long eglDestroyImage = GLFW.glfwGetProcAddress("eglDestroyImage");
 			long display = GLFWNativeEGL.glfwGetEGLDisplay();
 			
 			JNI.invokePPI(display, this.eglImage, eglDestroyImage);
-			super.release();
 		}
 		
 	}

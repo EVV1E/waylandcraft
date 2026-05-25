@@ -169,19 +169,6 @@ public class WaylandCraftBridge {
 		this.popups = popups_new;
 	}
 	
-	private void deleteNonExistingDmabufs(long[] remainingHandles) {
-		ArrayList<DmabufTexture> dmabufs_new = new ArrayList<DmabufTexture>();
-		for(DmabufTexture dmabuf : this.dmabufs) {
-			if(ArrayUtils.contains(remainingHandles, dmabuf.handle)) {
-				dmabufs_new.add(dmabuf);
-			}
-			else {
-				dmabuf.free();
-			}
-		}
-		this.dmabufs = dmabufs_new;
-	}
-	
 	private void deleteUnvisitedSurfaces() {
 		ArrayList<WLCSurface> surfaces_new = new ArrayList<WLCSurface>();
 		for(WLCSurface surface : this.surfaces) {
@@ -339,7 +326,7 @@ public class WaylandCraftBridge {
 		updateFramebuffers();
 		profiler.pop();
 		
-		deleteNonExistingDmabufs(dmabufs(instance));
+		freeUnusedDmabufs();
 		
 		updateFocusOrder();
 		
@@ -349,6 +336,25 @@ public class WaylandCraftBridge {
 		}
 		
 		profiler.pop();
+	}
+	
+	private void freeUnusedDmabufs() {
+		ArrayList<DmabufTexture> unusedDmabufs = new ArrayList<>();
+		for(DmabufTexture dmabuf : dmabufs) {
+			boolean used = false;
+			for(WLCSurface surface : surfaces) {
+				if(surface.getBuffer() == dmabuf) {
+					used = true;
+					break;
+				}
+			}
+			if(!used) unusedDmabufs.add(dmabuf);
+		}
+		dmabufs.removeAll(unusedDmabufs);
+		for(DmabufTexture dmabuf : unusedDmabufs) {
+			dmabuf.free();
+			deleteDmabuf(instance, dmabuf.handle);
+		}
 	}
 	
 	private void updateFramebuffers() {
@@ -686,7 +692,8 @@ public class WaylandCraftBridge {
 	// Returns four-element array containing x,y,width,height which could be null
 	private static native int[] surfaceXDGGeometry(long handle);
 	
-	private static native long[] dmabufs(long instance);
+	// Release a dmabuf wl_buffer
+	private static native void deleteDmabuf(long instance, long handle);
 	
 	// Updates the surface tree given by the root surface
 	// This changes the doubly linked list of the WLCSurfaces.

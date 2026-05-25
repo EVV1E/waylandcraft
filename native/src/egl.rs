@@ -22,6 +22,7 @@ pub const EGL_TRUE: EGLBoolean = 1;
 pub const EGL_FALSE: EGLBoolean = 0;
 pub const EGL_NONE: EGLAttrib = 0x3038;
 pub const EGL_NO_CONTEXT: EGLContext = std::ptr::null_mut();
+pub const EGL_NO_IMAGE: EGLImage = std::ptr::null_mut();
 pub const EGL_WIDTH: EGLAttrib = 0x3057;
 pub const EGL_HEIGHT: EGLAttrib = 0x3056;
 pub const EGL_LINUX_DMA_BUF_EXT: EGLAttrib = 0x3270;
@@ -127,11 +128,12 @@ impl EGLHelper {
     pub fn get_render_node(&self) -> Result<DrmNode, ()> {
         let mut dev_ret: EGLAttrib = 0;
 
-        if(self.eglQueryDisplayAttribEXT)(
+        if (self.eglQueryDisplayAttribEXT)(
             self.display,
             EGL_DEVICE_EXT,
             &mut dev_ret,
-        ) != EGL_TRUE {
+        ) != EGL_TRUE
+        {
             eprintln!(
                 "Failed to query EGL_DEVICE_EXT! Error: {:x}",
                 (self.eglGetError)(),
@@ -183,7 +185,7 @@ impl EGLHelper {
         Ok(drm_device)
     }
 
-    pub fn dmabuf_to_image(&self, dmabuf: &Dmabuf) -> EGLImage {
+    pub fn dmabuf_to_image(&self, dmabuf: &Dmabuf) -> Result<EGLImage, ()> {
         let mut attribs: Vec<EGLAttrib> = vec![];
         macro_rules! pair {
             ($a:expr, $v:expr) => {
@@ -248,13 +250,18 @@ impl EGLHelper {
 
         attribs.push(EGL_NONE);
 
-        (self.eglCreateImage)(
+        let result = (self.eglCreateImage)(
             self.display,
             EGL_NO_CONTEXT,
             EGL_LINUX_DMA_BUF_EXT as EGLenum,
             std::ptr::null_mut(),
             attribs.as_ptr(),
-        )
+        );
+
+        match result {
+            EGL_NO_IMAGE => Err(()),
+            image => Ok(image),
+        }
     }
 
     pub fn query_dmabuf_formats(&self) -> Vec<Format> {

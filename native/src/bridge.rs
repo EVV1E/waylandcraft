@@ -15,7 +15,7 @@ use jni::{
     },
 };
 use smithay::{
-    backend::allocator::{Buffer, dmabuf::WeakDmabuf},
+    backend::allocator::{Buffer, dmabuf::Dmabuf},
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
         wayland_server::{
@@ -54,7 +54,7 @@ pub(crate) struct BridgeState {
     toplevels: Vec<Box<ToplevelSurface>>,
     popups: Vec<Box<PopupSurface>>,
     surfaces: Vec<Box<WlSurface>>,
-    dmabufs: Vec<Box<WeakDmabuf>>,
+    dmabufs: Vec<Box<Dmabuf>>,
 }
 
 impl BridgeState {
@@ -432,13 +432,8 @@ enum BufferAttachResult {
     NotManaged,
 }
 
-impl BufferAttachResult {
-    fn not_managed(&self) -> bool {
-        matches!(self, Self::NotManaged)
-    }
-}
-
 fn try_attach_shm(
+    _instance: &mut WaylandCraft,
     env: &mut JNIEnv,
     obj: &JObject,
     buf: &WlBuffer,
@@ -480,6 +475,7 @@ fn try_attach_shm(
 }
 
 fn try_attach_single_pixel(
+    _instance: &mut WaylandCraft,
     env: &mut JNIEnv,
     obj: &JObject,
     buf: &WlBuffer,
@@ -530,8 +526,9 @@ fn try_attach_dmabuf(
     let height = dmabuf.height() as jint;
     ensure_viewport_valid(surf_data, Size::new(width, height));
 
-    let weak = dmabuf.weak();
-    let handle = insert_get_handle(&mut instance.bridge.dmabufs, &weak);
+    // This insert clones the dmabuf reference counter and as such ensures
+    // that a strong reference to the dmabuf is kept.
+    let handle = insert_get_handle(&mut instance.bridge.dmabufs, &dmabuf);
 
     let already_attached = unsafe {
         env.call_method_unchecked(
@@ -549,7 +546,11 @@ fn try_attach_dmabuf(
         return BufferAttachResult::Success;
     }
 
-    let image = instance.egl.dmabuf_to_image(dmabuf);
+    let image = match instance.egl.dmabuf_to_image(dmabuf) {
+        Ok(img) => img,
+        Err(_) => return BufferAttachResult::Error,
+    };
+
     unsafe {
         env.call_method_unchecked(
             obj,
@@ -570,20 +571,60 @@ fn try_attach_dmabuf(
     BufferAttachResult::Success
 }
 
+fn jptr_to_dmabuf(ptr: jlong) -> Option<&'static Dmabuf> {
+    if ptr == 0 {
+        return None;
+    }
+    let ptr: *mut Dmabuf = (ptr as usize) as *mut Dmabuf;
+    let r = unsafe { &mut *ptr };
+    Some(r)
+}
+
 #[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
-    dmabufs")]
-pub extern "system" fn dmabufs<'l>(
-    env: JNIEnv<'l>,
+    deleteDmabuf")]
+pub extern "system" fn delete_dmabuf<'l>(
+    _env: JNIEnv<'l>,
     _class: JClass<'l>,
     ptr: jlong,
-) -> jarray {
+    handle: jlong,
+) {
     let instance = jptr_to_instance(ptr);
-    instance.bridge.dmabufs.retain(|d| !d.is_gone());
+    let dmabuf = match jptr_to_dmabuf(handle) {
+        Some(d) => d,
+        None => return,
+    };
 
-    let dmabufs = get_all_handles(&mut instance.bridge.dmabufs);
-    let array = env.new_long_array(dmabufs.len() as jsize).unwrap();
-    env.set_long_array_region(&array, 0, &dmabufs).unwrap();
-    array.into_raw()
+    instance.bridge.dmabufs.retain(|d| **d != *dmabuf);
+}
+
+// Proxy to call the try_attach_* family of functions
+fn try_attach_buffer(
+    instance: &mut WaylandCraft,
+    env: &mut JNIEnv,
+    obj: &JObject,
+    buf: &WlBuffer,
+    surf_data: &SurfaceData,
+) -> Result<(), ()> {
+    type TryAttachFn = fn(
+        instance: &mut WaylandCraft,
+        env: &mut JNIEnv,
+        obj: &JObject,
+        buf: &WlBuffer,
+        surf_data: &SurfaceData,
+    ) -> BufferAttachResult;
+
+    let funcs: [TryAttachFn; 3] =
+        [try_attach_shm, try_attach_single_pixel, try_attach_dmabuf];
+    for func in funcs {
+        let result = func(instance, env, obj, buf, surf_data);
+        match result {
+            BufferAttachResult::NotManaged => continue,
+            BufferAttachResult::Success => return Ok(()),
+            BufferAttachResult::Error => return Err(()),
+        }
+    }
+
+    unreachable!("Buffer did not match any attachment mechanism!")
 }
 
 #[unsafe(export_name = "Java_dev_evvie_waylandcraft_bridge_WaylandCraftBridge_\
@@ -614,7 +655,7 @@ pub extern "system" fn updateSurfaceData<'l>(
         let mut attr_guard = data.cached_state.get::<SurfaceAttributes>();
         let attr = attr_guard.deref_mut().current();
 
-        let (maybe_buf, remove_buf) = if let Some(assign) = &attr.buffer {
+        let (maybe_buf, mut remove_buf) = if let Some(assign) = &attr.buffer {
             match assign {
                 BufferAssignment::NewBuffer(b) => (Some(b), false),
                 BufferAssignment::Removed => (None, true),
@@ -624,20 +665,11 @@ pub extern "system" fn updateSurfaceData<'l>(
         };
 
         if let Some(buf) = maybe_buf {
-            // First try shm
-            let mut r = try_attach_shm(&mut env, &obj, buf, data);
-
-            // If not managed by shm, try single pixel
-            if r.not_managed() {
-                r = try_attach_single_pixel(&mut env, &obj, buf, data);
+            let r = try_attach_buffer(instance, &mut env, &obj, buf, data);
+            if r.is_err() {
+                eprintln!("Buffer attach failed!");
+                remove_buf = true;
             }
-
-            // If not managed by single pixel, try dmabuf
-            if r.not_managed() {
-                r = try_attach_dmabuf(instance, &mut env, &obj, buf, data);
-            }
-
-            let _ = r;
 
             // Done with buffer attachment
             buf.release();
@@ -1748,7 +1780,7 @@ pub extern "system" fn execApp<'l>(
         ("WAYLAND_DISPLAY".into(), instance.state.socket.clone()),
         ("QT_QPA_PLATFORM".into(), "wayland".into()),
         ("ELECTRON_OZONE_PLATFORM_HINT".into(), "auto".into()),
-        ("GDK_BACKEND".into(), "wayland".into())
+        ("GDK_BACKEND".into(), "wayland".into()),
     ];
     instance.xdg.exec_app(app_id, env_vars) as jboolean
 }
