@@ -49,6 +49,18 @@ public class RenderUtils {
 			.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
 			.build();
 	
+	private static final RenderPipeline WINDOW_CUTOUT_ANTIALIASING_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_cutout"))
+			.withShaderDefine("ALPHA_CUTOUT")
+			.withShaderDefine("RGSS")
+			.build();
+	
+	private static final RenderPipeline WINDOW_TRANSLUCENT_ANTIALIASING_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_translucent"))
+			.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+			.withShaderDefine("RGSS")
+			.build();
+	
 	private static final RenderPipeline WINDOW_CUTOUT_BACKGROUND_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
 			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_cutout_background"))
 			.withShaderDefine("ALPHA_CUTOUT")
@@ -78,6 +90,24 @@ public class RenderUtils {
 					.withTexture("Sampler0", identifier, WINDOW_SAMPLER)
 					.createRenderSetup();
 			return RenderType.create("window_translucent", setup);
+		}
+	);
+	
+	public static final Function<Identifier, RenderType> WINDOW_CUTOUT_ANTIALIAS = Util.memoize(
+		(identifier) -> {
+			RenderSetup setup = RenderSetup.builder(WINDOW_CUTOUT_ANTIALIASING_PIPELINE)
+					.withTexture("Sampler0", identifier, WINDOW_SAMPLER)
+					.createRenderSetup();
+			return RenderType.create("window_cutout_antialias", setup);
+		}
+	);
+	
+	public static final Function<Identifier, RenderType> WINDOW_TRANSLUCENT_ANTIALIAS = Util.memoize(
+		(identifier) -> {
+			RenderSetup setup = RenderSetup.builder(WINDOW_TRANSLUCENT_ANTIALIASING_PIPELINE)
+					.withTexture("Sampler0", identifier, WINDOW_SAMPLER)
+					.createRenderSetup();
+			return RenderType.create("window_translucent_antialias", setup);
 		}
 	);
 	
@@ -114,7 +144,8 @@ public class RenderUtils {
 		Function<Identifier, RenderType> renderType;
 		
 		// Front quad
-		renderType = cutout ? WINDOW_CUTOUT : WINDOW_TRANSLUCENT;
+		if(WaylandCraft.instance.settings.getAntialiasing()) renderType = cutout ? WINDOW_CUTOUT_ANTIALIAS : WINDOW_TRANSLUCENT_ANTIALIAS;
+		else renderType = cutout ? WINDOW_CUTOUT : WINDOW_TRANSLUCENT;
 		collector.submitCustomGeometry(poseStack, renderType.apply(framebuffer.getTextureLocation()), new FramebufferRenderInstance(tl, bl, br, tr, false));
 		
 		// Back quad

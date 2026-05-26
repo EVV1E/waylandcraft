@@ -19,11 +19,16 @@ public class WaylandCraftSettings {
 	 */
 	
 	int pixelsPerBlock = 500;
+	boolean windowAntialiasing = false;
 	
 	/* This is where the getters go */
 	
 	public int getPixelsPerBlock() {
 		return pixelsPerBlock;
+	}
+	
+	public boolean getAntialiasing() {
+		return windowAntialiasing;
 	}
 	
 	/* Methods to modifiy settings by name */

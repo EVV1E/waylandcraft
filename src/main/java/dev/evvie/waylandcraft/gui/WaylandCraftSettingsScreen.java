@@ -70,6 +70,7 @@ public class WaylandCraftSettingsScreen extends Screen {
 		settingsWidgets.clear();
 		
 		createIntSettingsWidget("pixelsPerBlock", Component.literal("Window display pixels per block"));
+		createBooleanSettingsWidget("windowAntialiasing", Component.literal("Window in world antialiasing"));
 	}
 	
 }
