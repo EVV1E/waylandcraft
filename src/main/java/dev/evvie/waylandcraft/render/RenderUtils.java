@@ -60,9 +60,9 @@ public class RenderUtils {
 			.withShaderDefine("NO_COLOR")
 			.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
 			.build();
-
+	
 	public static final Supplier<GpuSampler> WINDOW_SAMPLER = () -> RenderSystem.getSamplerCache().getSampler(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE, FilterMode.LINEAR, FilterMode.NEAREST, false);
-
+	
 	public static final Function<Identifier, RenderType> WINDOW_CUTOUT = Util.memoize(
 		(identifier) -> {
 			RenderSetup setup = RenderSetup.builder(WINDOW_CUTOUT_PIPELINE)
