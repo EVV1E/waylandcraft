@@ -141,4 +141,14 @@ public class WaylandCraftSettingsManager {
 		writeSettings();
 	}
 	
+	// Get an int setting
+	public int getIntSetting(String name) {
+		return wlc.settings.getIntSetting(name);
+	}
+	
+	// Set a boolean setting
+	public boolean getBooleanSetting(String name) {
+		return wlc.settings.getBooleanSetting(name);
+	}
+	
 }

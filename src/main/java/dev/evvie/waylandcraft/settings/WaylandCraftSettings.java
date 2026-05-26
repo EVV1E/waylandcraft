@@ -19,16 +19,11 @@ public class WaylandCraftSettings {
 	 */
 	
 	int pixelsPerBlock = 500;
-	boolean test = false;
 	
 	/* This is where the getters go */
 	
 	public int getPixelsPerBlock() {
 		return pixelsPerBlock;
-	}
-	
-	public boolean getTest() {
-		return test;
 	}
 	
 	/* Methods to modifiy settings by name */
@@ -54,7 +49,7 @@ public class WaylandCraftSettings {
 	}
 	
 	// Get int setting. Returns null only when setting was not found.
-	public @Nullable Integer getIntSetting(String name) {
+	protected @Nullable Integer getIntSetting(String name) {
 		try {
 			Field field = WaylandCraftSettings.class.getDeclaredField(name);
 			return field.getInt(this);
@@ -66,7 +61,7 @@ public class WaylandCraftSettings {
 	}
 	
 	// Get boolean setting. Returns null only when setting was not found.
-	public @Nullable Boolean getBooleanSetting(String name) {
+	protected @Nullable Boolean getBooleanSetting(String name) {
 		try {
 			Field field = WaylandCraftSettings.class.getDeclaredField(name);
 			return field.getBoolean(this);
