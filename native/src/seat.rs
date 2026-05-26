@@ -286,7 +286,7 @@ impl WLCSeatState {
 
     // Emit relative movement on the surface with active pointer focus
     pub fn pointer_relative_motion(&self, dx: f64, dy: f64) {
-        self.for_all_pointers(|_pointer, data| {
+        self.for_all_pointers(|pointer, data| {
             if data.focus.is_none() {
                 return;
             }
@@ -301,6 +301,7 @@ impl WLCSeatState {
                     dy,                         // dy_unaccel
                 );
             }
+            self.pointer_frame(pointer);
         });
     }
 
