@@ -11,7 +11,12 @@ import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class WindowDisplay {
@@ -203,6 +208,27 @@ public class WindowDisplay {
 	
 	public void anchorToEntity(Entity entity) {
 		anchorToPosView(WaylandCraftUtils.getPosition(entity), WaylandCraftUtils.getLookVector(entity), WaylandCraftUtils.getUpVector(entity));
+	}
+	
+	public boolean trySnapWorld(Vec3 pos, Vec3 view, float yRot) {
+		BlockHitResult hitResult = Minecraft.getInstance().level.clip(new ClipContext(pos, pos.add(view.scale(10.0)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, Minecraft.getInstance().player));
+		if(hitResult.getType() != HitResult.Type.BLOCK) return false;
+		
+		Direction blockNormal = hitResult.getDirection();
+		Direction viewDirection = Direction.fromYRot(yRot);
+		
+		Direction downDirection = Direction.DOWN;
+		if(blockNormal.equals(Direction.UP)) {
+			downDirection = viewDirection.getOpposite();
+		}
+		else if(blockNormal.equals(Direction.DOWN)) {
+			downDirection = viewDirection;
+		}
+		
+		this.rotate(blockNormal.getUnitVec3(), downDirection.getUnitVec3());
+		this.pivot = hitResult.getLocation().add(blockNormal.getUnitVec3().scale(0.01));
+		
+		return true;
 	}
 	
 	public static class DisplayHitResult {

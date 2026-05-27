@@ -69,10 +69,10 @@ public class PointerGrabMap {
 		exclusiveGrab = grab;
 	}
 	
-	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up) {
+	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up, float yRot, float xRot) {
 		if(exclusiveGrab != null) {
 			try {
-				exclusiveGrab.moveWorld(pos, view, up);
+				exclusiveGrab.moveWorld(pos, view, up, yRot, xRot);
 			} catch(GrabDroppedException e) {
 				exclusiveGrab = null;
 			}

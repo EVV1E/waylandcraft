@@ -26,7 +26,7 @@ public class DNDGrab extends PointerGrab {
 	}
 	
 	@Override
-	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up) throws GrabDroppedException {
+	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up, float yRot, float xRot) throws GrabDroppedException {
 	}
 	
 	@Override

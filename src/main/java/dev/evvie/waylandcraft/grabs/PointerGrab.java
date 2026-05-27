@@ -28,7 +28,7 @@ public abstract class PointerGrab {
 	public abstract void release(boolean force) throws GrabDroppedException;
 	
 	// Called every time the pointer is moved in the world. Arguments are world position, view vector and view up vector
-	public abstract void moveWorld(Vec3 pos, Vec3 view, Vec3 up) throws GrabDroppedException;
+	public abstract void moveWorld(Vec3 pos, Vec3 view, Vec3 up, float yRot, float xRot) throws GrabDroppedException;
 	
 	// Called every time the pointer is moved over a window, coordinates relative to given (sub-)surface
 	public void hover(WLCAbstractWindow window, WLCSurface surface, double x, double y) throws GrabDroppedException {}

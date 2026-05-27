@@ -202,7 +202,12 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 					if(!playerWasUsingWindowItem) {
 						display.anchorDistance = 2.0;
 					}
-					display.anchorToCamera(camera);
+					
+					boolean modDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_ALT);
+					if(!(modDown && display.trySnapWorld(camera.position(), new Vec3(camera.forwardVector()), camera.yRot()))) {
+						display.anchorToCamera(camera);
+					}
+					
 					WaylandCraft.instance.bridge.focusSurface(toplevel);
 				}
 			}
@@ -444,7 +449,7 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 			this.overridePickBlock = true;
 			this.cursorShape = bridge.getCursorShape();
 			
-			pointerGrabs.moveWorld(pos, look, up);
+			pointerGrabs.moveWorld(pos, look, up, camera.yRot(), camera.xRot());
 			if(finalHitResult != null) {
 				pointerGrabs.hover(finalHitResult.target.window, finalHitResult.surface, finalHitResult.surfaceLocalRelative.x, finalHitResult.surfaceLocalRelative.y);
 			}

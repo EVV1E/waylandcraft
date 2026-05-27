@@ -42,7 +42,7 @@ public class ResizeGrab extends PointerGrab {
 	}
 	
 	@Override
-	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up) throws GrabDroppedException {
+	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up, float yRot, float xRot) throws GrabDroppedException {
 		if(!window.isValid()) this.drop();
 		
 		DisplayHitResult hitResult = window.intersect(pos, view);

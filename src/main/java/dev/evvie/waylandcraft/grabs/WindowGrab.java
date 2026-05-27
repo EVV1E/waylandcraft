@@ -1,6 +1,15 @@
 package dev.evvie.waylandcraft.grabs;
 
+import org.lwjgl.glfw.GLFW;
+
+import com.mojang.blaze3d.platform.InputConstants;
+
 import dev.evvie.waylandcraft.WindowDisplay;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class WindowGrab extends PointerGrab {
@@ -30,8 +39,11 @@ public class WindowGrab extends PointerGrab {
 	}
 	
 	@Override
-	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up) throws GrabDroppedException {
+	public void moveWorld(Vec3 pos, Vec3 view, Vec3 up, float yRot, float xRot) throws GrabDroppedException {
 		this.checkValid();
+		
+		boolean modDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_ALT);
+		if(modDown && window.trySnapWorld(pos, view, yRot)) return;
 		
 		window.anchorToPosView(pos, view, up);
 	}
