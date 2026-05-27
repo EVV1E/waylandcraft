@@ -77,7 +77,7 @@ public class WindowItemManager {
 				if(!item.is(WindowItem.WINDOW)) continue;
 				
 				WLCToplevel toplevel = WindowItem.getToplevel(item);
-				if(!isToplevelValid(toplevel)) {
+				if(toplevel == null) {
 					inv.setItem(i, ItemStack.EMPTY);
 				}
 			}
