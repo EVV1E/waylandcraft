@@ -27,6 +27,7 @@ import net.minecraft.client.MouseHandler;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ImageWidget;
+import net.minecraft.client.gui.components.PopupScreen;
 import net.minecraft.client.gui.components.SpriteIconButton;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
@@ -48,6 +49,7 @@ public class WindowManagerScreen extends Screen {
 	private Button hideButton;
 	private Button pinButton;
 	private Button itemButton;
+	private Button helpButton;
 	
 	private StringWidget captureModeMessage;
 	private ImageWidget captureModeSprite;
@@ -126,8 +128,8 @@ public class WindowManagerScreen extends Screen {
 				.build();
 		buttons.add(resizeButton);
 		
-		Component fullscreenComponent = Component.literal("Capture active [Press ALT-Q]").withColor(ARGB.color(255, 0, 0));
-		captureModeMessage = new StringWidget(leftMargin + 16, margin, buttonWidth, buttonHeight, fullscreenComponent, font);
+		Component fullscreenComponent = Component.literal("Capture Mode").withColor(ARGB.color(255, 0, 0));
+		captureModeMessage = new StringWidget(leftMargin + 18, margin - 1, buttonWidth, buttonHeight, fullscreenComponent, font);
 		captureModeSprite = ImageWidget.sprite(15, 15, Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "capture"));
 		captureModeSprite.setPosition(leftMargin - 1, margin);
 		
@@ -158,11 +160,21 @@ public class WindowManagerScreen extends Screen {
 		itemButton.setTooltipDelay(Duration.ofMillis(700));
 		buttons.add(itemButton);
 		
+		helpButton = SpriteIconButton.builder(Component.literal("Help"), this::onHelpPressed, true)
+				.sprite(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "help"), 15, 15)
+				.size(22, 22)
+				.build();
+		helpButton.setPosition(3, height - 22 - margin);
+		helpButton.setTooltip(Tooltip.create(Component.literal("Help")));
+		helpButton.setTooltipDelay(Duration.ofMillis(700));
+		buttons.add(helpButton);
+		
 		addRenderableWidget(grabButton);
 		addRenderableWidget(resizeButton);
 		addRenderableWidget(hideButton);
 		addRenderableWidget(pinButton);
 		addRenderableWidget(itemButton);
+		addRenderableWidget(helpButton);
 		addRenderableWidget(captureModeMessage);
 		addRenderableWidget(captureModeSprite);
 		
@@ -205,6 +217,21 @@ public class WindowManagerScreen extends Screen {
 	private void onItemPressed(Button button) {
 		if(focused == null) return;
 		wlc.itemManager.giveItem(focused);
+	}
+	
+	private void onHelpPressed(Button button) {
+		if(resizeMode) return;
+		String message = """
+				You can see your windows here.
+				Use ALT-Q to enable capture mode. It allows you to press escape \
+				in the windows without closing the screen. When active it also \
+				makes fullscreen windows properly take up the whole screen, \
+				disabling all of the other UI elements.
+				""";
+		minecraft.setScreen(new PopupScreen.Builder(this, Component.literal("Window Manager Help"))
+				.addMessage(Component.literal(message))
+				.addButton(Component.literal("Done"), (popup) -> popup.onClose())
+				.build());
 	}
 	
 	private void exitResizeMode() {
