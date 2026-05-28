@@ -203,9 +203,12 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 						display.anchorDistance = 2.0;
 					}
 					
+					display.anchorToCamera(camera);
+					
 					boolean modDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_ALT);
-					if(!(modDown && display.trySnapWorld(camera.position(), new Vec3(camera.forwardVector()), camera.yRot()))) {
-						display.anchorToCamera(camera);
+					boolean ctrlDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL);
+					if(modDown) {
+						display.trySnapWorld(camera.position(), new Vec3(camera.forwardVector()), camera.yRot(), ctrlDown);
 					}
 					
 					WaylandCraft.instance.bridge.focusSurface(toplevel);

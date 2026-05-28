@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Direction;
+import net.minecraft.core.Direction.Axis;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
@@ -210,9 +211,9 @@ public class WindowDisplay {
 		anchorToPosView(WaylandCraftUtils.getPosition(entity), WaylandCraftUtils.getLookVector(entity), WaylandCraftUtils.getUpVector(entity));
 	}
 	
-	public boolean trySnapWorld(Vec3 pos, Vec3 view, float yRot) {
-		BlockHitResult hitResult = Minecraft.getInstance().level.clip(new ClipContext(pos, pos.add(view.scale(10.0)), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, Minecraft.getInstance().player));
-		if(hitResult.getType() != HitResult.Type.BLOCK) return false;
+	public void trySnapWorld(Vec3 pos, Vec3 view, float yRot, boolean center) {
+		BlockHitResult hitResult = Minecraft.getInstance().level.clip(new ClipContext(pos, pos.add(view.scale(32.0)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, Minecraft.getInstance().player));
+		if(hitResult.getType() != HitResult.Type.BLOCK) return;
 		
 		Direction blockNormal = hitResult.getDirection();
 		Direction viewDirection = Direction.fromYRot(yRot);
@@ -226,9 +227,23 @@ public class WindowDisplay {
 		}
 		
 		this.rotate(blockNormal.getUnitVec3(), downDirection.getUnitVec3());
-		this.pivot = hitResult.getLocation().add(blockNormal.getUnitVec3().scale(0.01));
+		this.pivot = hitResult.getLocation().add(blockNormal.getUnitVec3().scale(0.03));
 		
-		return true;
+		if(center) {
+			double centerX = Math.floor(pivot.x) + 0.5;
+			double centerY = Math.floor(pivot.y) + 0.5;
+			double centerZ = Math.floor(pivot.z) + 0.5;
+			
+			if(blockNormal.getAxis().equals(Axis.X)) {
+				this.pivot = new Vec3(pivot.x, centerY, centerZ);
+			}
+			else if(blockNormal.getAxis().equals(Axis.Y)) {
+				this.pivot = new Vec3(centerX, pivot.y, centerZ);
+			}
+			else if(blockNormal.getAxis().equals(Axis.Z)) {
+				this.pivot = new Vec3(centerX, centerY, pivot.z);
+			}
+		}
 	}
 	
 	public static class DisplayHitResult {
