@@ -2,6 +2,8 @@
 
 Wayland Compositor in Minecraft
 
+[中文说明](README.zh-CN.md)
+
 [Demo video](https://youtu.be/cTkEM7b0IQw)
 
 Now available on [Modrinth](https://modrinth.com/mod/waylandcraft)!

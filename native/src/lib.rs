@@ -133,16 +133,26 @@ fn init_dmabuf(
     state: &mut DmabufState,
     egl: &EGLHelper,
 ) -> DmabufGlobal {
-    let render_node =
-        egl.get_render_node().expect("Failed to get render node!");
-    let render_node_id = render_node.dev_id();
     let formats = egl.query_dmabuf_formats();
 
-    let feedback = DmabufFeedbackBuilder::new(render_node_id, formats)
-        .build()
-        .unwrap();
+    match egl.get_render_node() {
+        Ok(render_node) => {
+            let render_node_id = render_node.dev_id();
+            let feedback = DmabufFeedbackBuilder::new(render_node_id, formats)
+                .build()
+                .unwrap();
 
-    state.create_global_with_default_feedback::<WLCState>(disp, &feedback)
+            state.create_global_with_default_feedback::<WLCState>(
+                disp, &feedback,
+            )
+        }
+        Err(()) => {
+            eprintln!(
+                "Failed to get render node; falling back to linux-dmabuf v3 without default feedback"
+            );
+            state.create_global::<WLCState>(disp, formats)
+        }
+    }
 }
 
 impl CompositorHandler for WLCState {
