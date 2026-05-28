@@ -52,6 +52,9 @@ pub struct WLCSeatState {
     pub keymap_file: SealedFile,
     pub xkb_context: xkb::Context,
     pub xkb_state: xkb::State,
+    pub cursor_surface: Option<WlSurface>,
+    pub cursor_hotspot: (i32, i32),
+    pub cursor_hidden: bool,
     pub cursor_shape: Option<u32>,
 }
 
@@ -174,6 +177,9 @@ impl WLCSeatState {
             keymap_file,
             xkb_context,
             xkb_state,
+            cursor_surface: None,
+            cursor_hotspot: (0, 0),
+            cursor_hidden: false,
             cursor_shape: None,
         }
     }
@@ -678,29 +684,44 @@ impl Dispatch<WlPointer, WLCPointer> for WLCState {
     ) {
         match request {
             wl_pointer::Request::SetCursor {
-                serial, surface, ..
+                serial,
+                surface,
+                hotspot_x,
+                hotspot_y,
             } => {
                 let last_enter =
                     with_pointer_data(pointer, |data| data.last_enter);
-                if last_enter.is_none() {
-                    return;
-                }
-                if last_enter.unwrap() != serial {
+                if last_enter != Some(serial) {
                     return;
                 }
 
-                if surface.is_none() {
-                    // Attaching an empty surface to hide cursor
-                    // Zero value (not defined in protocol) means hidden here.
-                    state.seat.cursor_shape = Some(0);
-                } else {
-                    // When an image is attached instead of a shape, reset to
-                    // default because this compositor doesn't implement normal
-                    // surface-based cursors, only cursor-shape.
+                match surface {
+                    Some(surface) => {
+                        if surface.client() != pointer.client() {
+                            return;
+                        }
+                        state.seat.cursor_surface = Some(surface);
+                        state.seat.cursor_hotspot = (hotspot_x, hotspot_y);
+                        state.seat.cursor_hidden = false;
+                    }
+                    None => {
+                        state.seat.cursor_surface = None;
+                        state.seat.cursor_hotspot = (0, 0);
+                        state.seat.cursor_hidden = true;
+                    }
+                }
+                state.seat.cursor_shape = None;
+            }
+            wl_pointer::Request::Release => {
+                if let Some(surface) = &state.seat.cursor_surface
+                    && surface.client() == pointer.client()
+                {
+                    state.seat.cursor_surface = None;
+                    state.seat.cursor_hotspot = (0, 0);
+                    state.seat.cursor_hidden = false;
                     state.seat.cursor_shape = None;
                 }
             }
-            wl_pointer::Request::Release => {}
             _ => unreachable!(),
         }
     }
@@ -1045,6 +1066,9 @@ impl Dispatch<WpCursorShapeDeviceV1, WLCCursorShapeDevice> for WLCState {
                     return;
                 }
 
+                state.seat.cursor_surface = None;
+                state.seat.cursor_hotspot = (0, 0);
+                state.seat.cursor_hidden = false;
                 state.seat.cursor_shape = Some(shape.into());
             }
             _ => unreachable!(),

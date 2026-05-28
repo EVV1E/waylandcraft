@@ -152,6 +152,11 @@ public class RenderUtils {
 		renderType = cutout ? WINDOW_BACKGROUND_CUTOUT : WINDOW_BACKGROUND_TRANSLUCENT;
 		collector.submitCustomGeometry(poseStack, renderType.apply(framebuffer.getTextureLocation()), new FramebufferRenderInstance(tl, bl, br, tr, true));
 	}
+
+	public static void renderTexture(PoseStack poseStack, SubmitNodeCollector collector, Identifier texture, boolean cutout, Vec3 tl, Vec3 bl, Vec3 br, Vec3 tr) {
+		Function<Identifier, RenderType> renderType = cutout ? WINDOW_CUTOUT : WINDOW_TRANSLUCENT;
+		collector.submitCustomGeometry(poseStack, renderType.apply(texture), new FramebufferRenderInstance(tl, bl, br, tr, false));
+	}
 	
 	public static final record FramebufferRenderInstance(Vec3 tl, Vec3 bl, Vec3 br, Vec3 tr, boolean reverse) implements CustomGeometryRenderer {
 		
@@ -176,6 +181,10 @@ public class RenderUtils {
 	public static void renderFramebuffer2D(GuiGraphicsExtractor context, WindowFramebuffer framebuffer, int x, int y, int w, int h) {
 		if(!framebuffer.isValid()) return;
 		((IGuiGraphicsExtractor) context).invokeInnerBlit(WINDOW_BLIT, framebuffer.getTextureLocation(), x, x + w, y, y + h, 0.0f, 1.0f, 0.0f, 1.0f, -1);
+	}
+
+	public static void renderTexture2D(GuiGraphicsExtractor context, Identifier texture, double x, double y, double w, double h) {
+		((IGuiGraphicsExtractor) context).invokeInnerBlit(WINDOW_BLIT, texture, (int) Math.round(x), (int) Math.round(x + w), (int) Math.round(y), (int) Math.round(y + h), 0.0f, 1.0f, 0.0f, 1.0f, -1);
 	}
 	
 }

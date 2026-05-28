@@ -20,6 +20,7 @@ import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
 import dev.evvie.waylandcraft.desktop.DesktopEntry;
 import dev.evvie.waylandcraft.grabs.WindowGrab;
 import dev.evvie.waylandcraft.mixin.IMouseHandlerMixin;
+import dev.evvie.waylandcraft.render.CursorRenderer;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import net.minecraft.client.Minecraft;
@@ -325,6 +326,12 @@ public class WindowManagerScreen extends Screen {
 				int h = buf.getHeight();
 				
 				RenderUtils.renderFramebuffer2D(context, buf, x, y, w, h);
+			}
+			HoveredSurface hovered = surfaceUnderPointer(i * guiScale, j * guiScale);
+			if(hovered != null) {
+				for(WindowElement element : windows) {
+					CursorRenderer.renderScreenCursor(context, element.window, element.x, element.y, 1.0, hovered.surface, hovered.rx, hovered.ry);
+				}
 			}
 		}
 		

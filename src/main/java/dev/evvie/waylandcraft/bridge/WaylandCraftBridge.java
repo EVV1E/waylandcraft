@@ -34,6 +34,9 @@ public class WaylandCraftBridge {
 	private ArrayList<WindowFramebuffer> framebuffers = new ArrayList<WindowFramebuffer>();
 	
 	public IconSurface dndIcon = null;
+	public IconSurface cursorIcon = null;
+	public int cursorHotspotX = 0;
+	public int cursorHotspotY = 0;
 	
 	private LinkedList<WLCToplevel> focusOrder = new LinkedList<WLCToplevel>();
 	
@@ -288,6 +291,27 @@ public class WaylandCraftBridge {
 		else {
 			dndIcon = null;
 		}
+
+		long cursorSurfaceHandle = cursorSurface(instance);
+		if(cursorSurfaceHandle != 0) {
+			WLCSurface cursorSurface = getOrCreateSurface(cursorSurfaceHandle);
+			if(cursorIcon != null && cursorIcon.surface != cursorSurface) {
+				cursorIcon = null;
+			}
+			if(cursorIcon == null) {
+				cursorIcon = new IconSurface(cursorSurface);
+			}
+
+			cursorHotspotX = cursorHotspotX(instance);
+			cursorHotspotY = cursorHotspotY(instance);
+			updateSurfaceData(instance, cursorIcon.surface);
+			cursorIcon.surface.visited = true;
+		}
+		else {
+			cursorIcon = null;
+			cursorHotspotX = 0;
+			cursorHotspotY = 0;
+		}
 		
 		// All surface trees have now been walked. Now delete all unvisited surfaces
 		deleteUnvisitedSurfaces();
@@ -376,6 +400,14 @@ public class WaylandCraftBridge {
 				framebuffers.add(dndIcon.framebuffer);
 			}
 			dndIcon.framebuffer.render();
+		}
+
+		if(cursorIcon != null) {
+			if(cursorIcon.framebuffer == null) {
+				cursorIcon.framebuffer = new WindowFramebuffer(cursorIcon.surface);
+				framebuffers.add(cursorIcon.framebuffer);
+			}
+			cursorIcon.framebuffer.render();
 		}
 		
 		// Cleanup unused framebuffers
@@ -727,6 +759,10 @@ public class WaylandCraftBridge {
 	
 	// Get active cursor image
 	private static native int cursorShape(long instance);
+
+	private static native long cursorSurface(long instance);
+	private static native int cursorHotspotX(long instance);
+	private static native int cursorHotspotY(long instance);
 	
 	// Set keyboard focus to a wayland surface. The handle may be 0 to unfocus any surfaces
 	private static native void keyboardFocus(long instance, long surfaceHandle);
