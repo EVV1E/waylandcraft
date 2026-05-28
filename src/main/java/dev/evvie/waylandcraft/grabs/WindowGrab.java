@@ -45,6 +45,9 @@ public class WindowGrab extends PointerGrab {
 		if(modDown) {
 			window.trySnapWorld(pos, view, yRot, ctrlDown);
 		}
+		else if(ctrlDown) {
+			window.trySnapToOtherWindows(pos, view);
+		}
 	}
 
 	@Override

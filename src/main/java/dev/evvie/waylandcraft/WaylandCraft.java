@@ -210,6 +210,9 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 					if(modDown) {
 						display.trySnapWorld(camera.position(), new Vec3(camera.forwardVector()), camera.yRot(), ctrlDown);
 					}
+					else if(ctrlDown) {
+						display.trySnapToOtherWindows(camera.position(), new Vec3(camera.forwardVector()));
+					}
 					
 					WaylandCraft.instance.bridge.focusSurface(toplevel);
 				}

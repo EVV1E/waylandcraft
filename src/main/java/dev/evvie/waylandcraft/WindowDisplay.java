@@ -8,6 +8,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
+import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
@@ -242,6 +243,55 @@ public class WindowDisplay {
 			}
 			else if(blockNormal.getAxis().equals(Axis.Z)) {
 				this.pivot = new Vec3(centerX, centerY, pivot.z);
+			}
+		}
+	}
+	
+	public void trySnapToOtherWindows(Vec3 pos, Vec3 view) {
+		for(WindowDisplay display : WaylandCraft.instance.displays) {
+			if(display == this) continue;
+			if(!(display.window instanceof WLCToplevel)) continue;
+			WLCToplevel toplevel = (WLCToplevel) display.window;
+			
+			DisplayHitResult result = display.intersect(pos, view);
+			double hx = result.surfaceLocalOrigin.x();
+			double hy = result.surfaceLocalOrigin.y();
+			
+			int left = toplevel.geometry.x();
+			int top = toplevel.geometry.y();
+			int right = left + toplevel.geometry.width();
+			int bottom = top + toplevel.geometry.height();
+			
+			int myLeft = window.geometry.x();
+			int myTop = window.geometry.y();
+			int myRight = myLeft + window.geometry.width();
+			int myBottom = myTop + window.geometry.height();
+			
+			double snapDistance = 0.2 * WaylandCraft.instance.settings.getPixelsPerBlock();
+			
+			// Right side snap
+			if(hy >= top && hy <= bottom && hx >= right - snapDistance && hx <= right + snapDistance) {
+				this.rotate(display.normal(), display.down());
+				this.pivot = display.localToWorld(right + (myRight - myLeft) / 2 - myLeft, (bottom - top) / 2, 0);
+				return;
+			}
+			// Left side snap
+			else if(hy >= top && hy <= bottom && hx <= left + snapDistance && hx >= left - snapDistance) {
+				this.rotate(display.normal(), display.down());
+				this.pivot = display.localToWorld(left - (myRight - myLeft) / 2 - myLeft, (bottom - top) / 2, 0);
+				return;
+			}
+			// Top side snap
+			else if(hx >= left && hx <= right && hy >= top - snapDistance && hy <= top + snapDistance) {
+				this.rotate(display.normal(), display.down());
+				this.pivot = display.localToWorld((right - left) / 2, top - (myBottom - myTop) / 2 - myTop, 0);
+				return;
+			}
+			// Bottom side snap
+			else if(hx >= left && hx <= right && hy <= bottom + snapDistance && hy >= bottom - snapDistance) {
+				this.rotate(display.normal(), display.down());
+				this.pivot = display.localToWorld((right - left) / 2, bottom + (myBottom - myTop) / 2 - myTop, 0);
+				return;
 			}
 		}
 	}
