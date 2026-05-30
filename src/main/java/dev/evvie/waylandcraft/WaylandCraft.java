@@ -95,6 +95,7 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	public DisplayHitResult hoveredDisplay = null;
 	
 	public KeyboardCaptureMode keyboardCaptureMode = KeyboardCaptureMode.NONE;
+	private boolean textInputActivated = false;
 	
 	public PointerCapture pointerCapture = null;
 	
@@ -354,6 +355,18 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 				bridge.dndCancel();
 			}
 		}
+		
+		if(settings.getAutoKeyboardGrab()) {
+			boolean inputActivateState = bridge.getInputActivateState();
+			if(inputActivateState) {
+			    if (!textInputActivated) {
+					enableKeyboardCapture(false);
+				}
+			} else if(keyboardCaptureMode == KeyboardCaptureMode.CAPTURE && textInputActivated) {
+				disableKeyboardCapture();
+			}
+			textInputActivated = inputActivateState;
+		}
 	}
 	
 	private void updateOutputSize(boolean inWMScreen) {
@@ -448,7 +461,14 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 		// Check for player reach
 		if(finalHitResult != null && !finalHitResult.position.closerThan(pos, Minecraft.getInstance().player.blockInteractionRange())) finalHitResult = null;
 		
-		if(!pointerGrabs.isExclusiveGrabActive()) hoveredDisplay = finalHitResult;
+		if(!pointerGrabs.isExclusiveGrabActive()) {
+			hoveredDisplay = finalHitResult;
+			
+			if(settings.getHoverFocus() && hoveredDisplay != null && hoveredDisplay.dist >= 0) {
+				WLCAbstractWindow window = hoveredDisplay.target.window;
+				if(window instanceof WLCToplevel) bridge.focusSurface((WLCToplevel) window);
+			}
+		}
 		
 		// Check for pointer grab and short-circuit if any
 		if(pointerGrabs.isGrabActive()) {

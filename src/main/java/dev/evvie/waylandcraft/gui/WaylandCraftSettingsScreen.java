@@ -71,6 +71,8 @@ public class WaylandCraftSettingsScreen extends Screen {
 		
 		createIntSettingsWidget("pixelsPerBlock", Component.literal("Window display pixels per block"));
 		createBooleanSettingsWidget("windowAntialiasing", Component.literal("Window in world antialiasing"));
+		createBooleanSettingsWidget("hoverFocus", Component.literal("Focus window on cursor hover"));
+		createBooleanSettingsWidget("autoKeyboardGrab", Component.literal("Grab keyboard on app request"));
 	}
 	
 }

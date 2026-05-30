@@ -20,6 +20,8 @@ public class WaylandCraftSettings {
 	
 	int pixelsPerBlock = 500;
 	boolean windowAntialiasing = false;
+	boolean hoverFocus = false;
+	boolean autoKeyboardGrab = false;
 	
 	/* This is where the getters go */
 	
@@ -29,6 +31,14 @@ public class WaylandCraftSettings {
 	
 	public boolean getAntialiasing() {
 		return windowAntialiasing;
+	}
+	
+	public boolean getHoverFocus() {
+		return hoverFocus;
+	}
+	
+	public boolean getAutoKeyboardGrab() {
+		return autoKeyboardGrab;
 	}
 	
 	/* Methods to modifiy settings by name */

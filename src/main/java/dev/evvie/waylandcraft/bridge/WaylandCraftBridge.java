@@ -283,7 +283,7 @@ public class WaylandCraftBridge {
 			toplevel.appID = toplevelAppID(toplevel.getHandle());
 			
 			if(ArrayUtils.contains(minimizeRequests, handle)) toplevel.requests.minimize = true;
-			if(ArrayUtils.contains(maximizeRequests, handle)) toplevel.requests.maximize= true;
+			if(ArrayUtils.contains(maximizeRequests, handle)) toplevel.requests.maximize = true;
 			if(ArrayUtils.contains(unmaximizeRequests, handle)) toplevel.requests.unmaximize = true;
 			if(ArrayUtils.contains(fullscreenRequests, handle)) toplevel.requests.fullscreen = true;
 			if(ArrayUtils.contains(unfullscreenRequests, handle)) toplevel.requests.unfullscreen = true;
@@ -511,6 +511,10 @@ public class WaylandCraftBridge {
 	
 	public CursorShape getCursorShape() {
 		return CursorShape.fromId(cursorShape(instance));
+	}
+	
+	public boolean getInputActivateState() {
+		return inputActivateState(instance);
 	}
 	
 	public void focusSurface(@Nullable WLCToplevel toplevel) {
@@ -757,6 +761,9 @@ public class WaylandCraftBridge {
 	
 	// Get active cursor image
 	private static native int cursorShape(long instance);
+	
+	// Get text input activate state
+	private static native boolean inputActivateState(long instance);
 	
 	// Set keyboard focus to a wayland surface. The handle may be 0 to unfocus any surfaces
 	private static native void keyboardFocus(long instance, long surfaceHandle);

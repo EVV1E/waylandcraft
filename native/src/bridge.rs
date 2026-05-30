@@ -262,6 +262,10 @@ bind_java_type! {
             sig = (instance: jlong) -> jint,
             fn = cursor_shape,
         },
+        static extern fn input_activate_state {
+            sig = (instance: jlong) -> jboolean,
+            fn = input_activate_state,
+        },
         static extern fn keyboard_focus {
             sig = (instance: jlong, surface_handle: jlong),
             fn = keyboard_focus,
@@ -1204,6 +1208,16 @@ fn cursor_shape<'local>(
     };
 
     Ok(shape)
+}
+
+fn input_activate_state<'local>(
+    _env: &mut Env<'local>,
+    _class: JClass<'local>,
+    instance: jlong,
+) -> Result<jboolean, BridgeError> {
+    let instance = jptr_to_instance!(instance, "inputActivateState")?;
+
+    Ok(instance.state.seat.text_input_active as jboolean)
 }
 
 fn keyboard_focus<'local>(

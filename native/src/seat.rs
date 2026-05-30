@@ -22,6 +22,10 @@ use smithay::{
             zwp_relative_pointer_v1 as zwp_relpointer,
             zwp_relative_pointer_v1::ZwpRelativePointerV1,
         },
+        wayland_protocols::wp::text_input::zv3::server::{
+            zwp_text_input_manager_v3::{self, ZwpTextInputManagerV3},
+            zwp_text_input_v3::{self, ZwpTextInputV3},
+        },
         wayland_server::{
             Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New,
             Resource,
@@ -46,7 +50,9 @@ use xkbcommon::xkb::{self, Keymap};
 pub struct WLCSeatState {
     pub pointers: Vec<WlPointer>,
     pub keyboards: Vec<WlKeyboard>,
+    pub text_inputs: Vec<ZwpTextInputV3>,
     pub kb_active: bool,
+    pub text_input_active: bool,
     pub pressed_keys: HashSet<u32>,
     pub keymap: Keymap,
     pub keymap_file: SealedFile,
@@ -93,6 +99,15 @@ pub struct WLCKeyboardData {
 
 type WLCKeyboard = Arc<Mutex<WLCKeyboardData>>;
 
+pub struct WLCTextInputData {
+    enabled: bool,
+    // Unlike WLCKeyboardData, we could use focus between different clients,
+    // but from UX perspective I think it should be focused only on active client.
+    focus: Option<WlSurface>,
+}
+
+type WLCTextInput = Arc<Mutex<WLCTextInputData>>;
+
 // Keyboard RMLVO keymap specifier
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Default)]
@@ -138,6 +153,15 @@ where
     f(data);
 }
 
+fn with_text_input_data<F>(text_input: &ZwpTextInputV3, f: F)
+where
+    F: FnOnce(&mut WLCTextInputData),
+{
+    let mut guard = text_input.data::<WLCTextInput>().unwrap().lock().unwrap();
+    let data = guard.deref_mut();
+    f(data);
+}
+
 fn create_keymap_file(keymap: &Keymap) -> SealedFile {
     let keymap_str = keymap.get_as_string(xkb::KEYMAP_FORMAT_TEXT_V1);
     SealedFile::with_content(
@@ -168,7 +192,9 @@ impl WLCSeatState {
         WLCSeatState {
             pointers: vec![],
             keyboards: vec![],
+            text_inputs: vec![],
             kb_active: false,
+            text_input_active: false,
             pressed_keys: HashSet::new(),
             keymap,
             keymap_file,
@@ -183,6 +209,7 @@ impl WLCSeatState {
         disp.create_global::<WLCState, ZwpRelativePointerManagerV1, ()>(1, ());
         disp.create_global::<WLCState, ZwpPointerConstraintsV1, ()>(1, ());
         disp.create_global::<WLCState, WpCursorShapeManagerV1, ()>(2, ());
+        disp.create_global::<WLCState, ZwpTextInputManagerV3, ()>(1, ());
     }
 
     fn pointer_frame(&self, pointer: &WlPointer) {
@@ -381,6 +408,36 @@ impl WLCSeatState {
 
             self.send_modifiers(keyboard, serial);
         });
+
+        // Update text inputs
+        let mut input_active = false;
+        self.for_all_text_inputs(|text_input, data| {
+            let text_input_client = text_input.client().unwrap();
+
+            if text_input_client != client {
+                // only active client is able to be focused
+                if let Some(focus) = &data.focus {
+                    text_input.leave(focus);
+                    data.focus = None;
+                }
+                return;
+            }
+
+            if let Some(focus) = &data.focus {
+                if *focus == surface {
+                    // Surface already focused
+                    input_active = input_active || data.enabled;
+                    return;
+                }
+                text_input.leave(focus);
+                data.focus = None;
+            }
+
+            text_input.enter(&surface);
+            data.focus = Some(surface.clone());
+            input_active = true;
+        });
+        self.text_input_active = input_active;
     }
 
     fn serialize_pressed_keys(&self) -> Vec<u8> {
@@ -457,6 +514,15 @@ impl WLCSeatState {
                 data.focus = None;
             }
         });
+
+        // Update text inputs
+        self.text_input_active = false;
+        self.for_all_text_inputs(|text_input, data| {
+            if let Some(focus) = &data.focus {
+                text_input.leave(focus);
+                data.focus = None;
+            }
+        });
     }
 
     pub fn keyboard_key(&self, key: u32, state: KeyState) {
@@ -523,6 +589,15 @@ impl WLCSeatState {
     {
         for keyboard in &self.keyboards {
             with_keyboard_data(keyboard, |data| f(keyboard, data));
+        }
+    }
+
+    fn for_all_text_inputs<F>(&self, mut f: F)
+    where
+        F: FnMut(&ZwpTextInputV3, &mut WLCTextInputData),
+    {
+        for text_input in &self.text_inputs {
+            with_text_input_data(text_input, |data| f(text_input, data));
         }
     }
 
@@ -1049,5 +1124,91 @@ impl Dispatch<WpCursorShapeDeviceV1, WLCCursorShapeDevice> for WLCState {
             }
             _ => unreachable!(),
         }
+    }
+}
+
+impl GlobalDispatch<ZwpTextInputManagerV3, ()> for WLCState {
+    fn bind(
+        _state: &mut Self,
+        _handle: &DisplayHandle,
+        _client: &Client,
+        resource: New<ZwpTextInputManagerV3>,
+        _data: &(),
+        data_init: &mut DataInit<'_, Self>,
+    ) {
+        data_init.init(resource, ());
+    }
+}
+
+impl Dispatch<ZwpTextInputManagerV3, ()> for WLCState {
+    fn request(
+        state: &mut Self,
+        _client: &Client,
+        _resource: &ZwpTextInputManagerV3,
+        request: zwp_text_input_manager_v3::Request,
+        _data: &(),
+        _disp: &DisplayHandle,
+        data_init: &mut DataInit<'_, Self>,
+    ) {
+        match request {
+            zwp_text_input_manager_v3::Request::GetTextInput { id, .. } => {
+                let text_input_data = WLCTextInputData {
+                    enabled: false,
+                    focus: None,
+                };
+                let text_input_data = Arc::new(Mutex::new(text_input_data));
+
+                let text_input: ZwpTextInputV3 =
+                    data_init.init(id, text_input_data.clone());
+
+                state.seat.text_inputs.push(text_input);
+            }
+            zwp_text_input_manager_v3::Request::Destroy => {}
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl Dispatch<ZwpTextInputV3, WLCTextInput> for WLCState {
+    fn request(
+        state: &mut Self,
+        _client: &Client,
+        text_input: &ZwpTextInputV3,
+        request: zwp_text_input_v3::Request,
+        _data: &WLCTextInput,
+        _disp: &DisplayHandle,
+        _data_init: &mut DataInit<'_, Self>,
+    ) {
+        match request {
+            zwp_text_input_v3::Request::Enable => {
+                with_text_input_data(text_input, |data| data.enabled = true);
+            }
+            zwp_text_input_v3::Request::Disable => {
+                with_text_input_data(text_input, |data| data.enabled = false);
+            }
+            // actually all of changes should be applied here, not immediately
+            zwp_text_input_v3::Request::Commit => {
+                with_text_input_data(text_input, |data| {
+                    if let Some(_focus) = &data.focus {
+                        state.seat.text_input_active = data.enabled;
+                    }
+                });
+            }
+            zwp_text_input_v3::Request::Destroy => {}
+            zwp_text_input_v3::Request::SetContentType { .. } => {}
+            zwp_text_input_v3::Request::SetCursorRectangle { .. } => {}
+            zwp_text_input_v3::Request::SetSurroundingText { .. } => {}
+            zwp_text_input_v3::Request::SetTextChangeCause { .. } => {}
+            _ => unreachable!(),
+        }
+    }
+
+    fn destroyed(
+        state: &mut Self,
+        _client: ClientId,
+        text_input_resource: &ZwpTextInputV3,
+        _data: &WLCTextInput,
+    ) {
+        state.seat.text_inputs.retain(|p| p != text_input_resource);
     }
 }
