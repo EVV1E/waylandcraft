@@ -103,11 +103,11 @@ bind_java_type! {
             fn = init,
         },
         static extern fn update {
-            sig = (wlc_bridge_handle: jlong),
+            sig = (instance: jlong),
             fn = update,
         },
         static extern fn socket {
-            sig = (wlc_bridge_handle: jlong) -> JString,
+            sig = (instance: jlong) -> JString,
             fn = socket,
         },
         static extern fn send_frame {
@@ -115,15 +115,15 @@ bind_java_type! {
             fn = send_frame,
         },
         static extern fn update_surface_data {
-            sig = (wlc_bridge_handle: jlong, surface: WLCSurface),
+            sig = (instance: jlong, surface: WLCSurface),
             fn = update_surface_data,
         },
         static extern fn toplevels {
-            sig = (wlc_bridge_handle: jlong) -> jlong[],
+            sig = (instance: jlong) -> jlong[],
             fn = toplevels,
         },
         static extern fn toplevel_surface {
-            sig = (wlc_bridge_handle: jlong, toplevel_handle: jlong) -> jlong,
+            sig = (instance: jlong, toplevel_handle: jlong) -> jlong,
             fn = toplevel_surface,
         },
         static extern fn toplevel_title {
@@ -144,55 +144,55 @@ bind_java_type! {
             fn = toplevel_resize_ovr,
         },
         static extern fn minimize_req {
-            sig = (wlc_bridge_handle: jlong) -> jlong[],
+            sig = (instance: jlong) -> jlong[],
             fn = minimize_req,
         },
         static extern fn maximize_req {
-            sig = (wlc_bridge_handle: jlong) -> jlong[],
+            sig = (instance: jlong) -> jlong[],
             fn = maximize_req,
         },
         static extern fn unmaximize_req {
-            sig = (wlc_bridge_handle: jlong) -> jlong[],
+            sig = (instance: jlong) -> jlong[],
             fn = unmaximize_req,
         },
         static extern fn fullscreen_req {
-            sig = (wlc_bridge_handle: jlong) -> jlong[],
+            sig = (instance: jlong) -> jlong[],
             fn = fullscreen_req,
         },
         static extern fn unfullscreen_req {
-            sig = (wlc_bridge_handle: jlong) -> jlong[],
+            sig = (instance: jlong) -> jlong[],
             fn = unfullscreen_req,
         },
         static extern fn move_request {
-            sig = (wlc_bridge_handle: jlong) -> jint[],
+            sig = (instance: jlong) -> jint[],
             fn = move_request,
         },
         static extern fn resize_request {
-            sig = (wlc_bridge_handle: jlong) -> jint[],
+            sig = (instance: jlong) -> jint[],
             fn = resize_request,
         },
         static extern fn fullscreened {
-            sig = (wlc_bridge_handle: jlong) -> jlong[],
+            sig = (instance: jlong) -> jlong[],
             fn = fullscreened,
         },
         static extern fn toplevel_maximize {
-            sig = (wlc_bridge_handle: jlong, toplevel_handle: jlong),
+            sig = (instance: jlong, toplevel_handle: jlong),
             fn = toplevel_maximize,
         },
         static extern fn toplevel_fullscreen {
-            sig = (wlc_bridge_handle: jlong, toplevel_handle: jlong),
+            sig = (instance: jlong, toplevel_handle: jlong),
             fn = toplevel_fullscreen,
         },
         static extern fn popups {
-            sig = (wlc_bridge_handle: jlong) -> jlong[],
+            sig = (instance: jlong) -> jlong[],
             fn = popups,
         },
         static extern fn popup_surface {
-            sig = (wlc_bridge_handle: jlong, popup_handle: jlong) -> jlong,
+            sig = (instance: jlong, popup_handle: jlong) -> jlong,
             fn = popup_surface,
         },
         static extern fn popup_parent {
-            sig = (wlc_bridge_handle: jlong, popup_handle: jlong) -> jlong,
+            sig = (instance: jlong, popup_handle: jlong) -> jlong,
             fn = popup_parent,
         },
         static extern fn popup_offset {
@@ -205,11 +205,11 @@ bind_java_type! {
             fn = surface_xdg_geometry,
         },
         static extern fn delete_dmabuf {
-            sig = (wlc_bridge_handle: jlong, dmabuf_handle: jlong),
+            sig = (instance: jlong, dmabuf_handle: jlong),
             fn = delete_dmabuf
         },
         extern fn update_surface_tree {
-            sig = (wlc_bridge_handle: jlong, surface: WLCSurface) -> WLCSurface,
+            sig = (instance: jlong, surface: WLCSurface) -> WLCSurface,
             fn = update_surface_tree,
         },
         static extern fn check_input_region {
@@ -217,95 +217,95 @@ bind_java_type! {
             fn = check_input_region,
         },
         static extern fn pointer_motion {
-            sig = (wlc_bridge_handle: jlong, x: jdouble, y: jdouble),
+            sig = (instance: jlong, x: jdouble, y: jdouble),
             fn = pointer_motion,
         },
         static extern fn pointer_motion_focus {
-            sig = (wlc_bridge_handle: jlong, surface_handle: jlong, x: jdouble, y: jdouble),
+            sig = (instance: jlong, surface_handle: jlong, x: jdouble, y: jdouble),
             fn = pointer_motion_focus,
         },
         static extern fn pointer_rel_motion {
-            sig = (wlc_bridge_handle: jlong, dx: jdouble, dy: jdouble),
+            sig = (instance: jlong, dx: jdouble, dy: jdouble),
             fn = pointer_rel_motion,
         },
         static extern fn maybe_pointer_lock {
-            sig = (wlc_bridge_handle: jlong, surface_handle: jlong) -> jboolean,
+            sig = (instance: jlong, surface_handle: jlong) -> jboolean,
             fn = maybe_pointer_lock,
         },
         static extern fn pointer_unlock {
-            sig = (wlc_bridge_handle: jlong),
+            sig = (instance: jlong),
             fn = pointer_unlock,
         },
         static extern fn pointer_leave {
-            sig = (wlc_bridge_handle: jlong),
+            sig = (instance: jlong),
             fn = pointer_leave,
         },
         static extern fn pointer_button {
-            sig = (wlc_bridge_handle: jlong, button: jint, state: jint) -> jint,
+            sig = (instance: jlong, button: jint, state: jint) -> jint,
             fn = pointer_button,
         },
         static extern fn pointer_axis {
-            sig = (wlc_bridge_handle: jlong, axis: jint, value: jdouble),
+            sig = (instance: jlong, axis: jint, value: jdouble),
             fn = pointer_axis,
         },
         static extern fn cursor_shape {
-            sig = (wlc_bridge_handle: jlong) -> jint,
+            sig = (instance: jlong) -> jint,
             fn = cursor_shape,
         },
         static extern fn keyboard_focus {
-            sig = (wlc_bridge_handle: jlong, surface_handle: jlong),
+            sig = (instance: jlong, surface_handle: jlong),
             fn = keyboard_focus,
         },
         static extern fn keyboard_activate {
-            sig = (wlc_bridge_handle: jlong),
+            sig = (instance: jlong),
             fn = keyboard_activate,
         },
         static extern fn keyboard_deactivate {
-            sig = (wlc_bridge_handle: jlong),
+            sig = (instance: jlong),
             fn = keyboard_deactivate,
         },
         static extern fn keyboard_input {
-            sig = (wlc_bridge_handle: jlong, scancode: jint, action: jint),
+            sig = (instance: jlong, scancode: jint, action: jint),
             fn = keyboard_input,
         },
         static extern fn keyboard_update {
-            sig = (wlc_bridge_handle: jlong, scancode: jint, pressed: jboolean),
+            sig = (instance: jlong, scancode: jint, pressed: jboolean),
             fn = keyboard_update,
         },
         static extern fn output_size {
-            sig = (wlc_bridge_handle: jlong) -> jint[],
+            sig = (instance: jlong) -> jint[],
             fn = output_size,
         },
         static extern fn output_bounds {
-            sig = (wlc_bridge_handle: jlong) -> jint[],
+            sig = (instance: jlong) -> jint[],
             fn = output_bounds,
         },
         static extern fn output_resize {
-            sig = (wlc_bridge_handle: jlong, width: jint, height: jint),
+            sig = (instance: jlong, width: jint, height: jint),
             fn = output_resize,
         },
         static extern fn output_set_bounds {
-            sig = (wlc_bridge_handle: jlong, width: jint, height: jint),
+            sig = (instance: jlong, width: jint, height: jint),
             fn = output_set_bounds,
         },
         static extern fn free_surface {
-            sig = (wlc_bridge_handle: jlong, surface_handle: jlong),
+            sig = (instance: jlong, surface_handle: jlong),
             fn = free_surface,
         },
         static extern fn free_toplevel {
-            sig = (wlc_bridge_handle: jlong, toplevel_handle: jlong),
+            sig = (instance: jlong, toplevel_handle: jlong),
             fn = free_toplevel,
         },
         static extern fn free_popup {
-            sig = (wlc_bridge_handle: jlong, popup_handle: jlong),
+            sig = (instance: jlong, popup_handle: jlong),
             fn = free_popup,
         },
         static extern fn load_desktop_entry {
-            sig = (wlc_bridge_handle: jlong, path: JString) -> JRawDesktopEntry,
+            sig = (instance: jlong, path: JString) -> JRawDesktopEntry,
             fn = load_desktop_entry,
         },
         static extern fn load_desktop_entries {
-            sig = (wlc_bridge_handle: jlong) -> JRawDesktopEntry[],
+            sig = (instance: jlong) -> JRawDesktopEntry[],
             fn = load_desktop_entries,
         },
         static extern fn render_svg {
@@ -314,50 +314,50 @@ bind_java_type! {
             fn = render_svg,
         },
         static extern fn exec_app {
-            sig = (wlc_bridge_handle: jlong, app_id: JString) -> jboolean,
+            sig = (instance: jlong, app_id: JString) -> jboolean,
             fn = exec_app,
         },
         static extern fn set_keymap_default {
-            sig = (wlc_bridge_handle: jlong),
+            sig = (instance: jlong),
             fn = set_keymap_default,
         },
         static extern fn export_keymap {
-            sig = (wlc_bridge_handle: jlong) -> JString,
+            sig = (instance: jlong) -> JString,
             fn = export_keymap,
         },
         static extern fn set_keymap_from_str {
-            sig = (wlc_bridge_handle: jlong, keymap: JString) -> jboolean,
+            sig = (instance: jlong, keymap: JString) -> jboolean,
             fn = set_keymap_from_str,
         },
         static extern fn check_dnd_request {
-            sig = (wlc_bridge_handle: jlong) -> jint[],
+            sig = (instance: jlong) -> jint[],
             fn = check_dnd_request,
         },
         static extern fn check_dnd_active {
-            sig = (wlc_bridge_handle: jlong) -> jboolean,
+            sig = (instance: jlong) -> jboolean,
             fn = check_dnd_active,
         },
         static extern fn dnd_cancel {
-            sig = (wlc_bridge_handle: jlong),
+            sig = (instance: jlong),
             fn = dnd_cancel,
         },
         static extern fn dnd_drop {
-            sig = (wlc_bridge_handle: jlong),
+            sig = (instance: jlong),
             fn = dnd_drop,
         },
         static extern fn dnd_motion {
-            sig = (wlc_bridge_handle: jlong, surface_handle: jlong, x: jdouble, y: jdouble),
+            sig = (instance: jlong, surface_handle: jlong, x: jdouble, y: jdouble),
             fn = dnd_motion,
         },
         static extern fn dnd_icon {
-            sig = (wlc_bridge_handle: jlong) -> jlong,
+            sig = (instance: jlong) -> jlong,
             fn = dnd_icon,
         },
     },
 }
 
 #[derive(Debug, Error)]
-enum WLCBError {
+enum BridgeError {
     #[error(transparent)]
     JniError(#[from] jni::errors::Error),
     #[error(transparent)]
@@ -365,13 +365,13 @@ enum WLCBError {
     #[error("{0}")]
     Null(&'static str),
     #[error("Null WLC instance handle given. Function: {0}")]
-    NullWlcInstance(&'static str),
+    NullInstancePtr(&'static str),
     #[error("Null wayland surface handle given. Function: {0}")]
-    NullWaylandSurface(&'static str),
+    NullSurfacePtr(&'static str),
     #[error("Null toplevel surface handle given. Function: {0}")]
-    NullToplevelSurface(&'static str),
+    NullToplevelPtr(&'static str),
     #[error("Null popup surface handle given. Function: {0}")]
-    NullPopupSurface(&'static str),
+    NullPopupPtr(&'static str),
     #[error("Error converting OS string, was not UTF8")]
     OsStringToUtf8,
     #[error("Unknown pointer button {0} received")]
@@ -386,10 +386,10 @@ enum WLCBError {
     NonPositiveHeight,
 }
 
-macro_rules! jptr_to_wlc {
+macro_rules! jptr_to_instance {
     ($jptr:expr, $location:literal) => {
         match jptr_to_mut::<WaylandCraft>($jptr) {
-            None => Err(WLCBError::NullWlcInstance($location)),
+            None => Err(BridgeError::NullInstancePtr($location)),
             Some(wlc) => Ok(wlc),
         }
     };
@@ -398,7 +398,7 @@ macro_rules! jptr_to_wlc {
 macro_rules! jptr_to_wl_surface {
     ($jptr:expr, $location:literal) => {
         match jptr_to_mut::<WlSurface>($jptr) {
-            None => Err(WLCBError::NullWaylandSurface($location)),
+            None => Err(BridgeError::NullSurfacePtr($location)),
             Some(wl_surface) => Ok(wl_surface),
         }
     };
@@ -407,7 +407,7 @@ macro_rules! jptr_to_wl_surface {
 macro_rules! jptr_to_toplevel {
     ($jptr:expr, $location:literal) => {
         match jptr_to_mut::<ToplevelSurface>($jptr) {
-            None => Err(WLCBError::NullToplevelSurface($location)),
+            None => Err(BridgeError::NullToplevelPtr($location)),
             Some(toplevel) => Ok(toplevel),
         }
     };
@@ -416,7 +416,7 @@ macro_rules! jptr_to_toplevel {
 macro_rules! jptr_to_popup {
     ($jptr:expr, $location:literal) => {
         match jptr_to_mut::<PopupSurface>($jptr) {
-            None => Err(WLCBError::NullPopupSurface($location)),
+            None => Err(BridgeError::NullPopupPtr($location)),
             Some(popup) => Ok(popup),
         }
     };
@@ -427,11 +427,11 @@ fn init<'local>(
     _class: JClass<'local>,
     glfw_get_proc_address: jlong,
     egl_display: jlong,
-) -> Result<jlong, WLCBError> {
+) -> Result<jlong, BridgeError> {
     let dpy: EGLDisplay = (egl_display as usize) as EGLDisplay;
     let egl = EGLHelper::new(dpy, glfw_get_proc_address as usize);
 
-    let instance = wlc_init(egl).map_err(WLCBError::Init)?;
+    let instance = wlc_init(egl).map_err(BridgeError::Init)?;
     let instance_box = Box::new(instance);
     let ptr = Box::into_raw(instance_box);
 
@@ -441,9 +441,9 @@ fn init<'local>(
 fn update<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<(), WLCBError> {
-    jptr_to_wlc!(wlc_bridge_handle, "update")?.update();
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    jptr_to_instance!(instance, "update")?.update();
 
     Ok(())
 }
@@ -451,14 +451,14 @@ fn update<'local>(
 fn socket<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JString<'local>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "socket")?;
+    instance: jlong,
+) -> Result<JString<'local>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "socket")?;
     let socket = instance
         .state
         .socket
         .to_str()
-        .ok_or(WLCBError::OsStringToUtf8)?;
+        .ok_or(BridgeError::OsStringToUtf8)?;
 
     Ok(JString::new(env, socket)?)
 }
@@ -467,7 +467,7 @@ fn send_frame<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
     surface_handle: jlong,
-) -> Result<(), WLCBError> {
+) -> Result<(), BridgeError> {
     let surface = jptr_to_wl_surface!(surface_handle, "sendFrame")?;
 
     with_surface_data(surface, |data| {
@@ -539,9 +539,9 @@ where
 fn toplevels<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "toplevels")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "toplevels")?;
 
     insert_all(
         &mut instance.bridge.toplevels,
@@ -559,9 +559,9 @@ fn toplevels<'local>(
 fn popups<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "popups")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "popups")?;
 
     insert_all(
         &mut instance.bridge.popups,
@@ -588,7 +588,7 @@ fn clear_requests<'local>(
     env: &mut Env<'local>,
     instance: &mut WaylandCraft,
     vec: RequestsVec,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
     let vec = match vec {
         RequestsVec::Minimize => &mut instance.state.requests.minimize,
         RequestsVec::Maximize => &mut instance.state.requests.maximize,
@@ -613,54 +613,54 @@ fn clear_requests<'local>(
 fn minimize_req<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "minimizeReq")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "minimizeReq")?;
     clear_requests(env, instance, RequestsVec::Minimize)
 }
 
 fn maximize_req<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "maximizeReq")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "maximizeReq")?;
     clear_requests(env, instance, RequestsVec::Maximize)
 }
 
 fn unmaximize_req<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "unmaximizeReq")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "unmaximizeReq")?;
     clear_requests(env, instance, RequestsVec::Unmaximize)
 }
 
 fn fullscreen_req<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "fullscreenReq")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "fullscreenReq")?;
     clear_requests(env, instance, RequestsVec::Fullscreen)
 }
 
 fn unfullscreen_req<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "unfullscreenReq")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "unfullscreenReq")?;
     clear_requests(env, instance, RequestsVec::Unfullscreen)
 }
 
 fn move_request<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jint>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "moveRequest")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "moveRequest")?;
     let serial = instance.state.requests.move_interactive.pop();
 
     let serial = match serial {
@@ -678,9 +678,9 @@ fn move_request<'local>(
 fn resize_request<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jint>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "resizeRequest")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "resizeRequest")?;
     let req = instance.state.requests.resize_interactive.pop();
 
     let (serial, edges) = match req {
@@ -800,13 +800,13 @@ fn try_attach_dmabuf(
 fn delete_dmabuf<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     dmabuf_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "deleteDmabuf")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "deleteDmabuf")?;
     let dmabuf = jptr_to_ref::<Dmabuf>(dmabuf_handle).ok_or_else(|| {
-        WLCBError::Null(
-            "deleteDmabuf: dmabuf does not exist",
+        BridgeError::Null(
+            "deleteDmabuf: dmabufHandle is null",
         )
     })?;
 
@@ -848,15 +848,15 @@ fn try_attach_buffer(
 fn update_surface_data<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     jsurface: WLCSurface<'local>,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "updateSurfaceData")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "updateSurfaceData")?;
 
     let handle = jsurface.handle(env)?;
     let surface = jptr_to_ref::<WlSurface>(handle).ok_or_else(|| {
-        WLCBError::Null(
-            "updateSufaceData: WLCSurface.handle() returned a null pointer",
+        BridgeError::Null(
+            "updateSufaceData: surfaceHandle is null",
         )
     })?;
 
@@ -911,10 +911,10 @@ fn update_surface_data<'local>(
 fn toplevel_surface<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     toplevel_handle: jlong,
-) -> Result<jlong, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "toplevelSurface")?;
+) -> Result<jlong, BridgeError> {
+    let instance = jptr_to_instance!(instance, "toplevelSurface")?;
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelSurface")?;
 
     let surface = toplevel.wl_surface();
@@ -925,10 +925,10 @@ fn toplevel_surface<'local>(
 fn popup_surface<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     popup_handle: jlong,
-) -> Result<jlong, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "popupSurface")?;
+) -> Result<jlong, BridgeError> {
+    let instance = jptr_to_instance!(instance, "popupSurface")?;
     let popup = jptr_to_popup!(popup_handle, "popupSurface")?;
 
     let surface = popup.wl_surface();
@@ -939,10 +939,10 @@ fn popup_surface<'local>(
 fn popup_parent<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     popup_handle: jlong,
-) -> Result<jlong, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "popupParent")?;
+) -> Result<jlong, BridgeError> {
+    let instance = jptr_to_instance!(instance, "popupParent")?;
     let popup = jptr_to_popup!(popup_handle, "popupParent")?;
 
     let parent_surface = match popup.get_parent_surface() {
@@ -969,7 +969,7 @@ fn popup_offset<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
     popup_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jint>, WLCBError> {
+) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
     let popup = jptr_to_popup!(popup_handle, "popupOffset")?;
 
     let mut offset: [jint; 2] = [0, 0];
@@ -991,15 +991,15 @@ fn popup_offset<'local>(
 fn update_surface_tree<'local>(
     env: &mut Env<'local>,
     this: WaylandCraftBridge<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     surface: WLCSurface<'local>,
-) -> Result<WLCSurface<'local>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "updateSurfaceTrees")?;
+) -> Result<WLCSurface<'local>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "updateSurfaceTrees")?;
 
     let handle = surface.handle(env)?;
     let surface = jptr_to_ref::<WlSurface>(handle).ok_or_else(|| {
-        WLCBError::Null(
-            "updateSufaceTree: WLCSurface.handle() returned a null pointer",
+        BridgeError::Null(
+            "updateSufaceTree: surface is not alive",
         )
     })?;
 
@@ -1063,11 +1063,11 @@ fn update_surface_tree<'local>(
 fn pointer_motion<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     x: jdouble,
     y: jdouble,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "pointerMotion")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "pointerMotion")?;
     instance.state.seat.pointer_motion(x, y);
 
     Ok(())
@@ -1076,12 +1076,12 @@ fn pointer_motion<'local>(
 fn pointer_motion_focus<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     surface_handle: jlong,
     x: jdouble,
     y: jdouble,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "pointerMotionFocus")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "pointerMotionFocus")?;
     let surface = jptr_to_ref(surface_handle);
     instance.state.seat.pointer_motion_focus(surface, x, y);
 
@@ -1091,11 +1091,11 @@ fn pointer_motion_focus<'local>(
 fn pointer_rel_motion<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     dx: jdouble,
     dy: jdouble,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "pointerRelMotion")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "pointerRelMotion")?;
     instance.state.seat.pointer_relative_motion(dx, dy);
 
     Ok(())
@@ -1104,10 +1104,10 @@ fn pointer_rel_motion<'local>(
 fn maybe_pointer_lock<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     surface_handle: jlong,
-) -> Result<jboolean, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "maybePointerLock")?;
+) -> Result<jboolean, BridgeError> {
+    let instance = jptr_to_instance!(instance, "maybePointerLock")?;
     let Some(surface) = jptr_to_ref(surface_handle) else {
         return Ok(false);
     };
@@ -1118,9 +1118,9 @@ fn maybe_pointer_lock<'local>(
 fn pointer_unlock<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "pointerUnlock")?;
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "pointerUnlock")?;
     instance.state.seat.pointer_unlock();
 
     Ok(())
@@ -1129,9 +1129,9 @@ fn pointer_unlock<'local>(
 fn pointer_leave<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "pointerLeave")?;
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "pointerLeave")?;
     instance.state.seat.pointer_motion_focus(None, 0.0, 0.0);
 
     Ok(())
@@ -1140,16 +1140,16 @@ fn pointer_leave<'local>(
 fn pointer_button<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     button: jint,
     state: jint,
-) -> Result<jint, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "pointerButton")?;
+) -> Result<jint, BridgeError> {
+    let instance = jptr_to_instance!(instance, "pointerButton")?;
 
     let state = match state {
         0 => ButtonState::Released,
         1 => ButtonState::Pressed,
-        _ => return Err(WLCBError::UnknownPointerButton(state)),
+        _ => return Err(BridgeError::UnknownPointerButton(state)),
     };
 
     Ok(instance.state.seat.pointer_button(button as u32, state) as jint)
@@ -1158,17 +1158,17 @@ fn pointer_button<'local>(
 fn pointer_axis<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     axis: jint,
     value: jdouble,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "pointerAxis")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "pointerAxis")?;
 
     let axis = match axis {
         0 => Axis::VerticalScroll,
         1 => Axis::HorizontalScroll,
         _ => {
-            return Err(WLCBError::UnknownScrollDirection(axis));
+            return Err(BridgeError::UnknownScrollDirection(axis));
         }
     };
 
@@ -1178,9 +1178,9 @@ fn pointer_axis<'local>(
 fn cursor_shape<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<jint, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "cursorShape")?;
+    instance: jlong,
+) -> Result<jint, BridgeError> {
+    let instance = jptr_to_instance!(instance, "cursorShape")?;
 
     let shape = match instance.state.seat.cursor_shape {
         Some(shape) => shape as jint,
@@ -1193,10 +1193,10 @@ fn cursor_shape<'local>(
 fn keyboard_focus<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     surface_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "keyboardFocus")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "keyboardFocus")?;
     let toplevel: Option<&ToplevelSurface> = jptr_to_ref(surface_handle);
 
     let surface = toplevel.map(|t| t.wl_surface().clone());
@@ -1242,9 +1242,9 @@ fn keyboard_focus<'local>(
 fn keyboard_activate<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "keyboardActivate")?;
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "keyboardActivate")?;
     instance.state.seat.activate_keyboard();
 
     Ok(())
@@ -1253,9 +1253,9 @@ fn keyboard_activate<'local>(
 fn keyboard_deactivate<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "keyboardDeactivate")?;
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "keyboardDeactivate")?;
     instance.state.seat.deactivate_keyboard();
 
     Ok(())
@@ -1264,18 +1264,18 @@ fn keyboard_deactivate<'local>(
 fn keyboard_input<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     scancode: jint,
     action: jint,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "keyboardInput")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "keyboardInput")?;
 
     let scancode = scancode as u32;
     let action = match action {
         0 => KeyState::Released,
         1 => KeyState::Pressed,
         _ => {
-            return Err(WLCBError::UnknownKeyboardState(action));
+            return Err(BridgeError::UnknownKeyboardState(action));
         }
     };
 
@@ -1287,11 +1287,11 @@ fn keyboard_input<'local>(
 fn keyboard_update<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     scancode: jint,
     pressed: jboolean,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "keyboardUpdate")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "keyboardUpdate")?;
     instance
         .state
         .seat
@@ -1303,9 +1303,9 @@ fn keyboard_update<'local>(
 fn fullscreened<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jlong>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "fullscreened")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "fullscreened")?;
 
     let mut handles: Vec<jlong> = vec![];
     for toplevel in instance.state.xdg_state.toplevel_surfaces() {
@@ -1331,9 +1331,9 @@ fn fullscreened<'local>(
 fn output_size<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jint>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "outputSize")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "outputSize")?;
 
     let size = instance.state.output.size();
     let size: [jint; 2] = [size.w, size.h];
@@ -1346,9 +1346,9 @@ fn output_size<'local>(
 fn output_bounds<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jint>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "outputBounds")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "outputBounds")?;
 
     let bounds = instance.state.output.bounds();
     let bounds: [jint; 2] = [bounds.w, bounds.h];
@@ -1361,19 +1361,19 @@ fn output_bounds<'local>(
 fn output_resize<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     width: jint,
     height: jint,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "outputResize")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "outputResize")?;
     let size = instance.state.output.size();
     let width_changed = size.w != width;
     let height_changed = size.h != height;
 
     if width < 1 {
-        return Err(WLCBError::NonPositiveWidth);
+        return Err(BridgeError::NonPositiveWidth);
     } else if height < 1 {
-        return Err(WLCBError::NonPositiveHeight);
+        return Err(BridgeError::NonPositiveHeight);
     }
 
     if !width_changed && !height_changed {
@@ -1398,19 +1398,19 @@ fn output_resize<'local>(
 fn output_set_bounds<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     width: jint,
     height: jint,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "outputSetBounds")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "outputSetBounds")?;
     let bounds = instance.state.output.bounds();
     let width_changed = bounds.w != width;
     let height_changed = bounds.h != height;
 
     if width < 1 {
-        return Err(WLCBError::NonPositiveWidth);
+        return Err(BridgeError::NonPositiveWidth);
     } else if height < 1 {
-        return Err(WLCBError::NonPositiveHeight);
+        return Err(BridgeError::NonPositiveHeight);
     }
 
     if !width_changed && !height_changed {
@@ -1438,7 +1438,7 @@ fn check_input_region<'local>(
     surface_handle: jlong,
     x: jdouble,
     y: jdouble,
-) -> Result<jboolean, WLCBError> {
+) -> Result<jboolean, BridgeError> {
     let Some(surface) = jptr_to_ref(surface_handle) else {
         return Ok(false);
     };
@@ -1460,7 +1460,7 @@ fn surface_xdg_geometry<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
     surface_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jint>, WLCBError> {
+) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
     let surface = match jptr_to_ref(surface_handle) {
         Some(s) => s,
         None => return Ok(JIntArray::null()),
@@ -1487,7 +1487,7 @@ fn toplevel_title<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
     toplevel_handle: jlong,
-) -> Result<JString<'local>, WLCBError> {
+) -> Result<JString<'local>, BridgeError> {
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelTitle")?;
 
     let surface = toplevel.wl_surface();
@@ -1514,7 +1514,7 @@ fn toplevel_app_id<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
     toplevel_handle: jlong,
-) -> Result<JString<'local>, WLCBError> {
+) -> Result<JString<'local>, BridgeError> {
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelAppId")?;
 
     let surface = toplevel.wl_surface();
@@ -1544,7 +1544,7 @@ fn toplevel_resize<'local>(
     width: jint,
     height: jint,
     interactive: jboolean,
-) -> Result<(), WLCBError> {
+) -> Result<(), BridgeError> {
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelResize")?;
 
     toplevel.with_pending_state(|state| {
@@ -1569,7 +1569,7 @@ fn toplevel_resize_ovr<'local>(
     toplevel_handle: jlong,
     width: jint,
     height: jint,
-) -> Result<(), WLCBError> {
+) -> Result<(), BridgeError> {
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelResizeOvr")?;
 
     toplevel.with_pending_state(|state| {
@@ -1585,10 +1585,10 @@ fn toplevel_resize_ovr<'local>(
 fn toplevel_maximize<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     toplevel_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "toplevelMaximize")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "toplevelMaximize")?;
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelMaximize")?;
 
     toplevel.with_pending_state(|state| {
@@ -1607,10 +1607,10 @@ fn toplevel_maximize<'local>(
 fn toplevel_fullscreen<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     toplevel_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "toplevelFullscreen")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "toplevelFullscreen")?;
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelFullscreen")?;
 
     toplevel.with_pending_state(|state| {
@@ -1626,10 +1626,10 @@ fn toplevel_fullscreen<'local>(
 fn free_surface<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     surface_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "freeSurface")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "freeSurface")?;
     remove_element(&mut instance.bridge.surfaces, surface_handle);
 
     Ok(())
@@ -1638,10 +1638,10 @@ fn free_surface<'local>(
 fn free_toplevel<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     toplevel_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "freeToplevel")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "freeToplevel")?;
     remove_element(&mut instance.bridge.toplevels, toplevel_handle);
 
     Ok(())
@@ -1650,10 +1650,10 @@ fn free_toplevel<'local>(
 fn free_popup<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     popup_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "freePopup")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "freePopup")?;
     remove_element(&mut instance.bridge.popups, popup_handle);
 
     Ok(())
@@ -1662,7 +1662,7 @@ fn free_popup<'local>(
 fn raw_desktop_entry_to_java<'local>(
     env: &mut Env<'local>,
     entry: &RawDesktopEntry,
-) -> Result<JRawDesktopEntry<'local>, WLCBError> {
+) -> Result<JRawDesktopEntry<'local>, BridgeError> {
     macro_rules! opt_to_jstring {
         ($env:expr, $string:expr) => {
             match $string {
@@ -1725,10 +1725,10 @@ fn raw_desktop_entry_to_java<'local>(
 fn load_desktop_entry<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     path: JString<'local>,
-) -> Result<JRawDesktopEntry<'local>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "loadDesktopEntry")?;
+) -> Result<JRawDesktopEntry<'local>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "loadDesktopEntry")?;
     let path: PathBuf = path.try_to_string(env)?.into();
     let entry = match instance.xdg.load_entry(path) {
         Some(e) => e,
@@ -1741,9 +1741,9 @@ fn load_desktop_entry<'local>(
 fn load_desktop_entries<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JObjectArray<'local, JRawDesktopEntry<'local>>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "loadDesktopEntries")?;
+    instance: jlong,
+) -> Result<JObjectArray<'local, JRawDesktopEntry<'local>>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "loadDesktopEntries")?;
     let entries = instance.xdg.get_raw_entries();
     let entries = entries
         .iter()
@@ -1769,7 +1769,7 @@ fn render_svg<'local>(
     width: jint,
     height: jint,
     buffer_ptr: jlong,
-) -> Result<jboolean, WLCBError> {
+) -> Result<jboolean, BridgeError> {
     let path: PathBuf = path.try_to_string(env)?.into();
     let data = (buffer_ptr as usize) as *mut u8;
     let width = width as u32;
@@ -1781,10 +1781,10 @@ fn render_svg<'local>(
 fn exec_app<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     app_id: JString<'local>,
-) -> Result<jboolean, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "renderSvg")?;
+) -> Result<jboolean, BridgeError> {
+    let instance = jptr_to_instance!(instance, "execApp")?;
     let app_id = app_id.try_to_string(env)?;
 
     let env_vars = vec![
@@ -1800,9 +1800,9 @@ fn exec_app<'local>(
 fn set_keymap_default<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "execApp")?;
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "setKeymapDefault")?;
     instance.state.seat.change_keymap_to_default();
 
     Ok(())
@@ -1811,9 +1811,9 @@ fn set_keymap_default<'local>(
 fn export_keymap<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JString<'local>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "setKeymapDefault")?;
+    instance: jlong,
+) -> Result<JString<'local>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "exportKeymap")?;
     let keymap_str = instance.state.seat.export_keymap();
     Ok(JString::new(env, keymap_str)?)
 }
@@ -1821,10 +1821,10 @@ fn export_keymap<'local>(
 fn set_keymap_from_str<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     keymap: JString<'local>,
-) -> Result<jboolean, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "exportKeymap")?;
+) -> Result<jboolean, BridgeError> {
+    let instance = jptr_to_instance!(instance, "setKeymapFromStr")?;
     let keymap_str = keymap.try_to_string(env)?;
     Ok(instance.state.seat.change_keymap_from_str(keymap_str))
 }
@@ -1832,9 +1832,9 @@ fn set_keymap_from_str<'local>(
 fn check_dnd_request<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<JPrimitiveArray<'local, jint>, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "setKeymapFromStr")?;
+    instance: jlong,
+) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "checkDndRequest")?;
     let serial = match instance.state.data.check_dnd_request() {
         Some(r) => r as jint,
         None => return Ok(JIntArray::null()),
@@ -1848,18 +1848,18 @@ fn check_dnd_request<'local>(
 fn check_dnd_active<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<jboolean, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "checkDndRequest")?;
+    instance: jlong,
+) -> Result<jboolean, BridgeError> {
+    let instance = jptr_to_instance!(instance, "checkDndActive")?;
     Ok(instance.state.data.dnd.is_some())
 }
 
 fn dnd_cancel<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "checkDndActive")?;
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "dndCancel")?;
     instance.state.data.dnd_cancel();
 
     Ok(())
@@ -1868,9 +1868,9 @@ fn dnd_cancel<'local>(
 fn dnd_drop<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "dndCancel")?;
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "dndDrop")?;
     instance.state.data.dnd_drop();
 
     Ok(())
@@ -1879,12 +1879,12 @@ fn dnd_drop<'local>(
 fn dnd_motion<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
+    instance: jlong,
     surface_handle: jlong,
     x: jdouble,
     y: jdouble,
-) -> Result<(), WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "dndDrop")?;
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "dndMotion")?;
     let surface = jptr_to_ref(surface_handle);
     instance.state.data.dnd_motion(surface, x, y);
 
@@ -1894,9 +1894,9 @@ fn dnd_motion<'local>(
 fn dnd_icon<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
-    wlc_bridge_handle: jlong,
-) -> Result<jlong, WLCBError> {
-    let instance = jptr_to_wlc!(wlc_bridge_handle, "dndMotion")?;
+    instance: jlong,
+) -> Result<jlong, BridgeError> {
+    let instance = jptr_to_instance!(instance, "dndIcon")?;
     let Some(dnd) = &instance.state.data.dnd else {
         return Ok(0);
     };
