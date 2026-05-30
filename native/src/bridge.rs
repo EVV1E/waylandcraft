@@ -136,7 +136,12 @@ bind_java_type! {
             fn = toplevel_app_id,
         },
         static extern fn toplevel_resize {
-            sig = (toplevel_handle: jlong, width: jint, height: jint, interactive: jboolean),
+            sig = (
+                toplevel_handle: jlong,
+                width: jint,
+                height: jint,
+                interactive: jboolean
+            ),
             fn = toplevel_resize,
         },
         static extern fn toplevel_resize_ovr {
@@ -221,7 +226,12 @@ bind_java_type! {
             fn = pointer_motion,
         },
         static extern fn pointer_motion_focus {
-            sig = (instance: jlong, surface_handle: jlong, x: jdouble, y: jdouble),
+            sig = (
+                instance: jlong,
+                surface_handle: jlong,
+                x: jdouble,
+                y: jdouble
+            ),
             fn = pointer_motion_focus,
         },
         static extern fn pointer_rel_motion {
@@ -309,7 +319,12 @@ bind_java_type! {
             fn = load_desktop_entries,
         },
         static extern fn render_svg {
-            sig = (path: JString, width: jint, height: jint, buffer_ptr: jlong) -> jboolean,
+            sig = (
+                path: JString,
+                width: jint,
+                height: jint,
+                buffer_ptr: jlong
+            ) -> jboolean,
             name = "renderSVG",
             fn = render_svg,
         },
@@ -346,7 +361,12 @@ bind_java_type! {
             fn = dnd_drop,
         },
         static extern fn dnd_motion {
-            sig = (instance: jlong, surface_handle: jlong, x: jdouble, y: jdouble),
+            sig = (
+                instance: jlong,
+                surface_handle: jlong,
+                x: jdouble,
+                y: jdouble
+            ),
             fn = dnd_motion,
         },
         static extern fn dnd_icon {
@@ -777,7 +797,7 @@ fn try_attach_dmabuf(
 
     // This insert clones the dmabuf reference counter and as such ensures
     // that a strong reference to the dmabuf is kept.
-    let handle = insert_get_handle(&mut instance.bridge.dmabufs, &dmabuf);
+    let handle = insert_get_handle(&mut instance.bridge.dmabufs, dmabuf);
 
     let already_attached = jsurface.attach_dmabuf(env, handle).unwrap();
 
@@ -805,9 +825,7 @@ fn delete_dmabuf<'local>(
 ) -> Result<(), BridgeError> {
     let instance = jptr_to_instance!(instance, "deleteDmabuf")?;
     let dmabuf = jptr_to_ref::<Dmabuf>(dmabuf_handle).ok_or_else(|| {
-        BridgeError::Null(
-            "deleteDmabuf: dmabufHandle is null",
-        )
+        BridgeError::Null("deleteDmabuf: dmabufHandle is null")
     })?;
 
     instance.bridge.dmabufs.retain(|d| **d != *dmabuf);
@@ -855,12 +873,10 @@ fn update_surface_data<'local>(
 
     let handle = jsurface.handle(env)?;
     let surface = jptr_to_ref::<WlSurface>(handle).ok_or_else(|| {
-        BridgeError::Null(
-            "updateSufaceData: surfaceHandle is null",
-        )
+        BridgeError::Null("updateSufaceData: surfaceHandle is null")
     })?;
 
-    with_states(&surface, |data| {
+    with_states(surface, |data| {
         let mut attr_guard = data.cached_state.get::<SurfaceAttributes>();
         let attr = attr_guard.deref_mut().current();
 
@@ -998,15 +1014,13 @@ fn update_surface_tree<'local>(
 
     let handle = surface.handle(env)?;
     let surface = jptr_to_ref::<WlSurface>(handle).ok_or_else(|| {
-        BridgeError::Null(
-            "updateSufaceTree: surface is not alive",
-        )
+        BridgeError::Null("updateSufaceTree: surface is not alive")
     })?;
 
     let mut last_child = WLCSurface::null();
 
     with_surface_tree_upward(
-        &surface,
+        surface,
         None,
         |surface, _data, _parent| {
             TraversalAction::DoChildren(Some(surface.clone()))
@@ -1112,7 +1126,7 @@ fn maybe_pointer_lock<'local>(
         return Ok(false);
     };
 
-    Ok(instance.state.seat.pointer_lock(&surface))
+    Ok(instance.state.seat.pointer_lock(surface))
 }
 
 fn pointer_unlock<'local>(
@@ -1172,7 +1186,9 @@ fn pointer_axis<'local>(
         }
     };
 
-    Ok(instance.state.seat.pointer_axis(axis, value))
+    instance.state.seat.pointer_axis(axis, value);
+
+    Ok(())
 }
 
 fn cursor_shape<'local>(
@@ -1445,7 +1461,7 @@ fn check_input_region<'local>(
 
     let point: Point<f64, Logical> = Point::new(x, y);
 
-    Ok(with_states(&surface, |data| {
+    Ok(with_states(surface, |data| {
         let mut attr_guard = data.cached_state.get::<SurfaceAttributes>();
         let attr = attr_guard.deref_mut().current();
         if let Some(r) = &attr.input_region {
@@ -1466,7 +1482,7 @@ fn surface_xdg_geometry<'local>(
         None => return Ok(JIntArray::null()),
     };
 
-    let geometry: Option<[jint; 4]> = with_states(&surface, |states| {
+    let geometry: Option<[jint; 4]> = with_states(surface, |states| {
         let mut guard = states.cached_state.get::<SurfaceCachedState>();
         guard
             .current()

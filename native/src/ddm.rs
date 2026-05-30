@@ -242,7 +242,7 @@ impl WLCDataState {
         let focus = self.dnd.as_ref().unwrap().focus.clone();
 
         if source.is_none()
-            && let Some(ref s) = surface
+            && let Some(s) = surface
         {
             let surface_client = s.client().unwrap();
             if surface_client != client {
@@ -301,7 +301,7 @@ impl WLCDataState {
             }
 
             // Make device enter surface
-            device.enter(new_serial(), &surface, x, y, offer.as_ref());
+            device.enter(new_serial(), surface, x, y, offer.as_ref());
             data.dnd_focus = Some(surface.clone());
             data.last_dnd_motion = None;
         });
