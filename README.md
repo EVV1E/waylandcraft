@@ -36,7 +36,7 @@ so the `ESC` key is forwarded to the application.
 
 ### How do I run X11 apps?
 Right now Xwayland isn't directly integrated yet. Instead you'll need to install
-[xwayland-satellite](https://github.com/Supreeeme/xwayland-satellite). Just run `xwayland-sateliite :2`
+[xwayland-satellite](https://github.com/Supreeeme/xwayland-satellite). Just run `xwayland-satellite :2`
 (or choose a different number than two) in a terminal inside of the game. Then
 when launching X11 apps you need to specify the DISPLAY environment variable. For example if you want to run Steam,
 run `DISPLAY=:2 steam` (in another terminal tab or window).
