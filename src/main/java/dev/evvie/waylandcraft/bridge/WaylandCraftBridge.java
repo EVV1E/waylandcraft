@@ -393,6 +393,10 @@ public class WaylandCraftBridge {
 		
 		profiler.pop();
 	}
+
+	public void framePresented(long presentationTime, int refreshRate) {
+		sendPresentation(instance, presentationTime, refreshRate);
+	}
 	
 	private void updateFramebuffers() {
 		List<WLCAbstractWindow> allWindows = Stream.of(toplevels, popups).flatMap((l) -> l.stream()).collect(Collectors.toList());
@@ -681,6 +685,7 @@ public class WaylandCraftBridge {
 	private static native void update(long instance);
 	private static native String socket(long instance);
 	private static native void sendFrame(long surfaceHandle);
+	private static native void sendPresentation(long instance, long presentationTime, int refreshRate);
 	
 	private static native void updateSurfaceData(long instance, WLCSurface surface);
 	

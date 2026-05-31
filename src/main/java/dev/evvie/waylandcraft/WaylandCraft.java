@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.stream.Stream;
 
+import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
@@ -147,6 +148,10 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 		if(bridge == null) return;
 		
 		displays.forEach((d) -> d.render(ctx));
+
+		long presentationTime = Util.getNanos();
+		int refreshRate = Minecraft.getInstance().getWindow().getRefreshRate();
+		bridge.framePresented(presentationTime, refreshRate);
 	}
 	
 	public void updateWorld(LevelExtractionContext ctx) {

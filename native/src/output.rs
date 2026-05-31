@@ -1,5 +1,6 @@
 use crate::WLCState;
 use smithay::{
+    output::{self, Output, PhysicalProperties},
     reexports::wayland_server::{
         Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New,
         Resource,
@@ -9,8 +10,7 @@ use smithay::{
 };
 
 pub struct WLCOutput {
-    pub outputs: Vec<WlOutput>,
-    size: Size<i32, Logical>,
+    pub output: Output,
     // size of content area
     bounds: Size<i32, Logical>,
     display_handle: DisplayHandle,
@@ -18,9 +18,25 @@ pub struct WLCOutput {
 
 impl WLCOutput {
     pub fn new(display_handle: &DisplayHandle) -> Self {
-        WLCOutput {
-            outputs: vec![],
+        let output = Output::new(
+            "output-0".into(),
+            PhysicalProperties {
+                // "physical" size, not virtual
+                // I'll put (1920/500*10000, 1080/500*10000)mm here
+                // (assuming 1 block is 1 meter)
+                size: Size::new(38400, 21600),
+                subpixel: output::Subpixel::None,
+                make: "Virtual".into(),
+                model: "Monitor".into(),
+                serial_number: "V1RT".into(),
+            }
+        );
+        output.set_preferred(output::Mode {
             size: Size::new(1920, 1080),
+            refresh: 60000,
+        });
+        WLCOutput {
+            output,
             bounds: Size::new(1920, 1080),
             display_handle: display_handle.clone(),
         }
@@ -32,7 +48,7 @@ impl WLCOutput {
     }
 
     pub fn size(&self) -> Size<i32, Logical> {
-        self.size
+        self.output.preferred_mode().unwrap().size.to_logical(1)
     }
 
     pub fn bounds(&self) -> Size<i32, Logical> {
@@ -40,14 +56,12 @@ impl WLCOutput {
     }
 
     pub fn resize(&mut self, width: i32, height: i32) {
-        self.size = Size::new(width, height);
-        let flags = wl_output::Mode::Current;
-        for output in &self.outputs {
-            output.mode(flags, self.size.w, self.size.h, 0);
-            if output.version() >= 2 {
-                output.done();
-            }
-        }
+        let old_preferred = self.output.preferred_mode().unwrap();
+        self.output.set_preferred(output::Mode {
+            size: Size::new(width, height),
+            refresh: 60000,
+        });
+        self.output.delete_mode(old_preferred);
     }
 
     pub fn set_bounds(&mut self, width: i32, height: i32) {
@@ -65,28 +79,31 @@ impl GlobalDispatch<WlOutput, ()> for WLCState {
         data_init: &mut DataInit<'_, Self>,
     ) {
         let output: WlOutput = data_init.init(resource, ());
+        let state_output = &state.output.output;
 
         let flags = wl_output::Mode::Current;
-        let size = &state.output.size;
-        output.mode(flags, size.w, size.h, 0);
+        if let Some(mode) = state_output.current_mode() {
+            output.mode(flags, mode.size.w, mode.size.h, mode.refresh);
+        }
 
-        let location = (0, 0);
-        let physical = (0, 0);
-
+        let location = state_output.current_location();
+        let physical = state_output.physical_properties();
         output.geometry(
-            location.0,
-            location.1,
-            physical.0,
-            physical.1,
+            location.x,
+            location.y,
+            physical.size.w,
+            physical.size.h,
             wl_output::Subpixel::None,
-            "Virtual".into(),
-            "Monitor".into(),
-            wl_output::Transform::Normal,
+            //physical.subpixel,
+            physical.make,
+            physical.model,
+            wl_output::Transform::Normal
+            //state_output.current_transform()
         );
 
         if output.version() >= 4 {
-            output.name("output-0".into());
-            output.description("Virtual Output".into());
+            output.name(state_output.name());
+            output.description(state_output.description());
         }
 
         if output.version() >= 2 {

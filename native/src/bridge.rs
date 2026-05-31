@@ -14,7 +14,10 @@ use jni::{
 use smithay::{
     backend::allocator::{Buffer, dmabuf::WeakDmabuf},
     reexports::{
-        wayland_protocols::xdg::shell::server::xdg_toplevel,
+        wayland_protocols::{
+            wp::presentation_time::server::wp_presentation_feedback::Kind,
+            xdg::shell::server::xdg_toplevel,
+        },
         wayland_server::{
             Resource,
             protocol::{
@@ -33,6 +36,7 @@ use smithay::{
             with_states as with_surface_data, with_surface_tree_upward,
         },
         dmabuf::get_dmabuf,
+        presentation::{PresentationFeedbackCachedState, Refresh},
         shell::xdg::{
             PopupSurface, SurfaceCachedState, ToplevelSurface,
             XdgToplevelSurfaceData,
@@ -44,6 +48,7 @@ use smithay::{
 };
 use std::ops::DerefMut;
 use std::path::PathBuf;
+use std::time::Duration;
 use thiserror::Error;
 
 #[allow(clippy::vec_box)]
@@ -113,6 +118,10 @@ bind_java_type! {
         static extern fn send_frame {
             sig = (surface_handle: jlong),
             fn = send_frame,
+        },
+        static extern fn send_presentation {
+            sig = (instance: jlong, presentation_time: jlong, refresh_rate: jint),
+            fn = send_presentation,
         },
         static extern fn update_surface_data {
             sig = (instance: jlong, surface: WLCSurface),
@@ -497,6 +506,34 @@ fn send_frame<'local>(
             c.done(get_time());
         }
     });
+
+    Ok(())
+}
+
+fn send_presentation<'local>(
+    _env: &mut Env<'local>,
+    _class: JClass<'local>,
+    instance: jlong,
+    presentation_time: jlong,
+    refresh_rate: jint,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "sendPresentation")?;
+    let refresh = Refresh::fixed(Duration::from_secs_f64(1.0 / refresh_rate as f64));
+    let presentation_time = Duration::from_nanos(presentation_time as u64);
+
+    for surface in &instance.bridge.surfaces {
+        let mut callbacks = with_states(surface, |states| {
+            std::mem::take(&mut states
+                .cached_state
+                .get::<PresentationFeedbackCachedState>()
+                .current()
+                .callbacks)
+        });
+        let seq = 0; // As protocol said. We can't query refresh count
+        for feedback in callbacks.drain(..) {
+            feedback.presented(&instance.state.output.output, presentation_time, refresh, seq, Kind::Vsync);
+        }
+    }
 
     Ok(())
 }
