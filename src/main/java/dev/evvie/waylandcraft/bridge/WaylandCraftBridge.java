@@ -22,6 +22,8 @@ import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 
@@ -260,6 +262,10 @@ public class WaylandCraftBridge {
 	public void update() {
 		ProfilerFiller profiler = Profiler.get();
 		profiler.push("wayland");
+
+		long presentationTime = Util.getNanos();
+		int refreshRate = Minecraft.getInstance().getWindow().getRefreshRate();
+		sendPresentation(instance, presentationTime, refreshRate);
 		
 		// Update wayland clients
 		profiler.push("update");
