@@ -560,8 +560,8 @@ public class WindowManagerScreen extends Screen {
 		HoveredSurface hovered = surfaceUnderPointer(mouseX, mouseY);
 		
 		if(hovered != null) {
-			wlc.bridge.sendScroll(0, -scrollY * 10);
-			wlc.bridge.sendScroll(1, -scrollX * 10);
+			wlc.bridge.sendScroll(0, -scrollY);
+			wlc.bridge.sendScroll(1, -scrollX);
 			return true;
 		}
 		

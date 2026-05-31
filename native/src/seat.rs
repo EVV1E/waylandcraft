@@ -319,9 +319,19 @@ impl WLCSeatState {
     }
 
     pub fn pointer_axis(&self, axis: Axis, value: f64) {
+        if value == 0.0 {
+            return;
+        }
         self.for_all_pointers(|pointer, data| {
             if data.focus.is_some() {
-                pointer.axis(get_time(), axis, value);
+                let version = pointer.version();
+                if version >= wl_pointer::EVT_AXIS_VALUE120_SINCE {
+                    let value = value * 120.0;
+                    pointer.axis_value120(axis, value.floor() as i32);
+                } else if version >= wl_pointer::EVT_AXIS_DISCRETE_SINCE {
+                    pointer.axis_discrete(axis, value.floor() as i32);
+                }
+                pointer.axis(get_time(), axis, value * 10.0);
                 self.pointer_frame(pointer);
             }
         });

@@ -584,9 +584,8 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 		if(hoveredDisplay != null) {
 			if(hoveredDisplay.dist < 0) return true;
 			
-			// Multiplication by -10 is the inverse transformation from what GLFW does on wayland
-			bridge.sendScroll(0, -scrollY * 10);
-			bridge.sendScroll(1, -scrollX * 10);
+			bridge.sendScroll(0, -scrollY);
+			bridge.sendScroll(1, -scrollX);
 			
 			WLCAbstractWindow window = hoveredDisplay.target.window;
 			if(window instanceof WLCToplevel) bridge.focusSurface((WLCToplevel) window);
