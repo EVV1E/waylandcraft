@@ -484,6 +484,11 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 			if(keyboardCaptureMode != KeyboardCaptureMode.NONE && bridge.maybeLockPointer(surface)) {
 				pointerCapture = new PointerCapture(surface, rel.x, rel.y);
 			}
+			
+			// Focus on hover
+			if(settings.getFocusOnHover() && hoveredDisplay.target.window instanceof WLCToplevel toplevel) {
+				bridge.focusSurface(toplevel);
+			}
 		}
 		else {
 			bridge.sendMotionOutside();

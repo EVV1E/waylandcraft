@@ -20,6 +20,12 @@ public class WaylandCraftSettings {
 	
 	int pixelsPerBlock = 500;
 	boolean windowAntialiasing = false;
+	boolean focusOnHover = false;
+	
+	/* This is where the field names go to avoid typos */
+	public static final String PIXELS_PER_BLOCK = "pixelsPerBlock";
+	public static final String WINDOW_ANTIALIASING = "windowAntialiasing";
+	public static final String FOCUS_ON_HOVER = "focusOnHover";
 	
 	/* This is where the getters go */
 	
@@ -29,6 +35,10 @@ public class WaylandCraftSettings {
 	
 	public boolean getAntialiasing() {
 		return windowAntialiasing;
+	}
+	
+	public boolean getFocusOnHover() {
+		return focusOnHover;
 	}
 	
 	/* Methods to modifiy settings by name */

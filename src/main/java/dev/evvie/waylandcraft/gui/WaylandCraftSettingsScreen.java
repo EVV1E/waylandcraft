@@ -3,6 +3,7 @@ package dev.evvie.waylandcraft.gui;
 import java.util.ArrayList;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.settings.WaylandCraftSettings;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ScrollableLayout;
 import net.minecraft.client.gui.components.StringWidget;
@@ -69,8 +70,9 @@ public class WaylandCraftSettingsScreen extends Screen {
 	private void createSettings() {
 		settingsWidgets.clear();
 		
-		createIntSettingsWidget("pixelsPerBlock", Component.literal("Window display pixels per block"));
-		createBooleanSettingsWidget("windowAntialiasing", Component.literal("Window in world antialiasing"));
+		createIntSettingsWidget(WaylandCraftSettings.PIXELS_PER_BLOCK, Component.literal("Window display pixels per block"));
+		createBooleanSettingsWidget(WaylandCraftSettings.WINDOW_ANTIALIASING, Component.literal("Window in world antialiasing"));
+		createBooleanSettingsWidget(WaylandCraftSettings.FOCUS_ON_HOVER, Component.literal("Focus windows when hovered"));
 	}
 	
 }
