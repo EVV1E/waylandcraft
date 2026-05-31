@@ -28,7 +28,7 @@ use smithay::{
             backend::ClientId,
             protocol::{
                 wl_keyboard::{self, KeyState, KeymapFormat, WlKeyboard},
-                wl_pointer::{self, Axis, ButtonState, WlPointer},
+                wl_pointer::{self, Axis, AxisSource, ButtonState, WlPointer},
                 wl_seat::{self, WlSeat},
                 wl_surface::WlSurface,
             },
@@ -319,12 +319,12 @@ impl WLCSeatState {
     }
 
     pub fn pointer_axis(&self, axis: Axis, value: f64) {
-        if value == 0.0 {
-            return;
-        }
         self.for_all_pointers(|pointer, data| {
             if data.focus.is_some() {
                 let version = pointer.version();
+                if version >= wl_pointer::EVT_AXIS_SOURCE_SINCE {
+                    pointer.axis_source(AxisSource::Wheel);
+                }
                 if version >= wl_pointer::EVT_AXIS_VALUE120_SINCE {
                     let value = value * 120.0;
                     pointer.axis_value120(axis, value.floor() as i32);
