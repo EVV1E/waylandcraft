@@ -319,6 +319,9 @@ impl WLCSeatState {
     }
 
     pub fn pointer_axis(&self, axis: Axis, value: f64) {
+        let val120 = (value * 120.0).floor() as i32;
+        if val120 == 0 { return }
+
         self.for_all_pointers(|pointer, data| {
             if data.focus.is_some() {
                 let version = pointer.version();
@@ -326,8 +329,7 @@ impl WLCSeatState {
                     pointer.axis_source(AxisSource::Wheel);
                 }
                 if version >= wl_pointer::EVT_AXIS_VALUE120_SINCE {
-                    let value = value * 120.0;
-                    pointer.axis_value120(axis, value.floor() as i32);
+                    pointer.axis_value120(axis, val120);
                 } else if version >= wl_pointer::EVT_AXIS_DISCRETE_SINCE {
                     pointer.axis_discrete(axis, value.floor() as i32);
                 }
