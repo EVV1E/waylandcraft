@@ -45,6 +45,9 @@ public class WaylandCraftBridge {
 	private @Nullable Integer lastMoveRequestSerial = null;
 	private @Nullable ResizeRequest lastResizeRequest = null;
 	
+	private float smoothedRefresh = 60.0f;
+	private static final float ALPHA = 0.05f;
+	
 	static {
 		boolean loaded = false;
 		InputStream inputStream = openNativeLibraryFromJar();
@@ -264,8 +267,10 @@ public class WaylandCraftBridge {
 		profiler.push("wayland");
 
 		long presentationTime = Util.getNanos();
-		int refreshRate = Minecraft.getInstance().getWindow().getRefreshRate();
-		sendPresentation(instance, presentationTime, refreshRate);
+		int refreshRate = Minecraft.getInstance().getFps();
+		if(refreshRate <= 0) refreshRate = 60;
+		smoothedRefresh = smoothedRefresh * (1 - ALPHA) + refreshRate * ALPHA;
+		sendPresentation(instance, presentationTime, Math.round(smoothedRefresh));
 		
 		// Update wayland clients
 		profiler.push("update");

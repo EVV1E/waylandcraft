@@ -518,7 +518,7 @@ fn send_presentation<'local>(
     refresh_rate: jint,
 ) -> Result<(), BridgeError> {
     let instance = jptr_to_instance!(instance, "sendPresentation")?;
-    let refresh = Refresh::fixed(Duration::from_secs_f64(1.0 / refresh_rate as f64));
+    let refresh = Refresh::Fixed(Duration::from_secs_f64(1.0 / refresh_rate as f64));
     let presentation_time = Duration::from_nanos(presentation_time as u64);
 
     for surface in &instance.bridge.surfaces {
