@@ -12,7 +12,7 @@ use jni::{
     sys::{jboolean, jbyte, jdouble, jint, jlong},
 };
 use smithay::{
-    backend::allocator::{Buffer, dmabuf::Dmabuf},
+    backend::allocator::{Buffer, dmabuf::WeakDmabuf},
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
         wayland_server::{
@@ -52,7 +52,7 @@ pub(crate) struct BridgeState {
     toplevels: Vec<Box<ToplevelSurface>>,
     popups: Vec<Box<PopupSurface>>,
     surfaces: Vec<Box<WlSurface>>,
-    dmabufs: Vec<Box<Dmabuf>>,
+    dmabufs: Vec<Box<WeakDmabuf>>,
 }
 
 impl BridgeState {
@@ -209,9 +209,9 @@ bind_java_type! {
             name = "surfaceXDGGeometry",
             fn = surface_xdg_geometry,
         },
-        static extern fn delete_dmabuf {
-            sig = (instance: jlong, dmabuf_handle: jlong),
-            fn = delete_dmabuf
+        static extern fn dmabufs {
+            sig = (instance: jlong) -> jlong[],
+            fn = dmabufs
         },
         extern fn update_surface_tree {
             sig = (instance: jlong, surface: WLCSurface) -> WLCSurface,
@@ -795,9 +795,8 @@ fn try_attach_dmabuf(
     let height = dmabuf.height() as jint;
     ensure_viewport_valid(surf_data, Size::new(width, height));
 
-    // This insert clones the dmabuf reference counter and as such ensures
-    // that a strong reference to the dmabuf is kept.
-    let handle = insert_get_handle(&mut instance.bridge.dmabufs, dmabuf);
+    let weak = dmabuf.weak();
+    let handle = insert_get_handle(&mut instance.bridge.dmabufs, &weak);
 
     let already_attached = jsurface.attach_dmabuf(env, handle).unwrap();
 
@@ -817,20 +816,18 @@ fn try_attach_dmabuf(
     BufferAttachResult::Success
 }
 
-fn delete_dmabuf<'local>(
-    _env: &mut Env<'local>,
+fn dmabufs<'local>(
+    env: &mut Env<'local>,
     _class: JClass<'local>,
     instance: jlong,
-    dmabuf_handle: jlong,
-) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "deleteDmabuf")?;
-    let dmabuf = jptr_to_ref::<Dmabuf>(dmabuf_handle).ok_or_else(|| {
-        BridgeError::Null("deleteDmabuf: dmabufHandle is null")
-    })?;
+) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "dmabufs")?;
+    instance.bridge.dmabufs.retain(|d| !d.is_gone());
 
-    instance.bridge.dmabufs.retain(|d| **d != *dmabuf);
-
-    Ok(())
+    let handles = get_all_handles(&mut instance.bridge.dmabufs);
+    let array = JLongArray::new(env, handles.len())?;
+    array.set_region(env, 0, &handles)?;
+    Ok(array)
 }
 
 // Proxy to call the try_attach_* family of functions
@@ -897,6 +894,9 @@ fn update_surface_data<'local>(
             }
 
             // Done with buffer attachment
+            // All buffers are immediately released because at this point they
+            // are all already written to an independent OpenGL texture.
+            // (including the dmabufs)
             buf.release();
             attr.buffer = None;
         }

@@ -199,6 +199,32 @@ public class WaylandCraftBridge {
 		this.popups = popups_new;
 	}
 	
+	private void updateDmabufs() {
+		long[] remainingHandles = dmabufs(instance);
+		ArrayList<DmabufTexture> dmabufs_new = new ArrayList<DmabufTexture>();
+		for(DmabufTexture dmabuf : this.dmabufs) {
+			// If the dmabuf texture is not attached to a real wl_buffer anymore, free the EGL resources
+			boolean retained = ArrayUtils.contains(remainingHandles, dmabuf.handle);
+			if(!retained) dmabuf.freeEGL();
+			
+			// Remove it from the list and free the texture if no longer attached to any surface
+			boolean used = false;
+			for(WLCSurface surface : surfaces) {
+				if(surface.getBuffer() == dmabuf) {
+					used = true;
+					break;
+				}
+			}
+			if(retained || used) {
+				dmabufs_new.add(dmabuf);
+			}
+			else {
+				dmabuf.doReleaseTexure();
+			}
+		}
+		this.dmabufs = dmabufs_new;
+	}
+	
 	private void deleteUnvisitedSurfaces() {
 		ArrayList<WLCSurface> surfaces_new = new ArrayList<WLCSurface>();
 		for(WLCSurface surface : this.surfaces) {
@@ -235,8 +261,8 @@ public class WaylandCraftBridge {
 		ProfilerFiller profiler = Profiler.get();
 		profiler.push("wayland");
 		
-		profiler.push("update");
 		// Update wayland clients
+		profiler.push("update");
 		update(this.instance);
 		profiler.pop();
 		
@@ -356,7 +382,7 @@ public class WaylandCraftBridge {
 		updateFramebuffers();
 		profiler.pop();
 		
-		freeUnusedDmabufs();
+		updateDmabufs();
 		
 		updateFocusOrder();
 		
@@ -366,25 +392,6 @@ public class WaylandCraftBridge {
 		}
 		
 		profiler.pop();
-	}
-	
-	private void freeUnusedDmabufs() {
-		ArrayList<DmabufTexture> unusedDmabufs = new ArrayList<>();
-		for(DmabufTexture dmabuf : dmabufs) {
-			boolean used = false;
-			for(WLCSurface surface : surfaces) {
-				if(surface.getBuffer() == dmabuf) {
-					used = true;
-					break;
-				}
-			}
-			if(!used) unusedDmabufs.add(dmabuf);
-		}
-		dmabufs.removeAll(unusedDmabufs);
-		for(DmabufTexture dmabuf : unusedDmabufs) {
-			dmabuf.free();
-			deleteDmabuf(instance, dmabuf.handle);
-		}
 	}
 	
 	private void updateFramebuffers() {
@@ -722,8 +729,7 @@ public class WaylandCraftBridge {
 	// Returns four-element array containing x,y,width,height which could be null
 	private static native int[] surfaceXDGGeometry(long surfaceHandle);
 	
-	// Release a dmabuf wl_buffer
-	private static native void deleteDmabuf(long instance, long dmabufHandle);
+	private static native long[] dmabufs(long instance);
 	
 	// Updates the surface tree given by the root surface
 	// This changes the doubly linked list of the WLCSurfaces.

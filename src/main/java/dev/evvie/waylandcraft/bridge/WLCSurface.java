@@ -104,6 +104,9 @@ public class WLCSurface {
 		if(this.buffer != null) {
 			this.width = buffer.width;
 			this.height = buffer.height;
+			
+			DmabufTexture dmabuf = (DmabufTexture) this.buffer;
+			dmabuf.copyData();
 		}
 		return this.buffer != null;
 	}
