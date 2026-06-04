@@ -6,8 +6,9 @@ use crate::seat::WLCSeatState;
 use crate::xdg_spec::XDGSpecHelper;
 use smithay::{
     backend::allocator::dmabuf::Dmabuf,
-    delegate_compositor, delegate_dmabuf, delegate_shm, delegate_presentation,
-    delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_shell,
+    delegate_compositor, delegate_dmabuf, delegate_output,
+    delegate_presentation, delegate_shm, delegate_single_pixel_buffer,
+    delegate_viewporter, delegate_xdg_shell,
     reexports::{
         calloop::{self, EventLoop, generic::Generic as GenericEvent},
         wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
@@ -111,8 +112,8 @@ impl WLCState {
         let data = WLCDataState::new(&disp);
         data.create_global();
 
-        let output = WLCOutput::new(&disp);
-        output.create_global();
+        let output = WLCOutput::new();
+        output.inner.create_global::<WLCState>(&disp);
 
         Self {
             display_handle: disp.clone(),
@@ -353,3 +354,4 @@ delegate_viewporter!(WLCState);
 delegate_single_pixel_buffer!(WLCState);
 delegate_presentation!(WLCState);
 delegate_dmabuf!(WLCState);
+delegate_output!(WLCState);

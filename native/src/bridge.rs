@@ -31,8 +31,8 @@ use smithay::{
     utils::{Logical, Point, Size},
     wayland::{
         compositor::{
-            BufferAssignment, SubsurfaceCachedState, SurfaceAttributes,
-            SurfaceData, TraversalAction, with_states, Damage,
+            BufferAssignment, Damage, SubsurfaceCachedState, SurfaceAttributes,
+            SurfaceData, TraversalAction, with_states,
             with_states as with_surface_data, with_surface_tree_upward,
         },
         dmabuf::get_dmabuf,
@@ -518,20 +518,29 @@ fn send_presentation<'local>(
     refresh_rate: jint,
 ) -> Result<(), BridgeError> {
     let instance = jptr_to_instance!(instance, "sendPresentation")?;
-    let refresh = Refresh::Fixed(Duration::from_secs_f64(1.0 / refresh_rate as f64));
+    let refresh =
+        Refresh::Fixed(Duration::from_secs_f64(1.0 / refresh_rate as f64));
     let presentation_time = Duration::from_nanos(presentation_time as u64);
 
     for surface in &instance.bridge.surfaces {
         let mut callbacks = with_states(surface, |states| {
-            std::mem::take(&mut states
-                .cached_state
-                .get::<PresentationFeedbackCachedState>()
-                .current()
-                .callbacks)
+            std::mem::take(
+                &mut states
+                    .cached_state
+                    .get::<PresentationFeedbackCachedState>()
+                    .current()
+                    .callbacks,
+            )
         });
         let seq = 0; // As protocol said. We can't query refresh count
         for feedback in callbacks.drain(..) {
-            feedback.presented(&instance.state.output.output, presentation_time, refresh, seq, Kind::Vsync);
+            feedback.presented(
+                &instance.state.output.inner,
+                presentation_time,
+                refresh,
+                seq,
+                Kind::Vsync,
+            );
         }
     }
 
