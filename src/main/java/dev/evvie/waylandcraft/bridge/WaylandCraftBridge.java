@@ -404,10 +404,6 @@ public class WaylandCraftBridge {
 		
 		profiler.pop();
 	}
-
-	public void framePresented(long presentationTime, int refreshRate) {
-		sendPresentation(instance, presentationTime, refreshRate);
-	}
 	
 	private void updateFramebuffers() {
 		List<WLCAbstractWindow> allWindows = Stream.of(toplevels, popups).flatMap((l) -> l.stream()).collect(Collectors.toList());
