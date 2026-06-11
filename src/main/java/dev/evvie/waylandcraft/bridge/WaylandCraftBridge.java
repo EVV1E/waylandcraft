@@ -22,6 +22,8 @@ import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 
@@ -42,6 +44,9 @@ public class WaylandCraftBridge {
 	
 	private @Nullable Integer lastMoveRequestSerial = null;
 	private @Nullable ResizeRequest lastResizeRequest = null;
+	
+	private float smoothedRefresh = 60.0f;
+	private static final float ALPHA = 0.05f;
 	
 	static {
 		boolean loaded = false;
@@ -260,6 +265,12 @@ public class WaylandCraftBridge {
 	public void update() {
 		ProfilerFiller profiler = Profiler.get();
 		profiler.push("wayland");
+
+		long presentationTime = Util.getNanos();
+		int refreshRate = Minecraft.getInstance().getFps();
+		if(refreshRate <= 0) refreshRate = 60;
+		smoothedRefresh = smoothedRefresh * (1 - ALPHA) + refreshRate * ALPHA;
+		sendPresentation(instance, presentationTime, Math.round(smoothedRefresh));
 		
 		// Update wayland clients
 		profiler.push("update");
@@ -681,6 +692,7 @@ public class WaylandCraftBridge {
 	private static native void update(long instance);
 	private static native String socket(long instance);
 	private static native void sendFrame(long surfaceHandle);
+	private static native void sendPresentation(long instance, long presentationTime, int refreshRate);
 	
 	private static native void updateSurfaceData(long instance, WLCSurface surface);
 	

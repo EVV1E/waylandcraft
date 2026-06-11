@@ -6,8 +6,9 @@ use crate::seat::WLCSeatState;
 use crate::xdg_spec::XDGSpecHelper;
 use smithay::{
     backend::allocator::dmabuf::Dmabuf,
-    delegate_compositor, delegate_dmabuf, delegate_shm,
-    delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_shell,
+    delegate_compositor, delegate_dmabuf, delegate_output,
+    delegate_presentation, delegate_shm, delegate_single_pixel_buffer,
+    delegate_viewporter, delegate_xdg_shell,
     reexports::{
         calloop::{self, EventLoop, generic::Generic as GenericEvent},
         wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
@@ -30,6 +31,7 @@ use smithay::{
             DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler, DmabufState,
             ImportNotifier,
         },
+        presentation::PresentationState,
         shell::xdg::{
             PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler,
             XdgShellState,
@@ -71,6 +73,7 @@ pub struct WLCState {
     pub xdg_state: XdgShellState,
     pub viewporter_state: ViewporterState,
     pub single_pixel_buffer_state: SinglePixelBufferState,
+    pub presentation_state: PresentationState,
     pub dmabuf_state: DmabufState,
     pub dmabuf_global: DmabufGlobal,
     pub requests: WindowRequests,
@@ -98,6 +101,7 @@ impl WLCState {
         let viewporter_state = ViewporterState::new::<WLCState>(&disp);
         let single_pixel_buffer_state =
             SinglePixelBufferState::new::<WLCState>(&disp);
+        let presentation_state = PresentationState::new::<WLCState>(&disp, 1);
 
         let mut dmabuf_state = DmabufState::new();
         let dmabuf_global = init_dmabuf(&disp, &mut dmabuf_state, egl);
@@ -108,8 +112,8 @@ impl WLCState {
         let data = WLCDataState::new(&disp);
         data.create_global();
 
-        let output = WLCOutput::new(&disp);
-        output.create_global();
+        let output = WLCOutput::new();
+        output.inner.create_global::<WLCState>(&disp);
 
         Self {
             display_handle: disp.clone(),
@@ -119,6 +123,7 @@ impl WLCState {
             xdg_state,
             viewporter_state,
             single_pixel_buffer_state,
+            presentation_state,
             dmabuf_state,
             dmabuf_global,
             requests: WindowRequests::default(),
@@ -347,4 +352,6 @@ delegate_shm!(WLCState);
 delegate_xdg_shell!(WLCState);
 delegate_viewporter!(WLCState);
 delegate_single_pixel_buffer!(WLCState);
+delegate_presentation!(WLCState);
 delegate_dmabuf!(WLCState);
+delegate_output!(WLCState);
