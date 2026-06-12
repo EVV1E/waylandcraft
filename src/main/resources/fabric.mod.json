@@ -11,7 +11,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"dev.evvie.waylandcraft.WaylandCraft"
+			"dev.evvie.waylandcraft.WaylandCraftCommon"
 		],
 		"client": [
 			"dev.evvie.waylandcraft.WaylandCraft"

@@ -16,12 +16,12 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeEGL;
 import org.lwjgl.system.Platform;
 
-import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
-import dev.evvie.waylandcraft.utils.CursorShape;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
+import dev.evvie.waylandcraft.utils.CursorShape;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 
@@ -61,20 +61,20 @@ public class WaylandCraftBridge {
 				System.load(temp.getAbsolutePath());
 				loaded = true;
 				
-				WaylandCraft.LOGGER.info("Loaded native library from jar");
+				WaylandCraftCommon.LOGGER.info("Loaded native library from jar");
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 		
 		if(!loaded) {
-			WaylandCraft.LOGGER.info("Native library could not be loaded from jar. Attempting to load from system");
+			WaylandCraftCommon.LOGGER.info("Native library could not be loaded from jar. Attempting to load from system");
 			System.loadLibrary("waylandcraft");
 		}
 	}
 	
 	private static InputStream loadResource(String path) {
-		WaylandCraft.LOGGER.info("Looking for '" + path + "'...");
+		WaylandCraftCommon.LOGGER.info("Looking for '" + path + "'...");
 		return WaylandCraftBridge.class.getResourceAsStream(path);
 	}
 	

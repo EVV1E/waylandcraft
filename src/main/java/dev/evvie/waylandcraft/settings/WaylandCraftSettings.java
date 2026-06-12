@@ -4,7 +4,7 @@ import java.lang.reflect.Field;
 
 import org.jetbrains.annotations.Nullable;
 
-import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 
 /* Settings for waylandcraft
  * 
@@ -48,7 +48,7 @@ public class WaylandCraftSettings {
 			Field field = WaylandCraftSettings.class.getDeclaredField(name);
 			field.setInt(this, value);
 		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
-			WaylandCraft.LOGGER.error("Invalid setting accessed: '" + name + "' as int!");
+			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "' as int!");
 			e.printStackTrace();
 		}
 	}
@@ -58,7 +58,7 @@ public class WaylandCraftSettings {
 			Field field = WaylandCraftSettings.class.getDeclaredField(name);
 			field.setBoolean(this, value);
 		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
-			WaylandCraft.LOGGER.error("Invalid setting accessed: '" + name + "' as boolean!");
+			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "' as boolean!");
 			e.printStackTrace();
 		}
 	}
@@ -69,7 +69,7 @@ public class WaylandCraftSettings {
 			Field field = WaylandCraftSettings.class.getDeclaredField(name);
 			return field.getInt(this);
 		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
-			WaylandCraft.LOGGER.error("Invalid setting accessed: '" + name + "' as int!");
+			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "' as int!");
 			e.printStackTrace();
 		}
 		return null;
@@ -81,7 +81,7 @@ public class WaylandCraftSettings {
 			Field field = WaylandCraftSettings.class.getDeclaredField(name);
 			return field.getBoolean(this);
 		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
-			WaylandCraft.LOGGER.error("Invalid setting accessed: '" + name + "' as boolean!");
+			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "' as boolean!");
 			e.printStackTrace();
 		}
 		return null;

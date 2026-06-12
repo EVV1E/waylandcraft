@@ -8,6 +8,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 
 public class XDGDesktopManager {
 	
@@ -33,7 +34,7 @@ public class XDGDesktopManager {
 		}
 		this.systemEntries = systemEntries;
 		
-		WaylandCraft.LOGGER.info("Completed desktop entry loading in " + Duration.between(start, Instant.now()).toMillis() / 1000.0f + "s");
+		WaylandCraftCommon.LOGGER.info("Completed desktop entry loading in " + Duration.between(start, Instant.now()).toMillis() / 1000.0f + "s");
 		
 		Thread iconPreloadThread = new Thread(this::preloadIcons);
 		iconPreloadThread.start();
@@ -46,7 +47,7 @@ public class XDGDesktopManager {
 			entry.preloadIcon();
 		}
 		
-		WaylandCraft.LOGGER.info("Completed icon preloading in " + Duration.between(start, Instant.now()).toMillis() / 1000.0f + "s");
+		WaylandCraftCommon.LOGGER.info("Completed icon preloading in " + Duration.between(start, Instant.now()).toMillis() / 1000.0f + "s");
 	}
 	
 	private boolean completeFetch() {

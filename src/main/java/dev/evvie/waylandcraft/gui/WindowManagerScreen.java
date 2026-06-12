@@ -11,6 +11,7 @@ import org.joml.Matrix3x2fStack;
 import org.lwjgl.glfw.GLFW;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.bridge.WLCPopup;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
@@ -130,11 +131,11 @@ public class WindowManagerScreen extends Screen {
 		
 		Component fullscreenComponent = Component.literal("Capture Mode").withColor(ARGB.color(255, 0, 0));
 		captureModeMessage = new StringWidget(leftMargin + 18, margin - 1, buttonWidth, buttonHeight, fullscreenComponent, font);
-		captureModeSprite = ImageWidget.sprite(15, 15, Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "capture"));
+		captureModeSprite = ImageWidget.sprite(15, 15, Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "capture"));
 		captureModeSprite.setPosition(leftMargin - 1, margin);
 		
 		hideButton = SpriteIconButton.builder(Component.literal("Hide"), this::onHidePressed, true)
-				.sprite(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "hide"), 15, 15)
+				.sprite(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "hide"), 15, 15)
 				.size(22, 22)
 				.build();
 		hideButton.setPosition(3, topMargin);
@@ -143,7 +144,7 @@ public class WindowManagerScreen extends Screen {
 		buttons.add(hideButton);
 		
 		pinButton = SpriteIconButton.builder(Component.literal("Pin"), this::onPinPressed, true)
-				.sprite(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pin"), 15, 15)
+				.sprite(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pin"), 15, 15)
 				.size(22, 22)
 				.build();
 		pinButton.setPosition(3, topMargin + 30);
@@ -152,7 +153,7 @@ public class WindowManagerScreen extends Screen {
 		buttons.add(pinButton);
 		
 		itemButton = SpriteIconButton.builder(Component.literal("Give Window Item"), this::onItemPressed, true)
-				.sprite(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "window"), 16, 16)
+				.sprite(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"), 16, 16)
 				.size(22, 22)
 				.build();
 		itemButton.setPosition(3, topMargin + 60);
@@ -161,7 +162,7 @@ public class WindowManagerScreen extends Screen {
 		buttons.add(itemButton);
 		
 		helpButton = SpriteIconButton.builder(Component.literal("Help"), this::onHelpPressed, true)
-				.sprite(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "help"), 15, 15)
+				.sprite(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "help"), 15, 15)
 				.size(22, 22)
 				.build();
 		helpButton.setPosition(3, height - 22 - margin);

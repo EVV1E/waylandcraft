@@ -8,6 +8,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.sugar.Local;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.gui.WaylandCraftSettingsScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.SpriteIconButton;
@@ -30,7 +31,7 @@ public class PauseScreenMixin extends Screen {
 	public void addButton(CallbackInfo info, @Local GridLayout layout) {
 		button = SpriteIconButton
 				.builder(Component.literal("waylandcraft"), (_) -> {Minecraft.getInstance().setScreen(new WaylandCraftSettingsScreen(WaylandCraft.instance));}, true)
-				.sprite(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "logo"), 16, 16)
+				.sprite(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "logo"), 16, 16)
 				.width(20)
 				.build();
 		layout.addChild(button, 3, 0);

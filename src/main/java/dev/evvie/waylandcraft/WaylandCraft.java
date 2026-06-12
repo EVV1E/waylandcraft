@@ -6,8 +6,6 @@ import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.mojang.blaze3d.platform.InputConstants;
 
@@ -38,7 +36,6 @@ import dev.evvie.waylandcraft.settings.WaylandCraftSettings;
 import dev.evvie.waylandcraft.settings.WaylandCraftSettingsManager;
 import dev.evvie.waylandcraft.utils.CursorShape;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -58,10 +55,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-public class WaylandCraft implements ModInitializer, ClientModInitializer {
-	public static final String MOD_ID = "waylandcraft";
-	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
-	private static final KeyMapping.Category KEYBIND_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "keys"));
+public class WaylandCraft implements ClientModInitializer {
+	
+	private static final KeyMapping.Category KEYBIND_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "keys"));
 	
 	public static WaylandCraft instance;
 	
@@ -105,13 +101,8 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 	public @Nullable CursorShape cursorShape = null;
 	
 	@Override
-	public void onInitialize() {
-		WindowItem.register();
-	}
-	
-	@Override
 	public void onInitializeClient() {
-		LOGGER.info("Initializing WaylandCraft");
+		WaylandCraftCommon.LOGGER.info("Initializing WaylandCraft");
 		
 		instance = this;
 		
@@ -139,7 +130,7 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 			xdgManager = new XDGDesktopManager(this);
 			settingsManager = new WaylandCraftSettingsManager(this);
 			
-			LOGGER.info("Server started on " + waylandSocket);
+			WaylandCraftCommon.LOGGER.info("Server started on " + waylandSocket);
 		}
 		bridge.update();
 	}
@@ -336,13 +327,13 @@ public class WaylandCraft implements ModInitializer, ClientModInitializer {
 		if(dndRequest != null) {
 			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(dndRequest);
 			if(implicit != null) {
-				LOGGER.info("DND STARTED");
+				WaylandCraftCommon.LOGGER.info("DND STARTED");
 				// The serial matched an active implicit grab
 				pointerGrabs.startExclusive(new DNDGrab(implicit));
 			}
 			else {
 				// Couldn't match implicit grab, have to cancel dnd
-				LOGGER.info("drag and drop did not match implicit grab");
+				WaylandCraftCommon.LOGGER.info("drag and drop did not match implicit grab");
 				bridge.dndCancel();
 			}
 		}

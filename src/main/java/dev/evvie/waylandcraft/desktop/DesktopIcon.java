@@ -14,6 +14,7 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.mixin.NativeImageMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
@@ -32,7 +33,7 @@ public class DesktopIcon {
 	
 	public DesktopIcon(String appId, String path) {
 		this.path = path;
-		this.identifier = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "icon_" + DigestUtils.sha1Hex(appId));
+		this.identifier = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "icon_" + DigestUtils.sha1Hex(appId));
 		this.wlc = WaylandCraft.instance;
 	}
 	

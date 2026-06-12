@@ -18,6 +18,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.mixin.IGuiGraphicsExtractor;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -32,43 +33,43 @@ import net.minecraft.world.phys.Vec3;
 public class RenderUtils {
 	
 	private static final RenderPipeline.Snippet WINDOW_PIPELINE_SNIPPET = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
-			.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "core/rendertype_window"))
-			.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "core/rendertype_window"))
+			.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "core/rendertype_window"))
+			.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "core/rendertype_window"))
 			.withSampler("Sampler0")
 			.withDepthStencilState(DepthStencilState.DEFAULT)
 			.withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
 			.buildSnippet();
 	
 	private static final RenderPipeline WINDOW_CUTOUT_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_cutout"))
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/window_cutout"))
 			.withShaderDefine("ALPHA_CUTOUT")
 			.build();
 	
 	private static final RenderPipeline WINDOW_TRANSLUCENT_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_translucent"))
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/window_translucent"))
 			.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
 			.build();
 	
 	private static final RenderPipeline WINDOW_CUTOUT_ANTIALIASING_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_cutout"))
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/window_cutout"))
 			.withShaderDefine("ALPHA_CUTOUT")
 			.withShaderDefine("RGSS")
 			.build();
 	
 	private static final RenderPipeline WINDOW_TRANSLUCENT_ANTIALIASING_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_translucent"))
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/window_translucent"))
 			.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
 			.withShaderDefine("RGSS")
 			.build();
 	
 	private static final RenderPipeline WINDOW_CUTOUT_BACKGROUND_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_cutout_background"))
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/window_cutout_background"))
 			.withShaderDefine("ALPHA_CUTOUT")
 			.withShaderDefine("NO_COLOR")
 			.build();
 	
 	private static final RenderPipeline WINDOW_TRANSLUCENT_BACKGROUND_PIPELINE = RenderPipeline.builder(WINDOW_PIPELINE_SNIPPET)
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_translucent_background"))
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/window_translucent_background"))
 			.withShaderDefine("NO_COLOR")
 			.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
 			.build();
@@ -130,9 +131,9 @@ public class RenderUtils {
 	);
 	
 	public static final RenderPipeline WINDOW_BLIT = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window_blit"))
-			.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "core/window_blit"))
-			.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "core/window_blit"))
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/window_blit"))
+			.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "core/window_blit"))
+			.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "core/window_blit"))
 			.withSampler("Sampler0")
 			.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
 			.withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS)

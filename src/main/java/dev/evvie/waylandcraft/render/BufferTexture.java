@@ -26,7 +26,7 @@ import com.mojang.blaze3d.textures.TextureFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 
-import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
@@ -151,7 +151,7 @@ public abstract class BufferTexture {
 	
 	public static final RenderPipeline DMABUF_BLIT = RenderPipelines.register(
 		RenderPipeline.builder()
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/dmabuf_blit"))
+			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/dmabuf_blit"))
 			.withVertexShader("core/screenquad")
 			.withFragmentShader("core/blit_screen")
 			.withSampler("InSampler")

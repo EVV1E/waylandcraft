@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import com.mojang.serialization.Codec;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.desktop.DesktopEntry;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
@@ -33,14 +34,14 @@ import net.minecraft.world.level.Level;
 public class WindowItem extends Item {
 	
 	public static Item WINDOW;
-	public static ResourceKey<Item> WINDOW_RESOURCE_KEY = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "window"));
+	public static ResourceKey<Item> WINDOW_RESOURCE_KEY = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"));
 	public static DataComponentType<Long> WINDOW_HANDLE;
 	public static Component BROKEN_WINDOW_TEXT = Component.literal("Broken Window");
 	public static Component UNKNOWN_WINDOW_TEXT = Component.literal("Unknown Window");
 	
 	public static void register() {
 		WINDOW = Registry.register(BuiltInRegistries.ITEM, WINDOW_RESOURCE_KEY, new WindowItem());
-		WINDOW_HANDLE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "window_handle"), DataComponentType.<Long>builder().persistent(Codec.LONG).build());
+		WINDOW_HANDLE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window_handle"), DataComponentType.<Long>builder().persistent(Codec.LONG).build());
 		ItemTooltipCallback.EVENT.register(WindowItem::addTooltip);
 	}
 	

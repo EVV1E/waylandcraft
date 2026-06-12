@@ -10,6 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.utils.CursorShape;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.gui.Gui;
@@ -19,19 +20,19 @@ import net.minecraft.resources.Identifier;
 @Mixin(Gui.class)
 public class GuiMixin {
 	
-	private static final Identifier TLBR_DIAGONAL_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/tlbr_diagonal");
-	private static final Identifier TRBL_DIAGONAL_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/trbl_diagonal");
-	private static final Identifier LEFT_RIGHT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/left_right");
-	private static final Identifier TOP_BOTTOM_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/top_bottom");
+	private static final Identifier TLBR_DIAGONAL_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/tlbr_diagonal");
+	private static final Identifier TRBL_DIAGONAL_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/trbl_diagonal");
+	private static final Identifier LEFT_RIGHT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/left_right");
+	private static final Identifier TOP_BOTTOM_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/top_bottom");
 	
-	private static final Identifier HELP_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/help");
-	private static final Identifier MOVE_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/move");
-	private static final Identifier POINTER_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/pointer");
-	private static final Identifier TEXT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/text");
-	private static final Identifier VTEXT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/vtext");
-	private static final Identifier WAIT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/wait");
-	private static final Identifier ZOOM_IN_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/zoom_in");
-	private static final Identifier ZOOM_OUT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "crosshair/zoom_out");
+	private static final Identifier HELP_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/help");
+	private static final Identifier MOVE_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/move");
+	private static final Identifier POINTER_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/pointer");
+	private static final Identifier TEXT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/text");
+	private static final Identifier VTEXT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/vtext");
+	private static final Identifier WAIT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/wait");
+	private static final Identifier ZOOM_IN_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/zoom_in");
+	private static final Identifier ZOOM_OUT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/zoom_out");
 	
 	@Redirect(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V", ordinal = 0))
 	public void crosshairBlitSprite(GuiGraphicsExtractor context, RenderPipeline pipeline, Identifier original, int x, int y, int width, int height) {

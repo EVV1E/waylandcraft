@@ -29,7 +29,7 @@ import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexFormat;
 
-import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCSurface.SurfaceDamage;
 import dev.evvie.waylandcraft.bridge.WLCSurface.ViewportSource;
@@ -46,9 +46,9 @@ public class WindowFramebuffer {
 	
 	public static final RenderPipeline WINDOW_PIPELINE = RenderPipelines.register(
 		RenderPipeline.builder()
-		.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/window"))
-		.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "window"))
-		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "window"))
+		.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/window"))
+		.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"))
+		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"))
 		.withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
 		.withSampler("sampler")
 		.withUniform("window_info", UniformType.UNIFORM_BUFFER)
@@ -59,9 +59,9 @@ public class WindowFramebuffer {
 	
 	public static final RenderPipeline DAMAGE_PIPELINE = RenderPipelines.register(
 		RenderPipeline.builder()
-		.withLocation(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "pipeline/damage"))
-		.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "window"))
-		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "window_damage"))
+		.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/damage"))
+		.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"))
+		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window_damage"))
 		.withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
 		.withUniform("window_info", UniformType.UNIFORM_BUFFER)
 		.withCull(false)
@@ -259,7 +259,7 @@ public class WindowFramebuffer {
 		if(target == null) return;
 		
 		texture = new FramebufferTexture(getTextureView());
-		location = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, name());
+		location = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, name());
 		
 		Minecraft.getInstance().getTextureManager().register(location, texture);
 	}

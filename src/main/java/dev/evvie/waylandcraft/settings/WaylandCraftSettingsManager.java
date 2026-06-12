@@ -9,6 +9,7 @@ import java.io.IOException;
 import com.google.gson.Gson;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import net.minecraft.client.Minecraft;
 
 public class WaylandCraftSettingsManager {
@@ -51,7 +52,7 @@ public class WaylandCraftSettingsManager {
 		
 		if(keymap != null) {
 			if(!wlc.bridge.setKeymapFromStr(keymap)) {
-				WaylandCraft.LOGGER.error("Failed to load keymap!");
+				WaylandCraftCommon.LOGGER.error("Failed to load keymap!");
 			}
 		}
 		
@@ -86,13 +87,13 @@ public class WaylandCraftSettingsManager {
 			int exitCode = process.waitFor();
 			if(exitCode != 0) {
 				keymap = null;
-				WaylandCraft.LOGGER.error("xkbcli exited with error " + exitCode);
+				WaylandCraftCommon.LOGGER.error("xkbcli exited with error " + exitCode);
 			}
 		} catch (IOException | InterruptedException e) {
-			WaylandCraft.LOGGER.error("xkbcli invoke failed!", e);
+			WaylandCraftCommon.LOGGER.error("xkbcli invoke failed!", e);
 		}
 		if(keymap == null) {
-			WaylandCraft.LOGGER.error("Failed to dump keymap using xkbcli");
+			WaylandCraftCommon.LOGGER.error("Failed to dump keymap using xkbcli");
 		}
 		return keymap;
 	}
@@ -107,7 +108,7 @@ public class WaylandCraftSettingsManager {
 			stream.close();
 			return keymap;
 		} catch(IOException e) {
-			WaylandCraft.LOGGER.info("Error reading keymap file!", e);
+			WaylandCraftCommon.LOGGER.info("Error reading keymap file!", e);
 			return null;
 		}
 	}

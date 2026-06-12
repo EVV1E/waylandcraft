@@ -3,7 +3,7 @@ package dev.evvie.waylandcraft.gui;
 import java.awt.Color;
 import java.util.function.Consumer;
 
-import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.desktop.DesktopEntry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -20,8 +20,8 @@ import net.minecraft.util.ARGB;
 
 public class AppWidget extends AbstractWidget {
 	
-	private static final Identifier SLOT_THINGY = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "textures/gui/slot_thingy.png");
-	private static final Identifier SLOT_THINGY_SELECTED = Identifier.fromNamespaceAndPath(WaylandCraft.MOD_ID, "textures/gui/slot_thingy_selected_overlay.png");
+	private static final Identifier SLOT_THINGY = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "textures/gui/slot_thingy.png");
+	private static final Identifier SLOT_THINGY_SELECTED = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "textures/gui/slot_thingy_selected_overlay.png");
 	
 	public final DesktopEntry entry;
 	private Consumer<DesktopEntry> launchAction;
