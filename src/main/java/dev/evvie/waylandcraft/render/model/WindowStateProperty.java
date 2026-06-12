@@ -6,7 +6,6 @@ import com.mojang.serialization.MapCodec;
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.desktop.DesktopEntry;
-import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.render.model.WindowStateProperty.WindowState;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.properties.select.SelectItemModelProperty;
@@ -23,7 +22,7 @@ public record WindowStateProperty() implements SelectItemModelProperty<WindowSta
 	
 	@Override
 	public WindowState get(ItemStack item, ClientLevel clientLevel, LivingEntity livingEntity, int i, ItemDisplayContext itemDisplayContext) {
-		WLCToplevel toplevel = WindowItem.getToplevel(item);
+		WLCToplevel toplevel = WaylandCraft.getToplevel(item);
 		if(toplevel == null) return WindowState.NONE;
 		
 		DesktopEntry entry = WaylandCraft.instance.xdgManager.forAppId(toplevel.appID);

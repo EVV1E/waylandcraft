@@ -11,7 +11,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
-import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.render.IMyItemFrameRenderState;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.block.BlockModelRenderState;
@@ -38,7 +37,7 @@ public class ItemFrameRendererMixin {
 	
 	@Inject(method = "extractRenderState", at = @At("HEAD"))
 	public void extractRenderState(ItemFrame itemFrame, ItemFrameRenderState itemFrameRenderState, float f, CallbackInfo info) {
-		WLCToplevel toplevel = WindowItem.getToplevel(itemFrame.getItem());
+		WLCToplevel toplevel = WaylandCraft.getToplevel(itemFrame.getItem());
 		((IMyItemFrameRenderState) itemFrameRenderState).setToplevel(toplevel);
 	}
 	

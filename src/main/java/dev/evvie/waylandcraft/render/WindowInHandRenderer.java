@@ -6,7 +6,6 @@ import com.mojang.math.Axis;
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
-import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.mixin.IItemInHandRendererMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -47,7 +46,7 @@ public class WindowInHandRenderer {
 	}
 	
 	public void renderWindow(PoseStack poseStack, SubmitNodeCollector collector, float sideMult, int light, ItemStack itemStack) {
-		WLCToplevel toplevel = WindowItem.getToplevel(itemStack);
+		WLCToplevel toplevel = WaylandCraft.getToplevel(itemStack);
 		if(toplevel == null) return;
 		if(toplevel.framebuffer == null) return;
 		

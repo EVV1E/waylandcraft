@@ -37,7 +37,7 @@ public abstract class ItemInHandRendererMixin {
 		@Local LocalRef<HumanoidArm> humanoidArmRef
 	) {
 		if(!itemStack.is(WindowItem.WINDOW)) return;
-		if(WindowItem.getToplevel(itemStack) == null) return;
+		if(WaylandCraft.getToplevel(itemStack) == null) return;
 		
 		info.cancel();
 		

@@ -2,6 +2,7 @@ package dev.evvie.waylandcraft;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
@@ -37,13 +38,14 @@ import dev.evvie.waylandcraft.settings.WaylandCraftSettingsManager;
 import dev.evvie.waylandcraft.utils.CursorShape;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.Camera;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -51,7 +53,9 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.Item.TooltipContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -74,7 +78,7 @@ public class WaylandCraft implements ClientModInitializer {
 	
 	public WLCToplevel pinnedToplevel = null;
 	
-	public WindowItemManager itemManager = new WindowItemManager(this);
+	public WindowItemManager itemManager = new WindowItemManager();
 	public XDGDesktopManager xdgManager;
 	
 	public KeyMapping keyOpenScreen;
@@ -113,8 +117,10 @@ public class WaylandCraft implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
 		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
-		ServerTickEvents.START_LEVEL_TICK.register(itemManager::onServerTick);
 		ClientPlayConnectionEvents.JOIN.register(this::onClientJoin);
+		ItemTooltipCallback.EVENT.register(this::addWindowItemTooltip);
+		
+		WaylandCraftCommon.instance.windowItemInteractionProvider = itemManager;
 		
 		WindowItemModel.register();
 		hudRenderer.register();
@@ -187,7 +193,7 @@ public class WaylandCraft implements ClientModInitializer {
 		if(playerUsingWindowItem) {
 			ItemStack item = Minecraft.getInstance().player.getUseItem();
 			if(item.is(WindowItem.WINDOW)) {
-				WLCToplevel toplevel = WindowItem.getToplevel(item);
+				WLCToplevel toplevel = getToplevel(item);
 				
 				if(toplevel != null) {
 					WindowDisplay display = getOrCreateDisplay(toplevel);
@@ -250,6 +256,28 @@ public class WaylandCraft implements ClientModInitializer {
 	private void onClientJoin(ClientPacketListener listener, PacketSender sender, Minecraft minecraft) {
 		minecraft.getChatListener().handleSystemMessage(Component.literal("Wayland compositor running on " + waylandSocket), false);
 		itemManager.giveItemsIfMissing(bridge.getMappedToplevels());
+	}
+	
+	@Nullable
+	public static WLCToplevel getToplevel(ItemStack item) {
+		if(item == null) return null;
+		
+		Long data = item.get(WindowItem.WINDOW_HANDLE);
+		if(data == null) return null;
+		
+		long handle = data.longValue();
+		return WaylandCraft.instance.bridge.getToplevel(handle);
+	}
+	
+	private void addWindowItemTooltip(ItemStack itemStack, TooltipContext ctx, TooltipFlag flag, List<Component> list) {
+		Long handle = itemStack.get(WindowItem.WINDOW_HANDLE);
+		if(handle != null) {
+			String text = "Handle 0x" + Long.toHexString(handle.longValue());
+			Component component = Component
+					.literal(text)
+					.withStyle(ChatFormatting.GRAY);
+			list.add(component);
+		}
 	}
 	
 	private void updateDisplayRequests() {
@@ -549,7 +577,7 @@ public class WaylandCraft implements ClientModInitializer {
 	 */
 	public boolean onScroll(long windowHandle, double scrollX, double scrollY) {
 		if(playerUsingWindowItem) {
-			WLCToplevel toplevel = WindowItem.getToplevel(Minecraft.getInstance().player.getUseItem());
+			WLCToplevel toplevel = getToplevel(Minecraft.getInstance().player.getUseItem());
 			if(toplevel != null) {
 				WindowDisplay display = getDisplay(toplevel);
 				if(display != null) {
