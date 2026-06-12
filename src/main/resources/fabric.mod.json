@@ -18,7 +18,11 @@
 		]
 	},
 	"mixins": [
-		"waylandcraft.mixins.json"
+		"waylandcraft.mixins.json",
+		{
+			"config": "waylandcraft.client.mixins.json",
+			"environment": "client"
+		}
 	],
 	"depends": {
 		"fabricloader": ">=0.19.2",
