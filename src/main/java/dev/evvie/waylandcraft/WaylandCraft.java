@@ -119,6 +119,7 @@ public class WaylandCraft implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		ClientPlayConnectionEvents.JOIN.register(this::onClientJoin);
 		ItemTooltipCallback.EVENT.register(this::addWindowItemTooltip);
+		ClientTickEvents.START_CLIENT_TICK.register(itemManager);
 		
 		WaylandCraftCommon.instance.windowItemInteractionProvider = itemManager;
 		
