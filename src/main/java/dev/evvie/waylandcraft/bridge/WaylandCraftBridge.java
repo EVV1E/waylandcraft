@@ -16,11 +16,11 @@ import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeEGL;
 import org.lwjgl.system.Platform;
 
-import dev.evvie.waylandcraft.CursorShape;
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
+import dev.evvie.waylandcraft.utils.CursorShape;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;

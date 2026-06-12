@@ -1,9 +1,9 @@
 package dev.evvie.waylandcraft.grabs;
 
-import dev.evvie.waylandcraft.CursorShape;
 import dev.evvie.waylandcraft.WindowDisplay;
 import dev.evvie.waylandcraft.WindowDisplay.DisplayHitResult;
 import dev.evvie.waylandcraft.grabs.PointerGrabMap.ImplicitGrab;
+import dev.evvie.waylandcraft.utils.CursorShape;
 import net.minecraft.world.phys.Vec3;
 
 public class MoveGrab extends PointerGrab {
