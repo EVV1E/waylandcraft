@@ -24,7 +24,7 @@ public record WindowStateProperty() implements SelectItemModelProperty<WindowSta
 	@Override
 	public WindowState get(ItemStack item, ClientLevel clientLevel, LivingEntity livingEntity, int i, ItemDisplayContext itemDisplayContext) {
 		WLCToplevel toplevel = WindowItem.getToplevel(item);
-		if(toplevel == null) return WindowState.BROKEN;
+		if(toplevel == null) return WindowState.NONE;
 		
 		DesktopEntry entry = WaylandCraft.instance.xdgManager.forAppId(toplevel.appID);
 		if(entry == null) return WindowState.NONE;

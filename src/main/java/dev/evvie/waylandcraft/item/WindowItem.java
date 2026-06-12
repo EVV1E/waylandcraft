@@ -36,7 +36,6 @@ public class WindowItem extends Item {
 	public static Item WINDOW;
 	public static ResourceKey<Item> WINDOW_RESOURCE_KEY = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"));
 	public static DataComponentType<Long> WINDOW_HANDLE;
-	public static Component BROKEN_WINDOW_TEXT = Component.literal("Broken Window");
 	public static Component UNKNOWN_WINDOW_TEXT = Component.literal("Unknown Window");
 	
 	public static void register() {
@@ -63,7 +62,7 @@ public class WindowItem extends Item {
 	@Override
 	public Component getName(ItemStack itemStack) {
 		WLCToplevel toplevel = getToplevel(itemStack);
-		if(toplevel == null) return BROKEN_WINDOW_TEXT;
+		if(toplevel == null) return UNKNOWN_WINDOW_TEXT;
 		
 		DesktopEntry entry = WaylandCraft.instance.xdgManager.forAppId(toplevel.appID);
 		if(entry == null) return UNKNOWN_WINDOW_TEXT;
