@@ -102,6 +102,10 @@ bind_java_type! {
             sig = (glfw_get_proc_address: jlong, egl_display: jlong) -> jlong,
             fn = init,
         },
+        static extern fn shutdown {
+            sig = (instance: jlong),
+            fn = shutdown,
+        },
         static extern fn update {
             sig = (instance: jlong),
             fn = update,
@@ -456,6 +460,21 @@ fn init<'local>(
     let ptr = Box::into_raw(instance_box);
 
     Ok(ptr.addr() as jlong)
+}
+
+fn shutdown<'local>(
+    _env: &mut Env<'local>,
+    _class: JClass<'local>,
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    // This function acquires the instance from a raw pointer again and
+    // drops it. Goes without saying that there shouldn't be any further
+    // calls into the bridge after this.
+
+    let ptr = instance as *mut WaylandCraft;
+    let _ = unsafe { Box::from_raw(ptr) };
+
+    Ok(())
 }
 
 fn update<'local>(

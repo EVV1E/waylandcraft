@@ -2,6 +2,7 @@ use crate::bridge::BridgeState;
 use crate::ddm::WLCDataState;
 use crate::egl::EGLHelper;
 use crate::output::WLCOutput;
+use crate::satellite::SatelliteState;
 use crate::seat::WLCSeatState;
 use crate::xdg_spec::XDGSpecHelper;
 use smithay::{
@@ -50,6 +51,7 @@ mod egl;
 mod java_types;
 mod output;
 mod process;
+mod satellite;
 mod seat;
 mod svg;
 mod utils;
@@ -77,6 +79,7 @@ pub struct WLCState {
     pub seat: WLCSeatState,
     pub data: WLCDataState,
     pub output: WLCOutput,
+    pub satellite: Option<SatelliteState>,
 }
 
 #[derive(Default)]
@@ -125,6 +128,7 @@ impl WLCState {
             seat,
             data,
             output,
+            satellite: None,
         }
     }
 }
@@ -322,6 +326,11 @@ pub(crate) fn wlc_init(
         .unwrap();
 
     let xdg = XDGSpecHelper::init();
+
+    match satellite::start_satellite(state.socket.clone()) {
+        Ok(s) => state.satellite = Some(s),
+        Err(e) => eprintln!("Failed to start xwayland-satellite! Error: {e}"),
+    }
 
     let instance = WaylandCraft {
         state,
