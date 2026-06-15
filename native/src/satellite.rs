@@ -1,8 +1,10 @@
-use std::ffi::OsString;
+use std::ffi::OsStr;
+use std::os::unix::net::{SocketAddr, UnixListener};
+use std::os::fd::{OwnedFd, RawFd, AsRawFd};
 use std::process::{Command, Child, Stdio};
-use rustix::io::Errno;
+use rustix::io::{Errno, write, fcntl_setfd, FdFlags};
 use rustix::fs::{Access, OFlags, access, lstat, mkdir, open, unlink};
-use rustix::process::{Pid, getuid, test_kill_process};
+use rustix::process::{Pid, getuid, getpid, test_kill_process};
 use thiserror::Error;
 
 /* Small parts of this code have been adapted from niri's implementation of
@@ -14,7 +16,16 @@ use thiserror::Error;
  */
 
 pub struct SatelliteState {
-    lock_guard: PathGuard,
+    display: i32,
+    _handle: Child,
+    _lock_guard: TmpFileGuard,
+    _unix_guard: TmpFileGuard,
+}
+
+impl SatelliteState {
+    pub fn get_display(&self) -> String {
+        format!(":{0}", self.display)
+    }
 }
 
 #[derive(Error, Debug)]
@@ -33,12 +44,22 @@ pub enum SatelliteError {
     FailX11DirPermCheck(Errno),
     #[error("X11 unix directory has the wrong permissions: {0}")]
     X11DirInvalidPerms(&'static str),
+    #[error("Failed to write X11 lock file: {0}")]
+    FailWriteLockFile(Errno),
+    #[error("Failed to bind to the X11 unix socket: {0}")]
+    FailBindUnixSocket(std::io::Error),
+    #[error("Failed to clone X11 socket: {0}")]
+    FailCloneSocket(std::io::Error),
+    #[error("Failed to set socket flags via fcntl")]
+    FailSetFdFlags(Errno),
     #[error("Failed to create X11 display socket")]
     NoDisplay,
 }
 
-struct PathGuard(String);
-impl Drop for PathGuard {
+// Guard for a temporary file
+// Deletes the file when dropped
+struct TmpFileGuard(String);
+impl Drop for TmpFileGuard {
     fn drop(&mut self) {
         let _ = unlink(&self.0);
     }
@@ -122,34 +143,127 @@ fn maybe_cleanup_lockfile(path: &str) -> Result<(), ()> {
     Ok(())
 }
 
+// Attempts to acquire lock file for display number.
+// Returns Ok(None) when the lock could not be acquired
+// Returns Ok(Some(...)) when the lock was acquired successfully
+// Returns Err(...) when an error occurred during writing
+fn try_lock_display(dpy: i32) -> Result<Option<TmpFileGuard>, SatelliteError> {
+    let lock_path = format!("{TMP_UNIX_DIR}/.X{dpy}-lock");
+
+    // Cleanup lockfile if it exists but isn't used anymore
+    let _ = maybe_cleanup_lockfile(&lock_path);
+
+    // Create display lock
+    let flags =
+        OFlags::WRONLY | OFlags::CLOEXEC | OFlags::CREATE | OFlags::EXCL;
+    let lock_fd = match open(&lock_path, flags, 0o444.into()) {
+        Ok(fd) => fd,
+        Err(_) => {
+            // Lock could not be acquired
+            return Ok(None)
+        }
+    };
+    // Create guard immediately after open(...) so the lockfile is deleted when
+    // the guard is dropped.
+    let guard = TmpFileGuard(lock_path);
+
+    let data = format!("{:>10}\n", getpid().as_raw_nonzero());
+    write(&lock_fd, data.as_bytes())
+        .map_err(SatelliteError::FailWriteLockFile)?;
+    drop(lock_fd);
+
+    Ok(Some(guard))
+}
+
+struct X11Sockets {
+    unix_fd: OwnedFd,
+    unix_guard: TmpFileGuard,
+}
+
+fn try_open_sockets(dpy: i32) -> Result<X11Sockets, SatelliteError> {
+    let socket_path = format!("{X11_TMP_UNIX_DIR}/X{dpy}");
+
+    /* Create unix socket */
+    let unix_addr = SocketAddr::from_pathname(&socket_path).unwrap();
+    let unix_socket = UnixListener::bind_addr(&unix_addr)
+        .map_err(SatelliteError::FailBindUnixSocket)?;
+    // Create temp file guard now that the socket was created so it now
+    // automatically gets deleted when dropped
+    let unix_guard = TmpFileGuard(socket_path);
+    let unix_fd = OwnedFd::from(unix_socket);
+
+    Ok(X11Sockets {
+        unix_fd,
+        unix_guard,
+    })
+}
+
+fn try_invoke_xws(
+    wayland_display: &OsStr,
+    display: i32,
+    listenfds: &[RawFd]
+) -> Result<Child, SatelliteError> {
+    let mut command = Command::new(XWS_BINARY);
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .env("WAYLAND_DISPLAY", wayland_display)
+        .env_remove("DISPLAY")
+        .env_remove("LD_LIBRARY_PATH");
+
+    command.arg(format!(":{display}"));
+    for fd in listenfds {
+        command.arg("-listenfd").arg(fd.to_string());
+    }
+
+    command.spawn().map_err(SatelliteError::FailExecute)
+}
+
+// Copy an owned file descriptor, clear any flags (notably CLOEXEC!) and return
+// the copied file descriptor.
+//
+// Clearing the flags is important because otherwise CLOEXEC will be set and the
+// file descriptor will not be correctly passed to the child process
+// (meaning xwayland-satellite)
+fn copy_listenfd(
+    listenfd: &OwnedFd
+) -> Result<(OwnedFd, RawFd), SatelliteError> {
+    let listenfd_copy = listenfd.try_clone()
+        .map_err(SatelliteError::FailCloneSocket)?;
+    fcntl_setfd(&listenfd_copy, FdFlags::empty())
+        .map_err(SatelliteError::FailSetFdFlags)?;
+    let raw = listenfd_copy.as_raw_fd();
+    Ok((listenfd_copy, raw))
+}
+
 pub fn start_satellite(
-    wayland_display: OsString,
+    wayland_display: &OsStr,
 ) -> Result<SatelliteState, SatelliteError> {
     ensure_x11_unix_dir()?;
     test_satellite()?;
 
     for dpy in 1..=32 {
-        let socket_path = format!("{X11_TMP_UNIX_DIR}/X{dpy}");
-        let lock_path = format!("{TMP_UNIX_DIR}/.X{dpy}-lock");
-
-        // Cleanup lockfile if it exists but isn't used anymore
-        let _ = maybe_cleanup_lockfile(&lock_path);
-
-        // Create display lock
-        let flags =
-            OFlags::WRONLY | OFlags::CLOEXEC | OFlags::CREATE | OFlags::EXCL;
-        let lock_fd = match open(&lock_path, flags, 0o444.into()) {
-            Ok(fd) => fd,
-            Err(_) => continue
+        let lock_guard = match try_lock_display(dpy)? {
+            Some(g) => g,
+            None => continue
         };
 
-        // Create guard so the lockfile is deleted when no longer used
-        let lock_guard = PathGuard(lock_path);
+        let X11Sockets { unix_fd, unix_guard } = try_open_sockets(dpy)?;
+        let (unix_fd_copy, unix_fd_raw) = copy_listenfd(&unix_fd)?;
 
-        println!("Found open display :{dpy}!");
+        let handle = try_invoke_xws(wayland_display, dpy, &[
+            unix_fd_raw,
+        ])?;
+
+        // Only drop file descriptor after passing it to xwayland-satellite
+        drop(unix_fd_copy);
 
         return Ok(SatelliteState {
-            lock_guard,
+            display: dpy,
+            _handle: handle,
+            _lock_guard: lock_guard,
+            _unix_guard: unix_guard,
         });
     }
 

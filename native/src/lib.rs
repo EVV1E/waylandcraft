@@ -327,9 +327,12 @@ pub(crate) fn wlc_init(
 
     let xdg = XDGSpecHelper::init();
 
-    match satellite::start_satellite(state.socket.clone()) {
+    match satellite::start_satellite(&state.socket) {
         Ok(s) => state.satellite = Some(s),
         Err(e) => eprintln!("Failed to start xwayland-satellite! Error: {e}"),
+    }
+    if let Some(ref s) = state.satellite {
+        println!("Started xwayland-satellite on display {}", s.get_display());
     }
 
     let instance = WaylandCraft {
