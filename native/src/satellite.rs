@@ -1,5 +1,6 @@
 use std::ffi::OsStr;
 use std::os::unix::net::{SocketAddr, UnixListener};
+use std::os::linux::net::SocketAddrExt;
 use std::os::fd::{OwnedFd, RawFd, AsRawFd};
 use std::process::{Command, Child, Stdio};
 use rustix::io::{Errno, write, fcntl_setfd, FdFlags};
@@ -48,6 +49,8 @@ pub enum SatelliteError {
     FailWriteLockFile(Errno),
     #[error("Failed to bind to the X11 unix socket: {0}")]
     FailBindUnixSocket(std::io::Error),
+    #[error("Failed to bind to the X11 abstract socket: {0}")]
+    FailBindAbstractSocket(std::io::Error),
     #[error("Failed to clone X11 socket: {0}")]
     FailCloneSocket(std::io::Error),
     #[error("Failed to set socket flags via fcntl")]
@@ -178,12 +181,20 @@ fn try_lock_display(dpy: i32) -> Result<Option<TmpFileGuard>, SatelliteError> {
 struct X11Sockets {
     unix_fd: OwnedFd,
     unix_guard: TmpFileGuard,
+    abstract_fd: OwnedFd,
 }
 
 fn try_open_sockets(dpy: i32) -> Result<X11Sockets, SatelliteError> {
     let socket_path = format!("{X11_TMP_UNIX_DIR}/X{dpy}");
 
+    /* Create abstract socket */
+    let abstract_addr = SocketAddr::from_abstract_name(&socket_path).unwrap();
+    let abstract_socket = UnixListener::bind_addr(&abstract_addr)
+        .map_err(SatelliteError::FailBindAbstractSocket)?;
+    let abstract_fd = OwnedFd::from(abstract_socket);
+
     /* Create unix socket */
+    let _ = unlink(&socket_path); // Delete potential existing socket
     let unix_addr = SocketAddr::from_pathname(&socket_path).unwrap();
     let unix_socket = UnixListener::bind_addr(&unix_addr)
         .map_err(SatelliteError::FailBindUnixSocket)?;
@@ -195,6 +206,7 @@ fn try_open_sockets(dpy: i32) -> Result<X11Sockets, SatelliteError> {
     Ok(X11Sockets {
         unix_fd,
         unix_guard,
+        abstract_fd,
     })
 }
 
@@ -249,21 +261,24 @@ pub fn start_satellite(
             None => continue
         };
 
-        let X11Sockets { unix_fd, unix_guard } = try_open_sockets(dpy)?;
-        let (unix_fd_copy, unix_fd_raw) = copy_listenfd(&unix_fd)?;
+        let sockets = try_open_sockets(dpy)?;
+        let (unix_fd_copy, unix_fd_raw) = copy_listenfd(&sockets.unix_fd)?;
+        let (abs_fd_copy, abs_fd_raw) = copy_listenfd(&sockets.abstract_fd)?;
 
         let handle = try_invoke_xws(wayland_display, dpy, &[
             unix_fd_raw,
+            abs_fd_raw,
         ])?;
 
         // Only drop file descriptor after passing it to xwayland-satellite
         drop(unix_fd_copy);
+        drop(abs_fd_copy);
 
         return Ok(SatelliteState {
             display: dpy,
             _handle: handle,
             _lock_guard: lock_guard,
-            _unix_guard: unix_guard,
+            _unix_guard: sockets.unix_guard,
         });
     }
 
