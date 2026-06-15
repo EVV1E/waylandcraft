@@ -1847,12 +1847,15 @@ fn exec_app<'local>(
     let instance = jptr_to_instance!(instance, "execApp")?;
     let app_id = app_id.try_to_string(env)?;
 
-    let env_vars = vec![
+    let mut env_vars = vec![
         ("WAYLAND_DISPLAY".into(), instance.state.socket.clone()),
         ("QT_QPA_PLATFORM".into(), "wayland".into()),
         ("ELECTRON_OZONE_PLATFORM_HINT".into(), "auto".into()),
         ("GDK_BACKEND".into(), "wayland".into()),
     ];
+    if let Some(ref s) = instance.state.satellite {
+        env_vars.push(("DISPLAY".into(), s.get_display().into()));
+    }
 
     Ok(instance.xdg.exec_app(app_id, env_vars))
 }
