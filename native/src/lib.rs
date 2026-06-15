@@ -331,9 +331,6 @@ pub(crate) fn wlc_init(
         Ok(s) => state.satellite = Some(s),
         Err(e) => eprintln!("Failed to start xwayland-satellite! Error: {e}"),
     }
-    if let Some(ref s) = state.satellite {
-        println!("Started xwayland-satellite on display {}", s.get_display());
-    }
 
     let instance = WaylandCraft {
         state,

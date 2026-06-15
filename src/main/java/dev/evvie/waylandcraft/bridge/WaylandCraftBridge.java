@@ -490,6 +490,10 @@ public class WaylandCraftBridge {
 		return socket(this.instance);
 	}
 	
+	public @Nullable String getX11Display() {
+		return x11Display(this.instance);
+	}
+	
 	public boolean inputRegionContains(WLCSurface surface, double x, double y) {
 		return checkInputRegion(surface.getHandle(), x, y);
 	}
@@ -691,6 +695,7 @@ public class WaylandCraftBridge {
 	private static native void shutdown(long instance);
 	private static native void update(long instance);
 	private static native String socket(long instance);
+	private static native String x11Display(long instance);
 	private static native void sendFrame(long surfaceHandle);
 	
 	private static native void updateSurfaceData(long instance, WLCSurface surface);

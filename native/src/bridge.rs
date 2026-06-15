@@ -114,6 +114,10 @@ bind_java_type! {
             sig = (instance: jlong) -> JString,
             fn = socket,
         },
+        static extern fn x11_display {
+            sig = (instance: jlong) -> JString,
+            fn = x11_display,
+        },
         static extern fn send_frame {
             sig = (surface_handle: jlong),
             fn = send_frame,
@@ -500,6 +504,20 @@ fn socket<'local>(
         .ok_or(BridgeError::OsStringToUtf8)?;
 
     Ok(JString::new(env, socket)?)
+}
+
+fn x11_display<'local>(
+    env: &mut Env<'local>,
+    _class: JClass<'local>,
+    instance: jlong,
+) -> Result<JString<'local>, BridgeError> {
+    let instance = jptr_to_instance!(instance, "x11Display")?;
+    if let Some(ref s) = instance.state.satellite {
+        Ok(JString::new(env, s.get_display())?)
+    }
+    else {
+        Ok(JString::null())
+    }
 }
 
 fn send_frame<'local>(

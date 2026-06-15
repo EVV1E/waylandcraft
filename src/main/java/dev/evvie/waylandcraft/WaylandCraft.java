@@ -70,6 +70,7 @@ public class WaylandCraft implements ClientModInitializer {
 	
 	public WaylandCraftBridge bridge = null;
 	public String waylandSocket = "";
+	public @Nullable String x11Display = null;
 	
 	public ArrayList<WindowDisplay> displays = new ArrayList<WindowDisplay>();
 	
@@ -134,10 +135,12 @@ public class WaylandCraft implements ClientModInitializer {
 		if(bridge == null) {
 			bridge = WaylandCraftBridge.start();
 			waylandSocket = bridge.getSocket();
+			x11Display = bridge.getX11Display();
 			xdgManager = new XDGDesktopManager(this);
 			settingsManager = new WaylandCraftSettingsManager(this);
 			
-			WaylandCraftCommon.LOGGER.info("Server started on " + waylandSocket);
+			WaylandCraftCommon.LOGGER.info("Wayland server started on " + waylandSocket);
+			WaylandCraftCommon.LOGGER.info("Xwayland started on " + x11Display);
 		}
 		bridge.update();
 	}
@@ -256,6 +259,7 @@ public class WaylandCraft implements ClientModInitializer {
 	
 	private void onClientJoin(ClientPacketListener listener, PacketSender sender, Minecraft minecraft) {
 		minecraft.getChatListener().handleSystemMessage(Component.literal("Wayland compositor running on " + waylandSocket), false);
+		if(x11Display != null) minecraft.getChatListener().handleSystemMessage(Component.literal("xwayland-satellite running on " + x11Display), false);
 		itemManager.giveItemsIfMissing(bridge.getMappedToplevels());
 	}
 	
