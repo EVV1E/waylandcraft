@@ -138,11 +138,18 @@ public class WaylandCraft implements ClientModInitializer {
 			x11Display = bridge.getX11Display();
 			xdgManager = new XDGDesktopManager(this);
 			settingsManager = new WaylandCraftSettingsManager(this);
+			registerSettingsResponders();
 			
 			WaylandCraftCommon.LOGGER.info("Wayland server started on " + waylandSocket);
 			WaylandCraftCommon.LOGGER.info("Xwayland started on " + x11Display);
 		}
 		bridge.update();
+	}
+	
+	private void registerSettingsResponders() {
+		settingsManager.registerResponder(WaylandCraftSettings.TERMINAL_CHOICE, (value) -> {
+			WaylandCraftCommon.LOGGER.info("TERMINAL: " + value);
+		});
 	}
 	
 	public void renderWorld(LevelRenderContext ctx) {

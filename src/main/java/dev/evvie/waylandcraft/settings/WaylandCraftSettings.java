@@ -29,6 +29,13 @@ public class WaylandCraftSettings {
 	public static final String FOCUS_ON_HOVER = "focusOnHover";
 	public static final String TERMINAL_CHOICE = "terminalChoice";
 	
+	public static final String[] SETTINGS = new String[] {
+			PIXELS_PER_BLOCK,
+			WINDOW_ANTIALIASING,
+			FOCUS_ON_HOVER,
+			TERMINAL_CHOICE
+	};
+	
 	/* This is where the getters go */
 	
 	public int getPixelsPerBlock() {
@@ -77,6 +84,17 @@ public class WaylandCraftSettings {
 			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "' as text!");
 			e.printStackTrace();
 		}
+	}
+	
+	protected @Nullable Object getSettingAnyType(String name) {
+		try {
+			Field field = WaylandCraftSettings.class.getDeclaredField(name);
+			return field.get(this);
+		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
+			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "'!");
+			e.printStackTrace();
+		}
+		return null;
 	}
 	
 	// Get int setting. Returns null only when setting was not found.

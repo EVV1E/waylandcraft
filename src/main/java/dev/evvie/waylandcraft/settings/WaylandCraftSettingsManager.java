@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import com.google.gson.Gson;
 
@@ -20,6 +21,8 @@ public class WaylandCraftSettingsManager {
 	private File settingsDir;
 	private File keymapFile;
 	private File settingsFile;
+	
+	private ArrayList<SettingResponder> responders = new ArrayList<SettingResponder>();
 	
 	public WaylandCraftSettingsManager(WaylandCraft wlc) {
 		this.wlc = wlc;
@@ -70,10 +73,13 @@ public class WaylandCraftSettingsManager {
 		if(createSettings) {
 			// Create default settings
 			wlc.settings = new WaylandCraftSettings();
-			writeSettings();
+		}
+		else {
+			readSettings();
 		}
 		
-		readSettings();
+		// Ensure the current settings format is written to disk (i.e. when the settings change across versions)
+		writeSettings();
 	}
 	
 	private String tryReadKeymapFromSystem() {
@@ -130,21 +136,41 @@ public class WaylandCraftSettingsManager {
 		}
 	}
 	
+	public void registerResponder(String setting, ISettingResponder responder) {
+		if(responders.stream().anyMatch((r) -> r.impl == responder)) return;
+		
+		responders.add(new SettingResponder(setting, responder));
+		responder.onChangeSetting(wlc.settings.getSettingAnyType(setting));
+	}
+	
+	private void updateResponders(String setting, Object value) {
+		for(SettingResponder r : responders) {
+			r.maybeFire(setting, value);
+		}
+	}
+	
+	public void unregisterResponder(ISettingResponder responder) {
+		responders.removeIf((r) -> r.impl == responder);
+	}
+	
 	// Set an int setting and write it to file
 	public void setIntSetting(String name, int value) {
 		wlc.settings.setIntSetting(name, value);
+		updateResponders(name, (Integer) value);
 		writeSettings();
 	}
 	
 	// Set a boolean setting and write it to file
 	public void setBooleanSetting(String name, boolean value) {
 		wlc.settings.setBooleanSetting(name, value);
+		updateResponders(name, (Boolean) value);
 		writeSettings();
 	}
 	
 	// Set a text setting and write it to file
 	public void setTextSetting(String name, String value) {
 		wlc.settings.setTextSetting(name, value);
+		updateResponders(name, value);
 		writeSettings();
 	}
 	
@@ -161,6 +187,24 @@ public class WaylandCraftSettingsManager {
 	// Set a text setting
 	public String getTextSetting(String name) {
 		return wlc.settings.getTextSetting(name);
+	}
+	
+	private static class SettingResponder {
+		
+		public final String settingName;
+		public final ISettingResponder impl;
+		
+		public SettingResponder(String settingName, ISettingResponder impl) {
+			this.settingName = settingName;
+			this.impl = impl;
+		}
+		
+		protected void maybeFire(String setting, Object value) {
+			if(setting.equals(this.settingName)) {
+				impl.onChangeSetting(value);
+			}
+		}
+		
 	}
 	
 }
