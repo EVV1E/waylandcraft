@@ -17,6 +17,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
@@ -195,35 +196,29 @@ public class WindowDisplay {
 		boolean modDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_ALT);
 		boolean ctrlDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL);
 		if(modDown) {
-			this.trySnapWorld(pos, view, yRot, ctrlDown);
+			this.tryAttachWalls(pos, view, yRot, ctrlDown);
 		}
 		else if(ctrlDown) {
 			this.trySnapToOtherWindows(pos, view);
 		}
 	}
 	
-	public void trySnapWorld(Vec3 pos, Vec3 view, float yRot, boolean center) {
+	public void tryAttachWalls(Vec3 pos, Vec3 view, float yRot, boolean snap) {
 		BlockHitResult hitResult = Minecraft.getInstance().level.clip(new ClipContext(pos, pos.add(view.scale(32.0)), ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, Minecraft.getInstance().player));
 		if(hitResult.getType() != HitResult.Type.BLOCK) return;
 		
 		Direction blockNormal = hitResult.getDirection();
 		Direction viewDirection = Direction.fromYRot(yRot);
 		
-		Direction downDirection = Direction.DOWN;
-		if(blockNormal.equals(Direction.UP)) {
-			downDirection = viewDirection.getOpposite();
-		}
-		else if(blockNormal.equals(Direction.DOWN)) {
-			downDirection = viewDirection;
-		}
-		
-		this.rotate(blockNormal.getUnitVec3(), downDirection.getUnitVec3());
 		this.pivot = hitResult.getLocation().add(blockNormal.getUnitVec3().scale(0.03));
 		
-		if(center) {
-			double centerX = Math.floor(pivot.x) + 0.5;
-			double centerY = Math.floor(pivot.y) + 0.5;
-			double centerZ = Math.floor(pivot.z) + 0.5;
+		Vec3 normal = blockNormal.getUnitVec3();
+		Vec3 down;
+		
+		if(snap) {
+			double centerX = (double) Math.round(pivot.x * 2) / 2;
+			double centerY = (double) Math.round(pivot.y * 2) / 2;
+			double centerZ = (double) Math.round(pivot.z * 2) / 2;
 			
 			if(blockNormal.getAxis().equals(Axis.X)) {
 				this.pivot = new Vec3(pivot.x, centerY, centerZ);
@@ -234,7 +229,27 @@ public class WindowDisplay {
 			else if(blockNormal.getAxis().equals(Axis.Z)) {
 				this.pivot = new Vec3(centerX, centerY, pivot.z);
 			}
+			
+			Direction downDirection = Direction.DOWN;
+			if(blockNormal.equals(Direction.UP)) {
+				downDirection = viewDirection.getOpposite();
+			}
+			else if(blockNormal.equals(Direction.DOWN)) {
+				downDirection = viewDirection;
+			}
+			down = downDirection.getUnitVec3();
 		}
+		else {
+			if(blockNormal.getAxis() == Axis.Y) {
+				down = new Vec3(-Mth.sin(yRot * Mth.DEG_TO_RAD), 0, Mth.cos(yRot * Mth.DEG_TO_RAD));
+				down = down.scale(-blockNormal.getStepY());
+			}
+			else {
+				down = new Vec3(0, -1, 0);
+			}
+		}
+		
+		this.rotate(normal, down);
 	}
 	
 	public void trySnapToOtherWindows(Vec3 pos, Vec3 view) {
