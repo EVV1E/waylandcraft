@@ -21,11 +21,13 @@ public class WaylandCraftSettings {
 	int pixelsPerBlock = 500;
 	boolean windowAntialiasing = false;
 	boolean focusOnHover = false;
+	String terminalChoice = "";
 	
 	/* This is where the field names go to avoid typos */
 	public static final String PIXELS_PER_BLOCK = "pixelsPerBlock";
 	public static final String WINDOW_ANTIALIASING = "windowAntialiasing";
 	public static final String FOCUS_ON_HOVER = "focusOnHover";
+	public static final String TERMINAL_CHOICE = "terminalChoice";
 	
 	/* This is where the getters go */
 	
@@ -39,6 +41,10 @@ public class WaylandCraftSettings {
 	
 	public boolean getFocusOnHover() {
 		return focusOnHover;
+	}
+	
+	public String getTerminalChoice() {
+		return terminalChoice;
 	}
 	
 	/* Methods to modifiy settings by name */
@@ -63,6 +69,16 @@ public class WaylandCraftSettings {
 		}
 	}
 	
+	protected void setTextSetting(String name, String value) {
+		try {
+			Field field = WaylandCraftSettings.class.getDeclaredField(name);
+			field.set(this, value);
+		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
+			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "' as text!");
+			e.printStackTrace();
+		}
+	}
+	
 	// Get int setting. Returns null only when setting was not found.
 	protected @Nullable Integer getIntSetting(String name) {
 		try {
@@ -82,6 +98,18 @@ public class WaylandCraftSettings {
 			return field.getBoolean(this);
 		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
 			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "' as boolean!");
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	// Get text setting. Returns null only when setting was not found.
+	protected @Nullable String getTextSetting(String name) {
+		try {
+			Field field = WaylandCraftSettings.class.getDeclaredField(name);
+			return (String) field.get(this);
+		} catch (NoSuchFieldException | IllegalArgumentException | IllegalAccessException e) {
+			WaylandCraftCommon.LOGGER.error("Invalid setting accessed: '" + name + "' as text!");
 			e.printStackTrace();
 		}
 		return null;

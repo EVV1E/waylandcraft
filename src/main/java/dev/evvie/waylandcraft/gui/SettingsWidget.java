@@ -8,9 +8,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -44,6 +47,11 @@ public class SettingsWidget extends AbstractWidget {
 		return new SettingsWidget(instance, control, message);
 	}
 	
+	public static SettingsWidget createTextWidget(WaylandCraft instance, String settingName, Component message) {
+		TextControlElement control = new TextControlElement(instance, settingName);
+		return new SettingsWidget(instance, control, message);
+	}
+	
 	@Override
 	protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		Font font = Minecraft.getInstance().font;
@@ -73,12 +81,16 @@ public class SettingsWidget extends AbstractWidget {
 		control.extractControlElement(graphics, mouseX, mouseY, a);
 	}
 	
+	public void saveValue() {
+		control.saveValue();
+	}
+	
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		if(!this.isActive()) return false;
 		if(!isMouseOver(event.x(), event.y())) return false;
 		
-		if(!doubleClick) control.onClick((int) event.x(), (int) event.y());
+		if(!doubleClick) control.onClick((int) event.x(), (int) event.y(), event.buttonInfo());
 		else control.onDoubleClick();
 		return true;
 	}
@@ -93,6 +105,12 @@ public class SettingsWidget extends AbstractWidget {
 	public boolean keyReleased(KeyEvent event) {
 		if(!this.isActive()) return false;
 		return control.onKeyReleased(event);
+	}
+	
+	@Override
+	public boolean charTyped(CharacterEvent event) {
+		if(!this.isActive()) return false;
+		return control.onCharTyped(event);
 	}
 	
 	@Override
@@ -151,7 +169,8 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		public abstract void extractControlElement(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a);
-		public void onClick(int mouseX, int mouseY) {}
+		public abstract void saveValue();
+		public void onClick(int mouseX, int mouseY, MouseButtonInfo buttonInfo) {}
 		public void onDoubleClick() {}
 		public void onDrag() {}
 		
@@ -164,6 +183,10 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		public boolean onKeyReleased(KeyEvent event) {
+			return false;
+		}
+		
+		public boolean onCharTyped(CharacterEvent event) {
 			return false;
 		}
 		
@@ -181,6 +204,11 @@ public class SettingsWidget extends AbstractWidget {
 		
 		private void setValue(boolean value) {
 			wlc.settingsManager.setBooleanSetting(settingName, value);
+		}
+		
+		@Override
+		public void saveValue() {
+			// Left blank. This widget automatically sets the value on click
 		}
 		
 		private void toggle() {
@@ -204,7 +232,7 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		@Override
-		public void onClick(int mouseX, int mouseY) {
+		public void onClick(int mouseX, int mouseY, MouseButtonInfo buttonInfo) {
 			if(isInside(mouseX, mouseY)) toggle();
 		}
 		
@@ -269,6 +297,11 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		@Override
+		public void saveValue() {
+			stopEntry();
+		}
+		
+		@Override
 		public void setFocused(boolean focused) {
 			if(!focused && isFocused()) {
 				// Focus lost
@@ -310,6 +343,77 @@ public class SettingsWidget extends AbstractWidget {
 				return true;
 			}
 			return false;
+		}
+		
+	}
+	
+	public static class TextControlElement extends ControlElement {
+		
+		private EditBox editBox;
+		
+		public TextControlElement(WaylandCraft wlc, String settingName) {
+			super(wlc, settingName);
+			
+			editBox = new EditBox(Minecraft.getInstance().font, getWidth(), getHeight(), Component.literal(settingName));
+			editBox.insertText(getSavedValue());
+			editBox.moveCursorTo(0, false);
+		}
+		
+		private String getSavedValue() {
+			return wlc.settingsManager.getTextSetting(settingName);
+		}
+		
+		@Override
+		public void setPosSize(int x, int y, int width, int height) {
+			super.setPosSize(x, y, width, height);
+			editBox.setRectangle(width, height, x, y);
+		}
+		
+		@Override
+		public void extractControlElement(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+			editBox.extractRenderState(graphics, mouseX, mouseY, a);
+		}
+		
+		@Override
+		public void saveValue() {
+			wlc.settingsManager.setTextSetting(settingName, editBox.getValue());
+		}
+		
+		@Override
+		public void onClick(int mouseX, int mouseY, MouseButtonInfo buttonInfo) {
+			super.onClick(mouseX, mouseY, buttonInfo);
+			editBox.onClick(new MouseButtonEvent(mouseX, mouseY, buttonInfo), false);
+		}
+		
+		@Override
+		public void setFocused(boolean focused) {
+			if(!focused && isFocused()) {
+				// Focus lost
+				saveValue();
+			}
+			
+			editBox.setFocused(focused);
+			super.setFocused(focused);
+		}
+		
+		@Override
+		public boolean onKeyPressed(KeyEvent event) {
+			if(event.key() == GLFW.GLFW_KEY_ENTER) {
+				saveValue();
+				return true;
+			}
+			
+			return editBox.keyPressed(event);
+		}
+		
+		@Override
+		public boolean onKeyReleased(KeyEvent event) {
+			return editBox.keyReleased(event);
+		}
+		
+		@Override
+		public boolean onCharTyped(CharacterEvent event) {
+			return editBox.charTyped(event);
 		}
 		
 	}

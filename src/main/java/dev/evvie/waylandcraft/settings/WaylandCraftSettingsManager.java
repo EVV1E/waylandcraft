@@ -142,6 +142,12 @@ public class WaylandCraftSettingsManager {
 		writeSettings();
 	}
 	
+	// Set a text setting and write it to file
+	public void setTextSetting(String name, String value) {
+		wlc.settings.setTextSetting(name, value);
+		writeSettings();
+	}
+	
 	// Get an int setting
 	public int getIntSetting(String name) {
 		return wlc.settings.getIntSetting(name);
@@ -150,6 +156,11 @@ public class WaylandCraftSettingsManager {
 	// Set a boolean setting
 	public boolean getBooleanSetting(String name) {
 		return wlc.settings.getBooleanSetting(name);
+	}
+	
+	// Set a text setting
+	public String getTextSetting(String name) {
+		return wlc.settings.getTextSetting(name);
 	}
 	
 }

@@ -47,6 +47,13 @@ public class WaylandCraftSettingsScreen extends Screen {
 	}
 	
 	@Override
+	public void removed() {
+		for(SettingsWidget widget : settingsWidgets) {
+			widget.saveValue();
+		}
+	}
+	
+	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		super.extractRenderState(graphics, mouseX, mouseY, a);
 	}
@@ -67,12 +74,18 @@ public class WaylandCraftSettingsScreen extends Screen {
 		settingsWidgets.add(widget);
 	}
 	
+	public void createTextSettingsWidget(String settingName, Component message) {
+		SettingsWidget widget = SettingsWidget.createTextWidget(wlc, settingName, message);
+		settingsWidgets.add(widget);
+	}
+	
 	private void createSettings() {
 		settingsWidgets.clear();
 		
 		createIntSettingsWidget(WaylandCraftSettings.PIXELS_PER_BLOCK, Component.literal("Window display pixels per block"));
 		createBooleanSettingsWidget(WaylandCraftSettings.WINDOW_ANTIALIASING, Component.literal("Window in world antialiasing"));
 		createBooleanSettingsWidget(WaylandCraftSettings.FOCUS_ON_HOVER, Component.literal("Focus windows when hovered"));
+		createTextSettingsWidget(WaylandCraftSettings.TERMINAL_CHOICE, Component.literal("Default terminal"));
 	}
 	
 }
