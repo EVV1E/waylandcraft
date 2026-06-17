@@ -1,11 +1,14 @@
 use std::ffi::OsString;
 use std::process::{Command, Stdio};
 
-pub fn spawn(
+pub fn spawn<A>(
     cmd: String,
-    args: Vec<String>,
+    args: A,
     env: Vec<(OsString, OsString)>,
-) -> Result<(), ()> {
+) -> Result<(), ()>
+where
+    A: IntoIterator<Item = String>
+{
     let mut command = Command::new(cmd);
     command
         .args(args)

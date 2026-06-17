@@ -148,7 +148,7 @@ public class WaylandCraft implements ClientModInitializer {
 	
 	private void registerSettingsResponders() {
 		settingsManager.registerResponder(WaylandCraftSettings.TERMINAL_CHOICE, (value) -> {
-			WaylandCraftCommon.LOGGER.info("TERMINAL: " + value);
+			bridge.setPreferredTerminal((String) value);
 		});
 	}
 	

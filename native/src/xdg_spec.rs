@@ -4,12 +4,14 @@ use freedesktop_desktop_entry::{
     DesktopEntry, desktop_entries, find_app_by_id, get_languages_from_env,
     unicase::Ascii,
 };
+use std::collections::VecDeque;
 use std::ffi::OsString;
 use std::path::PathBuf;
 
 pub struct XDGSpecHelper {
     locales: Vec<String>,
     entries: Vec<DesktopEntry>,
+    preferred_terminal: String,
 }
 
 pub struct RawDesktopEntry {
@@ -30,7 +32,15 @@ impl XDGSpecHelper {
         let locales = get_languages_from_env();
         let entries = desktop_entries(&locales);
 
-        XDGSpecHelper { locales, entries }
+        XDGSpecHelper {
+            locales,
+            entries,
+            preferred_terminal: String::new(),
+        }
+    }
+
+    pub fn set_preferred_terminal(&mut self, cmd: String) {
+        self.preferred_terminal = cmd;
     }
 
     fn to_raw(&self, entry: &DesktopEntry) -> RawDesktopEntry {
@@ -119,13 +129,25 @@ impl XDGSpecHelper {
     ) -> Option<()> {
         let entry = find_app_by_id(&self.entries, Ascii::new(&app_id))?;
         let exec = entry.exec()?;
-        let mut args = split_exec(exec).ok()?;
+        let mut exec = VecDeque::from(split_exec(exec).ok()?);
 
-        if args.is_empty() {
+        if exec.is_empty() {
             return None;
         }
 
-        let cmd = args.remove(0);
+        if entry.terminal() {
+            if self.preferred_terminal.is_empty() { return None }
+            exec.push_front("-e".into());
+            exec.push_front(self.preferred_terminal.clone());
+        }
+
+        // Split off the first element. That's the executable, everything else
+        // is arguments.
+        let cmd = exec.pop_front().unwrap();
+        let args = exec;
+
+        //println!("Executing {cmd} with {:?}", args);
+
         spawn(cmd, args, env).ok()?;
 
         Some(())
