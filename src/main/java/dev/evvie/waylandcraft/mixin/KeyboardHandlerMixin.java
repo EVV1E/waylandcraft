@@ -26,10 +26,10 @@ public class KeyboardHandlerMixin {
 	
 	@Inject(method = "keyPress", at = @At("HEAD"), cancellable = false)
 	public void onPressGlobal(long windowHandle, int action, KeyEvent event, CallbackInfo info) {
-		int scancode = WaylandCraft.correctScancode(event.scancode());
-		
-		if(action != GLFW.GLFW_PRESS && action != GLFW.GLFW_RELEASE) return;
 		if(WaylandCraft.instance.bridge == null) return;
+		
+		int scancode = WaylandCraft.correctScancode(event.scancode());
+		if(action != GLFW.GLFW_PRESS && action != GLFW.GLFW_RELEASE) return;
 		
 		WaylandCraft.instance.bridge.internalKeyUpdate(scancode, action == GLFW.GLFW_PRESS);
 	}

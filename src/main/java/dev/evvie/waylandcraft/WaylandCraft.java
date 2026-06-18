@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.system.Platform;
 
 import com.mojang.blaze3d.platform.InputConstants;
 
@@ -64,6 +65,7 @@ public class WaylandCraft implements ClientModInitializer {
 	private static final KeyMapping.Category KEYBIND_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "keys"));
 	
 	public static WaylandCraft instance;
+	public static boolean fallbackMode = false;
 	
 	public WaylandCraftSettingsManager settingsManager;
 	public WaylandCraftSettings settings;
@@ -115,6 +117,16 @@ public class WaylandCraft implements ClientModInitializer {
 		keyOpenAppLauncher = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.appLauncher", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, KEYBIND_CATEGORY));
 		keyCaptureKeyboard = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.captureKeyboard", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, KEYBIND_CATEGORY));
 		
+		WindowItemModel.register();
+		
+		settingsManager = new WaylandCraftSettingsManager(this);
+		
+		if(Platform.get() != Platform.LINUX) {
+			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");
+			WaylandCraft.fallbackMode = true;
+			return;
+		}
+		
 		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
 		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
@@ -124,7 +136,6 @@ public class WaylandCraft implements ClientModInitializer {
 		
 		WaylandCraftCommon.instance.windowItemInteractionProvider = itemManager;
 		
-		WindowItemModel.register();
 		hudRenderer.register();
 	}
 	
@@ -132,12 +143,13 @@ public class WaylandCraft implements ClientModInitializer {
 	 * Called after game render in Minecraft::runTick
 	 */
 	public void update() {
+		if(fallbackMode) return;
+		
 		if(bridge == null) {
 			bridge = WaylandCraftBridge.start();
 			waylandSocket = bridge.getSocket();
 			x11Display = bridge.getX11Display();
 			xdgManager = new XDGDesktopManager(this);
-			settingsManager = new WaylandCraftSettingsManager(this);
 			registerSettingsResponders();
 			
 			WaylandCraftCommon.LOGGER.info("Wayland server started on " + waylandSocket);
@@ -273,6 +285,7 @@ public class WaylandCraft implements ClientModInitializer {
 	@Nullable
 	public static WLCToplevel getToplevel(ItemStack item) {
 		if(item == null) return null;
+		if(WaylandCraft.instance.bridge == null) return null;
 		
 		Long data = item.get(WindowItem.WINDOW_HANDLE);
 		if(data == null) return null;
@@ -522,6 +535,8 @@ public class WaylandCraft implements ClientModInitializer {
 	 * Returns true when the mouse button action has been consumed
 	 */
 	public boolean onButtonPress(long windowHandle, int button, int action, int modifiers) {
+		if(bridge == null) return false;
+		
 		if(pointerCapture != null) {
 			if(action == 1 && !pointerCapture.pressedButtons.contains(button)) {
 				bridge.sendButton(0x110 + button, 1);
@@ -578,6 +593,7 @@ public class WaylandCraft implements ClientModInitializer {
 	 * Returns true when the mouse move has been consumed
 	 */
 	public boolean onMouseTurn(double dx, double dy) {
+		if(bridge == null) return false;
 		if(pointerCapture == null) return false;
 		
 		bridge.sendRelativeMotion(dx, dy);
@@ -588,6 +604,8 @@ public class WaylandCraft implements ClientModInitializer {
 	 * Returns true when the mouse scroll action has been consumed
 	 */
 	public boolean onScroll(long windowHandle, double scrollX, double scrollY) {
+		if(bridge == null) return false;
+		
 		if(playerUsingWindowItem) {
 			WLCToplevel toplevel = getToplevel(Minecraft.getInstance().player.getUseItem());
 			if(toplevel != null) {
@@ -626,6 +644,8 @@ public class WaylandCraft implements ClientModInitializer {
 	 * For X11 and Wayland hosts, this is a huge hack but should mostly work for now
 	 */
 	public boolean onKeyPress(long windowHandle, int key, int scancode, int action, int modifiers) {
+		if(bridge == null) return false;
+		
 		if(key == GLFW.GLFW_KEY_Q && modifiers == GLFW.GLFW_MOD_ALT) {
 			if(action == 0) return true;
 			

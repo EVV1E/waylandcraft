@@ -45,19 +45,7 @@ public class WaylandCraftSettingsManager {
 			throw new IOException("Waylandcraft settings directory exists but is not a directory");
 		}
 		
-		/* Read keymap override */
-		keymapFile = new File(settingsDir, "keymap.txt");
-		
-		String keymap = tryReadKeymapFromFile();
-		if(keymap == null) {
-			keymap = tryReadKeymapFromSystem();
-		}
-		
-		if(keymap != null) {
-			if(!wlc.bridge.setKeymapFromStr(keymap)) {
-				WaylandCraftCommon.LOGGER.error("Failed to load keymap!");
-			}
-		}
+		if(wlc.bridge != null) handleKeymap();
 		
 		/* Ensure settings file */
 		boolean createSettings = false;
@@ -80,6 +68,22 @@ public class WaylandCraftSettingsManager {
 		
 		// Ensure the current settings format is written to disk (i.e. when the settings change across versions)
 		writeSettings();
+	}
+	
+	private void handleKeymap() {
+		/* Read keymap override */
+		keymapFile = new File(settingsDir, "keymap.txt");
+		
+		String keymap = tryReadKeymapFromFile();
+		if(keymap == null) {
+			keymap = tryReadKeymapFromSystem();
+		}
+		
+		if(keymap != null) {
+			if(!wlc.bridge.setKeymapFromStr(keymap)) {
+				WaylandCraftCommon.LOGGER.error("Failed to load keymap!");
+			}
+		}
 	}
 	
 	private String tryReadKeymapFromSystem() {
