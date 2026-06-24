@@ -1,0 +1,18 @@
+{
+	"required": true,
+	"package": "dev.evvie.waylandcraft.vulkanmod.mixin",
+	"plugin": "dev.evvie.waylandcraft.vulkanmod.mixin.WaylandCraftVulkanModMixinPlugin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"VulkanDeviceExtMixin",
+		"VulkanImageFormatMixin",
+		"VulkanImageMixin",
+		"VkGpuBufferMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

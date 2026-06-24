@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "dev.evvie.waylandcraft.polymer.mixin",
+	"plugin": "dev.evvie.waylandcraft.polymer.mixin.PolymerMixinPlugin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"LivingEntityEquipmentMixin",
+		"ServerEntityEquipmentMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

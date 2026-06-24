@@ -19,8 +19,13 @@
 	},
 	"mixins": [
 		"waylandcraft.mixins.json",
+		"waylandcraft.polymer.mixins.json",
 		{
 			"config": "waylandcraft.client.mixins.json",
+			"environment": "client"
+		},
+		{
+			"config": "waylandcraft.vulkanmod.mixins.json",
 			"environment": "client"
 		}
 	],
@@ -29,5 +34,12 @@
 		"minecraft": "~26.1.2",
 		"java": ">=25",
 		"fabric-api": "*"
+	},
+	"recommends": {
+		"polymer-core": ">=0.16"
+	},
+	"suggests": {
+		"beryl": "*",
+		"vulkanmod": "*"
 	}
 }

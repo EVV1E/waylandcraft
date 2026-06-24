@@ -28,6 +28,9 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
+import dev.evvie.waylandcraft.vulkanmod.DmabufImporter;
+import dev.evvie.waylandcraft.vulkanmod.EglHelper;
+import dev.evvie.waylandcraft.vulkanmod.WaylandCraftVulkanSupport;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
@@ -102,7 +105,19 @@ public abstract class BufferTexture {
 			GlStateManager._pixelStore(GL33.GL_UNPACK_SKIP_ROWS, 0);
 			GlStateManager._pixelStore(GL33.GL_UNPACK_ALIGNMENT, 4);
 			
-			GL33.nglTexImage2D(GL33.GL_TEXTURE_2D, 0, GL33.GL_RGBA8, width, height, 0, GL33.GL_BGRA, GL33.GL_UNSIGNED_INT_8_8_8_8_REV, this.ptr);
+			if (dev.evvie.waylandcraft.vulkanmod.WaylandCraftVulkanSupport.ACTIVE) {
+				// VulkanMod's GL11.glTexImage2D mixin doesn't intercept this raw
+				// JNI path (GL33.nglTexImage2D), so it falls through to a null
+				// function pointer under GLFW_NO_API. VkGlTexture.texImage2D
+				// goes through VulkanMod's own upload path instead.
+				// internalFormat is passed as GL_BGRA (not GL_RGBA8) deliberately:
+				// VulkanMod's BGRAtoRGBA_buffer() swizzle is broken for this data,
+				// so we ask for a raw B8G8R8A8 upload instead and skip it entirely.
+				net.vulkanmod.gl.VkGlTexture.texImage2D(GL33.GL_TEXTURE_2D, 0, GL33.GL_BGRA, width, height, 0,
+						GL33.GL_BGRA, GL33.GL_UNSIGNED_INT_8_8_8_8_REV, this.ptr);
+			} else {
+				GL33.nglTexImage2D(GL33.GL_TEXTURE_2D, 0, GL33.GL_RGBA8, width, height, 0, GL33.GL_BGRA, GL33.GL_UNSIGNED_INT_8_8_8_8_REV, this.ptr);
+			}
 		}
 		
 	}
@@ -168,6 +183,26 @@ public abstract class BufferTexture {
 		private GpuTextureView eglImageView = null;
 		private int eglImageTex = -1;
 		
+		// Tracks only whether eglImageTex has ever had *any* backing
+		// VulkanImage yet (false until the first successful import). This
+		// does NOT gate whether copyData() re-imports — the VulkanMod path
+		// is a CPU readback snapshot, not a live EGLImage binding like the
+		// non-VulkanMod path, so it has to re-run on every call or later
+		// frames just keep showing whatever was imported first.
+		private boolean eglEverImported = false;
+		
+		// Throttles re-import frequency. The readback runs on a separate
+		// GLES context on its own worker thread specifically to avoid
+		// touching Vulkan driver state directly (see EglImageReader's
+		// header comment on NVIDIA's shared Vulkan/GLES driver state) —
+		// but that isolation doesn't stop the GPU itself from running both
+		// API contexts concurrently once commands are submitted. Capping
+		// how often this happens reduces how often that overlap occurs.
+		// There's no visual benefit to importing faster than the display
+		// refreshes anyway.
+		private static final long MIN_REIMPORT_INTERVAL_NS = 16_000_000L; // ~60Hz
+		private long lastImportNs = 0L;
+		
 		private RenderTarget target;
 		
 		public DmabufTexture(long handle, long eglImage, int width, int height) {
@@ -197,8 +232,12 @@ public abstract class BufferTexture {
 			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MIN_FILTER, GL33.GL_LINEAR);
 			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MAG_FILTER, GL33.GL_NEAREST);
 			
-			long glEGLImageTargetTexture2DOES = GLFW.glfwGetProcAddress("glEGLImageTargetTexture2DOES");
-			JNI.invokeJV(GL33.GL_TEXTURE_2D, this.eglImage, glEGLImageTargetTexture2DOES);
+			if (!WaylandCraftVulkanSupport.ACTIVE) {
+				long glEGLImageTargetTexture2DOES = GLFW.glfwGetProcAddress("glEGLImageTargetTexture2DOES");
+				JNI.invokeJV(GL33.GL_TEXTURE_2D, this.eglImage, glEGLImageTargetTexture2DOES);
+			}
+			// VulkanMod-active import happens lazily from copyData() below,
+			// on every call — see copyData() for why.
 			
 			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), TextureFormat.RGBA8, width, height, 1, 1, eglImageTex);
 			eglImageView = RenderSystem.getDevice().createTextureView(glTexture);
@@ -209,6 +248,46 @@ public abstract class BufferTexture {
 		public void copyData() {
 			if(eglImageView == null) return;
 			
+			if (WaylandCraftVulkanSupport.ACTIVE) {
+				long now = System.nanoTime();
+				if (eglEverImported && (now - lastImportNs) < MIN_REIMPORT_INTERVAL_NS) {
+					// Throttled — redraw last frame's content rather than
+					// importing again so soon.
+					drawBlit();
+					return;
+				}
+				
+				// Unlike the non-VulkanMod path (a live, zero-copy EGLImage
+				// binding that updates automatically as the dmabuf's content
+				// changes), this is a one-shot CPU readback snapshot — it
+				// has to be re-taken on every call, including re-attaches of
+				// an already-known dmabuf, or later frames never show.
+				boolean imported = DmabufImporter.importIntoVulkanMod(eglImageTex, EglHelper.get(), this.eglImage, width, height);
+				if (!imported) {
+					if (!eglEverImported) {
+						// No prior successful import means no backing
+						// VulkanImage exists at all yet — drawing now would
+						// crash inside VulkanMod's uniform setup.
+						WaylandCraftCommon.LOGGER.warn("[waylandcraft/vulkanmod] DMA-BUF import failed for handle 0x{}, will retry next frame",
+								Long.toHexString(handle));
+						return;
+					}
+					// A later frame's readback failed transiently, but an
+					// earlier successful import already gave this texture a
+					// real VulkanImage — fall through and redraw last
+					// frame's content rather than skip, since skipping
+					// can't prevent a crash here and would just mean a
+					// dropped frame shows as a brief freeze instead.
+				} else {
+					eglEverImported = true;
+					lastImportNs = now;
+				}
+			}
+			
+			drawBlit();
+		}
+		
+		private void drawBlit() {
 			try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), OptionalInt.of(0x00000000))) {
 				renderPass.setPipeline(DMABUF_BLIT);
 				RenderSystem.bindDefaultUniforms(renderPass);
@@ -230,9 +309,16 @@ public abstract class BufferTexture {
 		public void freeEGL() {
 			if(eglImageView == null) return;
 			
-			long display = GLFWNativeEGL.glfwGetEGLDisplay();
-			long eglDestroyImage = GLFW.glfwGetProcAddress("eglDestroyImage");
-			JNI.invokePPI(display, this.eglImage, eglDestroyImage);
+			if (WaylandCraftVulkanSupport.ACTIVE) {
+				// EglHelper owns a dedicated cleanup EGL context for this case:
+				// some drivers (NVIDIA) SIGSEGV on eglDestroyImage without a
+				// current EGL context, which VulkanMod's render thread never has.
+				EglHelper.destroyImage(EglHelper.get(), this.eglImage);
+			} else {
+				long display = GLFWNativeEGL.glfwGetEGLDisplay();
+				long eglDestroyImage = GLFW.glfwGetProcAddress("eglDestroyImage");
+				JNI.invokePPI(display, this.eglImage, eglDestroyImage);
+			}
 			
 			GlStateManager._deleteTexture(eglImageTex);
 			eglImageView = null;

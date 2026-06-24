@@ -136,6 +136,8 @@ public class WaylandCraft implements ClientModInitializer {
 		
 		WaylandCraftCommon.instance.windowItemInteractionProvider = itemManager;
 		
+		dev.evvie.waylandcraft.network.WaylandCraftNetworking.registerClient();
+		
 		hudRenderer.register();
 	}
 	
@@ -151,7 +153,6 @@ public class WaylandCraft implements ClientModInitializer {
 			x11Display = bridge.getX11Display();
 			xdgManager = new XDGDesktopManager(this);
 			registerSettingsResponders();
-			settingsManager.loadKeymap();
 			
 			WaylandCraftCommon.LOGGER.info("Wayland server started on " + waylandSocket);
 			WaylandCraftCommon.LOGGER.info("Xwayland started on " + x11Display);
@@ -695,7 +696,11 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		
 		window.rotate(parent.normal(), parent.down());
-		window.moveOrigin(parent.localToWorld(popup.offsetX, popup.offsetY, 0.01));
+		
+		int x = popup.offsetX - popup.geometry.x() + parent.window.geometry.x();
+		int y = popup.offsetY - popup.geometry.y() + parent.window.geometry.y();
+		
+		window.moveOrigin(parent.localToWorld(x, y, 0.01));
 	}
 	
 	public static enum KeyboardCaptureMode {

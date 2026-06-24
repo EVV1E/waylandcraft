@@ -57,17 +57,6 @@ public class WindowFramebuffer {
 		.build()
 	);
 	
-	public static final RenderPipeline UNPREMULTIPLY_PIPELINE = RenderPipelines.register(
-		RenderPipeline.builder()
-		.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/unpremultiply"))
-		.withVertexShader("core/screenquad")
-		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "unpremultiply"))
-		.withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
-		.withColorTargetState(ColorTargetState.DEFAULT)
-		.withSampler("sampler")
-		.build()
-	);
-	
 	public static final RenderPipeline DAMAGE_PIPELINE = RenderPipelines.register(
 		RenderPipeline.builder()
 		.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/damage"))
@@ -186,12 +175,6 @@ public class WindowFramebuffer {
 			}
 		}
 		
-		try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer unpremultiply", target.getColorTextureView(), OptionalInt.empty())) {
-			pass.setPipeline(UNPREMULTIPLY_PIPELINE);
-			pass.bindTexture("sampler", target.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-			pass.draw(0, 3);
-		}
-		
 		if(debugDamage) drawDebugDamage(opaqueUniforms);
 	}
 	
@@ -253,12 +236,24 @@ public class WindowFramebuffer {
 	private static record BufferDraw(GpuTextureView textureView, float x, float y, float w, float h, float u1, float v1, float u2, float v2, boolean alpha) {
 		
 		public CompiledBufferDraw compile() {
+			// VulkanMod renders with a negative viewport height (the standard
+			// Vulkan trick to match OpenGL's Y-up NDC), which flips the screen
+			// Y-axis: NDC (-1,-1) maps to screen bottom-left instead of
+			// top-left. That inverts the window vertically on screen, so we
+			// flip the V texture coordinate here to compensate. Vanilla GL
+			// renders top-left-origin as usual and needs no correction.
+			float fv1 = v1, fv2 = v2;
+			if (dev.evvie.waylandcraft.vulkanmod.WaylandCraftVulkanSupport.ACTIVE) {
+				fv1 = 1.0f - v1;
+				fv2 = 1.0f - v2;
+			}
+			
 			try(ByteBufferBuilder byteBuilder = new ByteBufferBuilder(DefaultVertexFormat.POSITION_TEX.getVertexSize() * 4)) {
 				BufferBuilder builder = new BufferBuilder(byteBuilder, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
-				builder.addVertex(x, y, 0).setUv(u1, v1);
-				builder.addVertex(x + w, y, 0).setUv(u2, v1);
-				builder.addVertex(x + w, y + h, 0).setUv(u2, v2);
-				builder.addVertex(x, y + h, 0).setUv(u1, v2);
+				builder.addVertex(x, y, 0).setUv(u1, fv1);
+				builder.addVertex(x + w, y, 0).setUv(u2, fv1);
+				builder.addVertex(x + w, y + h, 0).setUv(u2, fv2);
+				builder.addVertex(x, y + h, 0).setUv(u1, fv2);
 				
 				try(MeshData mesh = builder.buildOrThrow()) {
 					int indexCount = mesh.drawState().indexCount();
@@ -328,7 +323,6 @@ public class WindowFramebuffer {
 		public FramebufferTexture(GpuTextureView textureView) {
 			this.textureView = textureView;
 			this.texture = textureView.texture();
-			this.sampler = RenderUtils.WINDOW_SAMPLER.get();
 		}
 		
 		@Override

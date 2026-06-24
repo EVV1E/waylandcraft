@@ -28,6 +28,11 @@ repositories {
 			includeGroup "maven.modrinth"
 		}
 	}
+
+	maven {
+		name = "pb4"
+		url = "https://maven.pb4.eu/release/"
+	}
 }
 
 dependencies {
@@ -37,7 +42,29 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	// Iris — used by IrisCompat to check whether a shader pack is in use.
 	compileOnly "maven.modrinth:iris:${project.iris_version}"
+
+	// Polymer (optional at runtime, compile-time only here) ──────────────
+	// PolymerIntegration and PolymerWindowItem are the only classes that
+	// reference Polymer directly; both are only ever loaded behind a
+	// FabricLoader.isModLoaded("polymer-core") guard (see WindowItem.java
+	// and PolymerIntegration). The mod works without Polymer present — just
+	// without the "non-WaylandCraft players can join" benefit. The bundled
+	// artifact includes polymer-core, polymer-rsm, and polymer-resource-pack.
+	compileOnly "eu.pb4:polymer-bundled:${project.polymer_version}"
+
+	// Beryl — detected at runtime via FabricLoader.isModLoaded() only;
+	// no Beryl API is called, so no compile-time dep is needed. See BerylCompat.
+
+	// VulkanMod (optional at runtime, compile-time only here) ──────────────────
+	// dev.evvie.waylandcraft.vulkanmod.* references net.vulkanmod.* directly.
+	// The package is only ever entered behind a WaylandCraftVulkanSupport.ACTIVE
+	// guard, so the mod works fine without VulkanMod installed.
+	compileOnly "maven.modrinth:vulkanmod:${project.vulkanmod_version}"
+	// lwjgl-vulkan is bundled by VulkanMod; we declare it separately so
+	// VkDevice / VkCommandBuffer etc. resolve at compile time.
+	compileOnly "org.lwjgl:lwjgl-vulkan:3.4.1"
 }
 
 processResources {
