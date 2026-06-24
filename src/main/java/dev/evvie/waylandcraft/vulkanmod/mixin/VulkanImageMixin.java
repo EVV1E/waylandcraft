@@ -51,9 +51,10 @@ public class VulkanImageMixin {
     )
     private void wvc$guardFreeImage(long imageId, long allocation) {
         if (allocation == 0L) {
-            // External / imported image — no VMA allocation, not in the
-            // MemoryManager tracking map.  Skipping avoids the NPE in
-            // MemoryManager.freeImage where images.remove(imageId) returns null.
+            // External / imported image — no VMA allocation.  Destroy the
+            // VkImage and VkDeviceMemory we allocated during DMA-BUF import.
+            // No-op for non-imported externals (e.g. swap chain images).
+            dev.evvie.waylandcraft.vulkanmod.DmabufImporter.freeDmabufResources(imageId);
             return;
         }
         MemoryManager.freeImage(imageId, allocation);

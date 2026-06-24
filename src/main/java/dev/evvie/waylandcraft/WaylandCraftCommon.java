@@ -8,10 +8,8 @@ import dev.evvie.waylandcraft.item.ServerItemManager;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemInteractionProvider;
 import dev.evvie.waylandcraft.network.WaylandCraftNetworking;
-import dev.evvie.waylandcraft.polymer.PolymerIntegration;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.loader.api.FabricLoader;
 
 public class WaylandCraftCommon implements ModInitializer {
 	
@@ -27,11 +25,6 @@ public class WaylandCraftCommon implements ModInitializer {
 		instance = this;
 		WindowItem.register();
 		WaylandCraftNetworking.register();
-
-		if (FabricLoader.getInstance().isModLoaded("polymer-core")) {
-			PolymerIntegration.registerResourcePackAssets();
-		}
-
 		ServerTickEvents.START_LEVEL_TICK.register(serverItemManager);
 	}
 	

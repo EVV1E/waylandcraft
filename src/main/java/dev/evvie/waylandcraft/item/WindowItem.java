@@ -3,8 +3,6 @@ package dev.evvie.waylandcraft.item;
 import com.mojang.serialization.Codec;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
-import dev.evvie.waylandcraft.polymer.PolymerIntegration;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -29,15 +27,8 @@ public class WindowItem extends Item {
 	public static DataComponentType<Long> WINDOW_HANDLE;
 	
 	public static void register() {
-		boolean polymerPresent = FabricLoader.getInstance().isModLoaded("polymer-core");
-
-		WindowItem instance = polymerPresent ? PolymerIntegration.createWindowItem() : new WindowItem();
-		WINDOW = Registry.register(BuiltInRegistries.ITEM, WINDOW_RESOURCE_KEY, instance);
+		WINDOW = Registry.register(BuiltInRegistries.ITEM, WINDOW_RESOURCE_KEY, new WindowItem());
 		WINDOW_HANDLE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window_handle"), DataComponentType.<Long>builder().persistent(Codec.LONG).build());
-
-		if (polymerPresent) {
-			PolymerIntegration.excludeFromRegistrySync();
-		}
 	}
 	
 	public WindowItem() {

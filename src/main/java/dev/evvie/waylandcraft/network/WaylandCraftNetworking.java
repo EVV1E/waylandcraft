@@ -15,7 +15,7 @@ public class WaylandCraftNetworking {
 		// Never actually sent — registering the type here (on both client and
 		// server, since this runs from the common "main" entrypoint) is what
 		// makes ServerPlayNetworking.canSend() usable as a per-player "does
-		// this connection have WaylandCraft" check. See PolymerWindowItem.getPolymerItem().
+		// this connection have WaylandCraft" check.
 		PayloadTypeRegistry.clientboundPlay().register(ClientboundPresenceMarkerPayload.TYPE, ClientboundPresenceMarkerPayload.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(ServerboundGiveItemsPayload.TYPE, (payload, ctx) -> {

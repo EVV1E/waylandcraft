@@ -39,6 +39,7 @@ public class VulkanDeviceExtMixin {
         if (unsupported.isEmpty()) {
             Vulkan.REQUIRED_EXTENSION.add(EXT_DRM_MODIFIER);
             Vulkan.REQUIRED_EXTENSION.add(EXT_EXT_MEM_FD);
+            dev.evvie.waylandcraft.vulkanmod.DmabufImporter.dmabufVulkanAvailable = true;
             WaylandCraftCommon.LOGGER.info("[waylandcraft/vulkanmod] DMA-BUF Vulkan extensions will be enabled: {} {}",
                 EXT_DRM_MODIFIER, EXT_EXT_MEM_FD);
         } else {

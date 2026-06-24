@@ -11,11 +11,9 @@ import net.minecraft.resources.Identifier;
  * channel identifier shows up in the per-connection registered-channel list
  * that Fabric's networking handshake exchanges with every connecting client.
  *
- * PolymerWindowItem.getPolymerItem() checks ServerPlayNetworking.canSend() against
- * this exact payload type to answer "does THIS specific player have
- * WaylandCraft installed" — which is a different question than "is this
- * player Polymer-aware". Polymer's handshake only proves Polymer itself is
- * present; it has no visibility into third-party mods like this one.
+ * Clients that have WaylandCraft installed register this channel during the
+ * networking handshake, allowing the server to detect per-player WaylandCraft
+ * presence via ServerPlayNetworking.canSend().
  */
 public record ClientboundPresenceMarkerPayload() implements CustomPacketPayload {
 

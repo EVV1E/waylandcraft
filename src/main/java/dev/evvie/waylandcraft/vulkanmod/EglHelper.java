@@ -229,6 +229,83 @@ public final class EglHelper {
         JNI.invokePPPPI(display, 0L, 0L, 0L, fnMakeCurrent);
     }
 
+    // ── DMA-BUF export ────────────────────────────────────────────────────────
+
+    private static volatile long fnExportQuery = 0L;
+    private static volatile long fnExportImage = 0L;
+
+    /**
+     * Exported metadata from an EGLImage via EGL_MESA_image_dma_buf_export.
+     *
+     * @param fd       DMA-BUF file descriptor — caller takes ownership;
+     *                 on successful Vulkan import Vulkan closes it, on failure
+     *                 caller must close it.
+     * @param fourcc   DRM format code (e.g. DRM_FORMAT_ARGB8888 = 0x34325241).
+     * @param modifier DRM format modifier (e.g. DRM_FORMAT_MOD_LINEAR = 0).
+     * @param stride   Row stride in bytes for plane 0.
+     * @param offset   Byte offset of plane 0 within the fd.
+     */
+    public record DmabufExportInfo(int fd, int fourcc, long modifier, int stride, int offset) {}
+
+    /**
+     * Export the DMA-BUF backing an EGLImage using EGL_MESA_image_dma_buf_export.
+     * Only single-plane formats are supported (covers all common ARGB/XRGB cases).
+     * Returns null on any failure or if the image is multi-planar.
+     */
+    public static DmabufExportInfo exportDmabuf(long display, long eglImage) {
+        if (display == 0L || eglImage == 0L) return null;
+
+        if (fnExportQuery == 0L) {
+            fnExportQuery = resolveEglFunc("eglExportDMABUFImageQueryMESA");
+            fnExportImage = resolveEglFunc("eglExportDMABUFImageMESA");
+        }
+        if (fnExportQuery == 0L || fnExportImage == 0L) {
+            LOGGER.warn("[waylandcraft/vulkanmod] EGL_MESA_image_dma_buf_export not available");
+            return null;
+        }
+
+        try (MemoryStack stack = MemoryStack.stackPush()) {
+            java.nio.IntBuffer pFourcc    = stack.mallocInt(1);
+            java.nio.IntBuffer pNumPlanes = stack.mallocInt(1);
+            java.nio.LongBuffer pModifier = stack.mallocLong(1);
+
+            // eglExportDMABUFImageQueryMESA(display, image, &fourcc, &numPlanes, &modifiers)
+            int ok = JNI.invokePPPPPI(display, eglImage,
+                    MemoryUtil.memAddress(pFourcc),
+                    MemoryUtil.memAddress(pNumPlanes),
+                    MemoryUtil.memAddress(pModifier),
+                    fnExportQuery);
+            if (ok == 0) {
+                LOGGER.warn("[waylandcraft/vulkanmod] eglExportDMABUFImageQueryMESA failed");
+                return null;
+            }
+
+            int numPlanes = pNumPlanes.get(0);
+            if (numPlanes != 1) {
+                LOGGER.warn("[waylandcraft/vulkanmod] multi-planar DMA-BUF ({} planes) not supported", numPlanes);
+                return null;
+            }
+
+            java.nio.IntBuffer pFds     = stack.mallocInt(1);
+            java.nio.IntBuffer pStrides = stack.mallocInt(1);
+            java.nio.IntBuffer pOffsets = stack.mallocInt(1);
+
+            // eglExportDMABUFImageMESA(display, image, &fds, &strides, &offsets)
+            ok = JNI.invokePPPPPI(display, eglImage,
+                    MemoryUtil.memAddress(pFds),
+                    MemoryUtil.memAddress(pStrides),
+                    MemoryUtil.memAddress(pOffsets),
+                    fnExportImage);
+            if (ok == 0) {
+                LOGGER.warn("[waylandcraft/vulkanmod] eglExportDMABUFImageMESA failed");
+                return null;
+            }
+
+            return new DmabufExportInfo(pFds.get(0), pFourcc.get(0), pModifier.get(0),
+                    pStrides.get(0), pOffsets.get(0));
+        }
+    }
+
     // ── Shutdown ───────────────────────────────────────────────────────────────
 
     /**

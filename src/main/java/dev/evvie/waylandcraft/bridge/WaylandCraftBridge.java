@@ -22,6 +22,8 @@ import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import dev.evvie.waylandcraft.utils.CursorShape;
+import dev.evvie.waylandcraft.vulkanmod.EglHelper;
+import dev.evvie.waylandcraft.vulkanmod.WaylandCraftVulkanSupport;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 
@@ -107,14 +109,29 @@ public class WaylandCraftBridge {
 	}
 	
 	public static WaylandCraftBridge start() {
-		long eglDisplay = GLFWNativeEGL.glfwGetEGLDisplay();
+		long eglDisplay;
+		if (WaylandCraftVulkanSupport.ACTIVE) {
+			// VulkanMod uses GLFW_NO_API — GLFW never creates an EGL context, so
+			// glfwGetEGLDisplay() returns 0.  Get the display directly from the
+			// Wayland (or X11) native display via libEGL and cache it in EglHelper
+			// for later use by our DMA-BUF import path.
+			eglDisplay = EglHelper.getOrCreate(0L);
+		} else {
+			eglDisplay = GLFWNativeEGL.glfwGetEGLDisplay();
+		}
 		if(eglDisplay == 0) {
 			throw new RuntimeException("Failed to get EGL display!");
 		}
 		
+		if (WaylandCraftVulkanSupport.ACTIVE) {
+			// Pre-create the surfaceless cleanup context that eglDestroyImage
+			// requires under NVIDIA's driver (see EglHelper.destroyImage).
+			EglHelper.ensureCleanupContext();
+		}
+
 		long handle = init(GLFW.Functions.GetProcAddress, eglDisplay);
 		WaylandCraftBridge bridge = new WaylandCraftBridge(handle);
-		
+
 		// Add shutdown thread to clean up resources on normal exit
 		Runtime.getRuntime().addShutdownHook(new Thread(bridge::shutdownHook));
 		
@@ -124,6 +141,9 @@ public class WaylandCraftBridge {
 	private void shutdownHook() {
 		shutdown(instance);
 		instance = 0;
+		if (WaylandCraftVulkanSupport.ACTIVE) {
+			EglHelper.shutdown();
+		}
 	}
 	
 	protected WLCToplevel getOrCreateToplevel(long topLevelHandle) {

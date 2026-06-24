@@ -176,33 +176,18 @@ public abstract class BufferTexture {
 	);
 	
 	public static class DmabufTexture extends BufferTexture {
-		
+
 		public final long handle;
 		private final long eglImage;
-		
+
 		private GpuTextureView eglImageView = null;
 		private int eglImageTex = -1;
-		
-		// Tracks only whether eglImageTex has ever had *any* backing
-		// VulkanImage yet (false until the first successful import). This
-		// does NOT gate whether copyData() re-imports — the VulkanMod path
-		// is a CPU readback snapshot, not a live EGLImage binding like the
-		// non-VulkanMod path, so it has to re-run on every call or later
-		// frames just keep showing whatever was imported first.
-		private boolean eglEverImported = false;
-		
-		// Throttles re-import frequency. The readback runs on a separate
-		// GLES context on its own worker thread specifically to avoid
-		// touching Vulkan driver state directly (see EglImageReader's
-		// header comment on NVIDIA's shared Vulkan/GLES driver state) —
-		// but that isolation doesn't stop the GPU itself from running both
-		// API contexts concurrently once commands are submitted. Capping
-		// how often this happens reduces how often that overlap occurs.
-		// There's no visual benefit to importing faster than the display
-		// refreshes anyway.
-		private static final long MIN_REIMPORT_INTERVAL_NS = 16_000_000L; // ~60Hz
-		private long lastImportNs = 0L;
-		
+
+		// True once importDmabuf() has given eglImageTex a live VulkanImage
+		// backing. The DMA-BUF is a zero-copy live view — no re-import needed
+		// on subsequent frames; copyData() just blits from the same VkImage.
+		private boolean dmabufImported = false;
+
 		private RenderTarget target;
 		
 		public DmabufTexture(long handle, long eglImage, int width, int height) {
@@ -232,12 +217,16 @@ public abstract class BufferTexture {
 			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MIN_FILTER, GL33.GL_LINEAR);
 			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MAG_FILTER, GL33.GL_NEAREST);
 			
-			if (!WaylandCraftVulkanSupport.ACTIVE) {
+			if (WaylandCraftVulkanSupport.ACTIVE) {
+				dmabufImported = DmabufImporter.importDmabuf(eglImageTex, EglHelper.get(), this.eglImage, width, height);
+				if (!dmabufImported) {
+					WaylandCraftCommon.LOGGER.warn("[waylandcraft/vulkanmod] DMA-BUF Vulkan import failed for handle 0x{}",
+						Long.toHexString(handle));
+				}
+			} else {
 				long glEGLImageTargetTexture2DOES = GLFW.glfwGetProcAddress("glEGLImageTargetTexture2DOES");
 				JNI.invokeJV(GL33.GL_TEXTURE_2D, this.eglImage, glEGLImageTargetTexture2DOES);
 			}
-			// VulkanMod-active import happens lazily from copyData() below,
-			// on every call — see copyData() for why.
 			
 			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), TextureFormat.RGBA8, width, height, 1, 1, eglImageTex);
 			eglImageView = RenderSystem.getDevice().createTextureView(glTexture);
@@ -246,44 +235,8 @@ public abstract class BufferTexture {
 		}
 		
 		public void copyData() {
-			if(eglImageView == null) return;
-			
-			if (WaylandCraftVulkanSupport.ACTIVE) {
-				long now = System.nanoTime();
-				if (eglEverImported && (now - lastImportNs) < MIN_REIMPORT_INTERVAL_NS) {
-					// Throttled — redraw last frame's content rather than
-					// importing again so soon.
-					drawBlit();
-					return;
-				}
-				
-				// Unlike the non-VulkanMod path (a live, zero-copy EGLImage
-				// binding that updates automatically as the dmabuf's content
-				// changes), this is a one-shot CPU readback snapshot — it
-				// has to be re-taken on every call, including re-attaches of
-				// an already-known dmabuf, or later frames never show.
-				boolean imported = DmabufImporter.importIntoVulkanMod(eglImageTex, EglHelper.get(), this.eglImage, width, height);
-				if (!imported) {
-					if (!eglEverImported) {
-						// No prior successful import means no backing
-						// VulkanImage exists at all yet — drawing now would
-						// crash inside VulkanMod's uniform setup.
-						WaylandCraftCommon.LOGGER.warn("[waylandcraft/vulkanmod] DMA-BUF import failed for handle 0x{}, will retry next frame",
-								Long.toHexString(handle));
-						return;
-					}
-					// A later frame's readback failed transiently, but an
-					// earlier successful import already gave this texture a
-					// real VulkanImage — fall through and redraw last
-					// frame's content rather than skip, since skipping
-					// can't prevent a crash here and would just mean a
-					// dropped frame shows as a brief freeze instead.
-				} else {
-					eglEverImported = true;
-					lastImportNs = now;
-				}
-			}
-			
+			if (eglImageView == null) return;
+			if (WaylandCraftVulkanSupport.ACTIVE && !dmabufImported) return;
 			drawBlit();
 		}
 		

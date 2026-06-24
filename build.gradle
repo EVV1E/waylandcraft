@@ -29,10 +29,6 @@ repositories {
 		}
 	}
 
-	maven {
-		name = "pb4"
-		url = "https://maven.pb4.eu/release/"
-	}
 }
 
 dependencies {
@@ -45,17 +41,9 @@ dependencies {
 	// Iris — used by IrisCompat to check whether a shader pack is in use.
 	compileOnly "maven.modrinth:iris:${project.iris_version}"
 
-	// Polymer (optional at runtime, compile-time only here) ──────────────
-	// PolymerIntegration and PolymerWindowItem are the only classes that
-	// reference Polymer directly; both are only ever loaded behind a
-	// FabricLoader.isModLoaded("polymer-core") guard (see WindowItem.java
-	// and PolymerIntegration). The mod works without Polymer present — just
-	// without the "non-WaylandCraft players can join" benefit. The bundled
-	// artifact includes polymer-core, polymer-rsm, and polymer-resource-pack.
-	compileOnly "eu.pb4:polymer-bundled:${project.polymer_version}"
-
-	// Beryl — detected at runtime via FabricLoader.isModLoaded() only;
-	// no Beryl API is called, so no compile-time dep is needed. See BerylCompat.
+	// Beryl — BerylCompat calls RenderingPipeline.isUsingShaderPipeline() via an
+	// inner holder class; the actual class reference is never linked without Beryl.
+	compileOnly "maven.modrinth:beryl:${project.beryl_version}"
 
 	// VulkanMod (optional at runtime, compile-time only here) ──────────────────
 	// dev.evvie.waylandcraft.vulkanmod.* references net.vulkanmod.* directly.
