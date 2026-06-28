@@ -222,6 +222,34 @@ public class RenderUtils {
 		context.blit(framebuffer.getTextureLocation(), x, y, x + w, y + h, 0.0f, 1.0f, 0.0f, 1.0f);
 	}
 	
+	public static void renderBox(PoseStack poseStack, SubmitNodeCollector collector, Vec3 point, int color, float size) {
+		Vec3[] points = new Vec3[] {
+				// Bottom
+				point.add(-size, -size, -size),
+				point.add( size, -size, -size),
+				point.add( size, -size,  size),
+				point.add(-size, -size,  size),
+				point.add(-size, -size, -size),
+				
+				// Top / First connecting line
+				point.add(-size, size, -size),
+				point.add( size, size, -size),
+				point.add( size, size,  size),
+				point.add(-size, size,  size),
+				point.add(-size, size, -size),
+		};
+		renderLineStrip(poseStack, collector, points, color, 1.0f);
+		
+		Vec3[] second = new Vec3[] {point.add( size, -size, -size), point.add( size,  size, -size)};
+		renderLineStrip(poseStack, collector, second, color, 1.0f);
+		
+		Vec3[] third = new Vec3[] {point.add(-size, -size,  size), point.add(-size,  size,  size)};
+		renderLineStrip(poseStack, collector, third, color, 1.0f);
+		
+		Vec3[] fourth = new Vec3[] {point.add( size, -size,  size), point.add( size,  size,  size)};
+		renderLineStrip(poseStack, collector, fourth, color, 1.0f);
+	}
+	
 	public static void renderLineStrip(PoseStack poseStack, SubmitNodeCollector collector, Vec3[] points, int color, float width) {
 		collector.submitCustomGeometry(poseStack, RenderTypes.lines(), new LineStripDraw(points, color, width));
 	}

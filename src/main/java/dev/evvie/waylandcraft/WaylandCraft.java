@@ -21,6 +21,7 @@ import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.ResizeRequest;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
 import dev.evvie.waylandcraft.desktop.XDGDesktopManager;
 import dev.evvie.waylandcraft.displays.DisplayProperties;
+import dev.evvie.waylandcraft.displays.RemoteDisplay;
 import dev.evvie.waylandcraft.displays.WindowDisplay;
 import dev.evvie.waylandcraft.displays.WindowDisplay.DisplayHitResult;
 import dev.evvie.waylandcraft.grabs.DNDGrab;
@@ -80,6 +81,7 @@ public class WaylandCraft implements ClientModInitializer {
 	public @Nullable String x11Display = null;
 	
 	public ArrayList<WindowDisplay> displays = new ArrayList<WindowDisplay>();
+	public ArrayList<RemoteDisplay> remoteDisplays = new ArrayList<RemoteDisplay>();
 	
 	public boolean overridePickBlock = false;
 	public HitResult trueGameHitResult = null;
@@ -126,17 +128,18 @@ public class WaylandCraft implements ClientModInitializer {
 		
 		settingsManager = new WaylandCraftSettingsManager(this);
 		
+		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
+		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
+		ClientPlayConnectionEvents.DISCONNECT.register(this::onClientDisconnect);
+		
 		if(Platform.get() != Platform.LINUX) {
 			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");
 			WaylandCraft.fallbackMode = true;
 			return;
 		}
 		
-		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
-		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		ClientPlayConnectionEvents.JOIN.register(this::onClientJoin);
-		ClientPlayConnectionEvents.DISCONNECT.register(this::onClientDisconnect);
 		ItemTooltipCallback.EVENT.register(this::addWindowItemTooltip);
 		ClientTickEvents.START_CLIENT_TICK.register(itemManager);
 		
@@ -172,12 +175,18 @@ public class WaylandCraft implements ClientModInitializer {
 	}
 	
 	public void renderWorld(LevelRenderContext ctx) {
-		if(bridge == null) return;
+		remoteDisplays.forEach((d) -> d.render(ctx));
 		
-		displays.forEach((d) -> d.render(ctx));
+		if(bridge != null) {
+			displays.forEach((d) -> d.render(ctx));
+		}
 	}
 	
 	public void updateWorld(LevelExtractionContext ctx) {
+		remoteDisplays.removeIf((d) -> !d.isValid());
+		
+		if(bridge == null) return;
+		
 		for(WLCPopup popup : bridge.getMappedPopups()) {
 			WLCAbstractWindow root = popup;
 			while((root = ((WLCPopup) root).getParent()) instanceof WLCPopup);
@@ -298,6 +307,7 @@ public class WaylandCraft implements ClientModInitializer {
 	
 	private void onClientDisconnect(ClientPacketListener listener, Minecraft minecraft) {
 		displays.clear();
+		remoteDisplays.clear();
 		itemManager.reset();
 	}
 	
