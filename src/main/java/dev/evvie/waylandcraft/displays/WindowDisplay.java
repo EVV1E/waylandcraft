@@ -29,6 +29,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	
 	public final WLCAbstractWindow window;
 	public double anchorDistance = 2.0;
+	public DisplayProperties prevProperties = null;
 	
 	public WindowDisplay(WLCAbstractWindow window) {
 		this.window = window;

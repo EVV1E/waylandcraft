@@ -83,6 +83,21 @@ public abstract class AbstractWindowDisplay {
 		pivot = pos.add(localX().scale(width/2)).add(localY().scale(height/2));
 	}
 	
+	public DisplayProperties getProperties() {
+		return new DisplayProperties(pivot, normal, down, width, height, geometryX, geometryY, pixelScale);
+	}
+	
+	public void applyProperties(DisplayProperties properties) {
+		this.pivot = properties.pivot();
+		this.normal = properties.normal();
+		this.down = properties.down();
+		this.width = properties.width();
+		this.height = properties.height();
+		this.geometryX = properties.geometryX();
+		this.geometryY = properties.geometryY();
+		this.pixelScale = properties.pixelScale();
+	}
+	
 	public void render(LevelRenderContext ctx) {
 		FramebufferRenderable framebuffer = getFramebuffer();
 		if(framebuffer == null) return;

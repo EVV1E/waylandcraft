@@ -20,6 +20,7 @@ import dev.evvie.waylandcraft.bridge.WaylandCraftBridge;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.ResizeRequest;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
 import dev.evvie.waylandcraft.desktop.XDGDesktopManager;
+import dev.evvie.waylandcraft.displays.DisplayProperties;
 import dev.evvie.waylandcraft.displays.WindowDisplay;
 import dev.evvie.waylandcraft.displays.WindowDisplay.DisplayHitResult;
 import dev.evvie.waylandcraft.grabs.DNDGrab;
@@ -33,6 +34,7 @@ import dev.evvie.waylandcraft.gui.WindowManagerScreen;
 import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemManager;
+import dev.evvie.waylandcraft.network.ServerboundDisplayPayload;
 import dev.evvie.waylandcraft.render.WindowInHandRenderer;
 import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
 import dev.evvie.waylandcraft.render.model.WindowItemModel;
@@ -44,6 +46,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
@@ -262,8 +265,17 @@ public class WaylandCraft implements ClientModInitializer {
 	public void onClientTick(Minecraft minecraft) {
 		if(minecraft.player == null) return;
 		checkKeybinds(minecraft);
-	}
 		
+		for(WindowDisplay display : displays) {
+			if(!(display.window instanceof WLCToplevel)) continue;
+			DisplayProperties props = display.getProperties();
+			if(!props.equals(display.prevProperties)) {
+				ClientPlayNetworking.send(new ServerboundDisplayPayload(display.window.getHandle(), display.getProperties()));
+				display.prevProperties = props;
+			}
+		}
+	}
+	
 	private void checkKeybinds(Minecraft minecraft) {
 		if(keyOpenScreen.consumeClick()) {
 			keyboardCaptureMode = KeyboardCaptureMode.NONE;

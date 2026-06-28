@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.evvie.waylandcraft.displays.ServerDisplayManager;
 import dev.evvie.waylandcraft.item.ServerItemManager;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemInteractionProvider;
@@ -19,6 +20,7 @@ public class WaylandCraftCommon implements ModInitializer {
 	
 	public @Nullable WindowItemInteractionProvider windowItemInteractionProvider = null;
 	public ServerItemManager serverItemManager = new ServerItemManager();
+	public ServerDisplayManager serverDisplayManager = new ServerDisplayManager();
 	
 	@Override
 	public void onInitialize() {
@@ -27,6 +29,7 @@ public class WaylandCraftCommon implements ModInitializer {
 		WaylandCraftNetworking.register();
 		
 		ServerTickEvents.START_LEVEL_TICK.register(serverItemManager);
+		ServerTickEvents.START_SERVER_TICK.register(serverDisplayManager::tick);
 	}
 	
 }
