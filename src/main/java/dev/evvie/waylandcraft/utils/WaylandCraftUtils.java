@@ -6,15 +6,28 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import dev.evvie.waylandcraft.item.WindowHandle;
+import io.netty.buffer.ByteBuf;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 public class WaylandCraftUtils {
+	
+	public static final StreamCodec<ByteBuf, Short> UNSIGNED_BYTE = new StreamCodec<ByteBuf, Short>() {
+		public Short decode(final ByteBuf input) {
+			return input.readUnsignedByte();
+		}
+		
+		public void encode(final ByteBuf output, final Short value) {
+			output.writeByte(value);
+		}
+	};
 	
 	public static Vec3 getPosition(Entity entity) {
 		float partialTicks = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
@@ -50,26 +63,15 @@ public class WaylandCraftUtils {
 		return up;
 	}
 	
-	public static ServerPlayer getPlayer(ServerLevel level, UUID id) {
-		for(ServerPlayer player : level.players()) {
-			UUID pid = WindowHandle.getPlayerUUID(player);
-			if(pid.equals(id)) return player;
-		}
-		return null;
-	}
-	
-	public static boolean isHandleValid(ServerLevel level, WindowHandle handle) {
-		if(handle == null) return false;
-		
-		ServerPlayer player = getPlayer(level, handle.player());
-		if(player == null) return false;
-		
-		return ((IMyServerPlayer) player).getAliveWindows().contains(handle.handle());
+	public static UUID getPlayerUUID(Player player) {
+		return player.getGameProfile().id();
 	}
 	
 	public static boolean isHandleValid(MinecraftServer server, WindowHandle handle) {
-		for(ServerLevel level : server.getAllLevels()) {
-			if(isHandleValid(level, handle)) return true;
+		for(ServerPlayer player : PlayerLookup.all(server)) {
+			if(getPlayerUUID(player).equals(handle.player())) {
+				return ((IMyServerPlayer) player).getAliveWindows().contains(handle.handle());
+			}
 		}
 		return false;
 	}

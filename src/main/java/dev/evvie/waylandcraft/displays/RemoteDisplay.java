@@ -4,12 +4,19 @@ import org.jetbrains.annotations.Nullable;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
+import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.phys.Vec3;
 
 public class RemoteDisplay extends AbstractWindowDisplay {
+	
+	public final WindowHandle handle;
+	
+	public RemoteDisplay(WindowHandle handle) {
+		this.handle = handle;
+	}
 	
 	@Override
 	public boolean isValid() {

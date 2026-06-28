@@ -27,7 +27,7 @@ public class ServerItemManager implements ServerTickEvents.StartLevelTick {
 				if(!item.is(WindowItem.WINDOW)) continue;
 				
 				WindowHandle handle = item.get(WindowItem.WINDOW_HANDLE);
-				if(!WaylandCraftUtils.isHandleValid(level, handle)) {
+				if(!WaylandCraftUtils.isHandleValid(level.getServer(), handle)) {
 					inv.setItem(i, ItemStack.EMPTY);
 				}
 			}
@@ -45,7 +45,7 @@ public class ServerItemManager implements ServerTickEvents.StartLevelTick {
 			.filter((e) -> e instanceof ItemEntity)
 			.map((e) -> (ItemEntity) e)
 			.filter((e) -> e.getItem().is(WindowItem.WINDOW))
-			.filter((e) -> !WaylandCraftUtils.isHandleValid(level, e.getItem().get(WindowItem.WINDOW_HANDLE)))
+			.filter((e) -> !WaylandCraftUtils.isHandleValid(level.getServer(), e.getItem().get(WindowItem.WINDOW_HANDLE)))
 			.filter((e) -> e.getAge() > 10)
 			.forEach((e) -> {
 				level.sendParticles(ParticleTypes.FLAME, false, false, e.getX(), e.getY(), e.getZ(), 10, 0.15, 0.2, 0.15, 0.1);

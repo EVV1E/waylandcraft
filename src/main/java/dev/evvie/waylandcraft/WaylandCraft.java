@@ -35,6 +35,7 @@ import dev.evvie.waylandcraft.gui.WindowManagerScreen;
 import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemManager;
+import dev.evvie.waylandcraft.network.ClientboundDisplayPayload;
 import dev.evvie.waylandcraft.network.ServerboundDisplayPayload;
 import dev.evvie.waylandcraft.render.WindowInHandRenderer;
 import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
@@ -131,6 +132,8 @@ public class WaylandCraft implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
 		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
 		ClientPlayConnectionEvents.DISCONNECT.register(this::onClientDisconnect);
+		
+		ClientPlayNetworking.registerGlobalReceiver(ClientboundDisplayPayload.TYPE, this::handleDisplayPayload);
 		
 		if(Platform.get() != Platform.LINUX) {
 			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");
@@ -250,6 +253,24 @@ public class WaylandCraft implements ClientModInitializer {
 		playerWasUsingWindowItem = playerUsingWindowItem;
 		
 		updateOutputSize(inWMScreen);
+	}
+	
+	public @Nullable RemoteDisplay getRemoteDisplay(WindowHandle handle) {
+		return remoteDisplays.stream().filter((d) -> d.handle.equals(handle)).findAny().orElse(null);
+	}
+	
+	public void handleDisplayPayload(ClientboundDisplayPayload payload, ClientPlayNetworking.Context ctx) {
+		if(payload.removed()) {
+			remoteDisplays.removeIf((d) -> d.handle.equals(payload.handle()));
+			return;
+		}
+		
+		RemoteDisplay display = getRemoteDisplay(payload.handle());
+		if(display == null) {
+			display = new RemoteDisplay(payload.handle());
+			remoteDisplays.add(display);
+		}
+		display.applyProperties(payload.properties());
 	}
 	
 	public void startUsingWindowItem() {
