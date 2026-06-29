@@ -15,6 +15,10 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	
 	public final WindowHandle handle;
 	
+	private final RemoteDisplayRenderState renderState = new RemoteDisplayRenderState();
+	private Vec3 packetPivot = pivot;
+	private Vec3 prevPivot = pivot;
+	
 	public RemoteDisplay(WindowHandle handle) {
 		this.handle = handle;
 	}
@@ -30,6 +34,20 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	}
 	
 	@Override
+	public void tick() {
+		prevPivot = pivot;
+		pivot = packetPivot;
+	}
+	
+	@Override
+	public void extract(LevelExtractionContext ctx) {
+		float partialTicks = ctx.deltaTracker().getGameTimeDeltaPartialTick(true);
+		renderState.pivot = this.prevPivot.lerp(this.pivot, partialTicks);
+		renderState.localX = this.localX();
+		renderState.localY = this.localY();
+	}
+	
+	@Override
 	public void render(LevelRenderContext ctx) {
 		Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
 		
@@ -37,11 +55,15 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 		poseStack.pushPose();
 		poseStack.translate(Vec3.ZERO.subtract(cameraPos));
 		
+		Vec3 pivot = renderState.pivot;
+		Vec3 localX = renderState.localX;
+		Vec3 localY = renderState.localY;
+		Vec3 origin = pivot.subtract(localX.scale(width / 2)).subtract(localY.scale(height / 2));
+		
 		RenderUtils.renderBox(poseStack, ctx.submitNodeCollector(), pivot, 0xffffffff, 0.07f);
 		
-		Vec3 origin = origin();
-		Vec3 spanX = localX().scale(width);
-		Vec3 spanY = localY().scale(height);
+		Vec3 spanX = localX.scale(width);
+		Vec3 spanY = localY.scale(height);
 		Vec3[] points = new Vec3[] {
 				origin,
 				origin.add(spanX),
@@ -55,7 +77,8 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	}
 	
 	public void applyProperties(DisplayProperties properties) {
-		this.pivot = properties.pivot();
+		this.packetPivot = properties.pivot();
+		
 		this.normal = properties.normal();
 		this.down = properties.down();
 		this.width = properties.width();
@@ -72,6 +95,14 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	@Override
 	public @Nullable FramebufferRenderable getFramebuffer() {
 		return null;
+	}
+	
+	private static class RemoteDisplayRenderState {
+		
+		public Vec3 pivot = Vec3.ZERO;
+		public Vec3 localX = Vec3.ZERO;
+		public Vec3 localY = Vec3.ZERO;
+		
 	}
 	
 }
