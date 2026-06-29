@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.render.RenderUtils;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.phys.Vec3;
@@ -21,10 +22,6 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	@Override
 	public boolean isValid() {
 		return true;
-	}
-	
-	@Override
-	public void updateGeometry() {
 	}
 	
 	public void setSize(int width, int height) {
@@ -55,6 +52,17 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 		RenderUtils.renderLineStrip(poseStack, ctx.submitNodeCollector(), points, 0xffffffff, 2.0f);
 		
 		poseStack.popPose();
+	}
+	
+	public void applyProperties(DisplayProperties properties) {
+		this.pivot = properties.pivot();
+		this.normal = properties.normal();
+		this.down = properties.down();
+		this.width = properties.width();
+		this.height = properties.height();
+		this.geometryX = properties.geometryX();
+		this.geometryY = properties.geometryY();
+		this.pixelScale = properties.pixelScale();
 	}
 	
 	@Override

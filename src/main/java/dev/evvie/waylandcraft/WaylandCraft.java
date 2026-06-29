@@ -132,6 +132,7 @@ public class WaylandCraft implements ClientModInitializer {
 		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
 		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
 		ClientPlayConnectionEvents.DISCONNECT.register(this::onClientDisconnect);
+		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		
 		ClientPlayNetworking.registerGlobalReceiver(ClientboundDisplayPayload.TYPE, this::handleDisplayPayload);
 		
@@ -141,7 +142,6 @@ public class WaylandCraft implements ClientModInitializer {
 			return;
 		}
 		
-		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		ClientPlayConnectionEvents.JOIN.register(this::onClientJoin);
 		ItemTooltipCallback.EVENT.register(this::addWindowItemTooltip);
 		ClientTickEvents.START_CLIENT_TICK.register(itemManager);
@@ -186,7 +186,11 @@ public class WaylandCraft implements ClientModInitializer {
 	}
 	
 	public void updateWorld(LevelExtractionContext ctx) {
+		displays.removeIf((d) -> !d.isValid());
 		remoteDisplays.removeIf((d) -> !d.isValid());
+		
+		displays.forEach((d) -> d.extract(ctx));
+		remoteDisplays.forEach((d) -> d.extract(ctx));
 		
 		if(bridge == null) return;
 		
@@ -204,9 +208,6 @@ public class WaylandCraft implements ClientModInitializer {
 				displays.removeIf((w) -> w.window == popup);
 			}
 		}
-		
-		displays.removeIf((d) -> !d.isValid());
-		displays.forEach((d) -> d.updateGeometry());
 		
 		for(WLCPopup popup : bridge.getMappedPopups()) {
 			anchorToParent(popup);
@@ -294,6 +295,12 @@ public class WaylandCraft implements ClientModInitializer {
 	
 	public void onClientTick(Minecraft minecraft) {
 		if(minecraft.player == null) return;
+		
+		displays.forEach((d) -> d.tick());
+		remoteDisplays.forEach((d) -> d.tick());
+		
+		if(bridge == null) return;
+		
 		checkKeybinds(minecraft);
 		
 		for(WindowDisplay display : displays) {

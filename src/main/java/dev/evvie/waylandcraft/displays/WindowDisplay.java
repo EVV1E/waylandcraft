@@ -13,6 +13,7 @@ import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.math.WorldPlane;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -33,7 +34,6 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	
 	public WindowDisplay(WLCAbstractWindow window) {
 		this.window = window;
-		this.updateGeometry();
 	}
 	
 	@Override
@@ -42,7 +42,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	}
 	
 	@Override
-	public void updateGeometry() {
+	public void extract(LevelExtractionContext ctx) {
 		setPixelScale(1.0f / WaylandCraft.instance.settings.getPixelsPerBlock());
 		width = window.geometry.width();
 		height = window.geometry.height();

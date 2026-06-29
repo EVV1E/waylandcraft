@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.evvie.waylandcraft.math.WorldPlane;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.phys.Vec3;
@@ -26,13 +27,12 @@ public abstract class AbstractWindowDisplay {
 	protected int geometryX = 0;
 	protected int geometryY = 0;
 	
-	private float pixelScale;
+	protected float pixelScale;
 	
 	public AbstractWindowDisplay() {
 	}
 	
 	public abstract boolean isValid();
-	public abstract void updateGeometry();
 	
 	public abstract void renderFramebuffer(PoseStack poseStack, SubmitNodeCollector collector, Vec3 origin, Vec3 spanX, Vec3 spanY);
 	public abstract @Nullable FramebufferRenderable getFramebuffer();
@@ -87,22 +87,15 @@ public abstract class AbstractWindowDisplay {
 		return new DisplayProperties(pivot, normal, down, width, height, geometryX, geometryY, pixelScale);
 	}
 	
-	public void applyProperties(DisplayProperties properties) {
-		this.pivot = properties.pivot();
-		this.normal = properties.normal();
-		this.down = properties.down();
-		this.width = properties.width();
-		this.height = properties.height();
-		this.geometryX = properties.geometryX();
-		this.geometryY = properties.geometryY();
-		this.pixelScale = properties.pixelScale();
+	public void tick() {
+	}
+	
+	public void extract(LevelExtractionContext ctx) {
 	}
 	
 	public void render(LevelRenderContext ctx) {
 		FramebufferRenderable framebuffer = getFramebuffer();
 		if(framebuffer == null) return;
-		
-		updateGeometry();
 		
 		int xoff = framebuffer.getXOff();
 		int yoff = framebuffer.getYOff();
