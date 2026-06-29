@@ -18,6 +18,10 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	private final RemoteDisplayRenderState renderState = new RemoteDisplayRenderState();
 	private Vec3 packetPivot = pivot;
 	private Vec3 prevPivot = pivot;
+	private Vec3 packetNormal = normal;
+	private Vec3 prevNormal = normal;
+	private Vec3 packetDown = down;
+	private Vec3 prevDown = down;
 	
 	public RemoteDisplay(WindowHandle handle) {
 		this.handle = handle;
@@ -36,15 +40,27 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	@Override
 	public void tick() {
 		prevPivot = pivot;
+		prevNormal = normal;
+		prevDown = down;
+		
 		pivot = packetPivot;
+		normal = packetNormal;
+		down = packetDown;
 	}
 	
 	@Override
 	public void extract(LevelExtractionContext ctx) {
 		float partialTicks = ctx.deltaTracker().getGameTimeDeltaPartialTick(true);
 		renderState.pivot = this.prevPivot.lerp(this.pivot, partialTicks);
-		renderState.localX = this.localX();
-		renderState.localY = this.localY();
+		
+		Vec3 normal = this.prevNormal.lerp(this.normal, partialTicks).normalize();
+		Vec3 down = this.prevDown.lerp(this.down, partialTicks).normalize();
+		
+		Vec3 localX = normal.cross(down).scale(pixelScale);
+		Vec3 localY = down.scale(pixelScale);
+		
+		renderState.localX = localX;
+		renderState.localY = localY;
 	}
 	
 	@Override
@@ -78,9 +94,9 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	
 	public void applyProperties(DisplayProperties properties) {
 		this.packetPivot = properties.pivot();
+		this.packetNormal = properties.normal();
+		this.packetDown = properties.down();
 		
-		this.normal = properties.normal();
-		this.down = properties.down();
 		this.width = properties.width();
 		this.height = properties.height();
 		this.geometryX = properties.geometryX();
