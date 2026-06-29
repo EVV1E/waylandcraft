@@ -84,6 +84,8 @@ public class WaylandCraft implements ClientModInitializer {
 	public ArrayList<WindowDisplay> displays = new ArrayList<WindowDisplay>();
 	public ArrayList<RemoteDisplay> remoteDisplays = new ArrayList<RemoteDisplay>();
 	
+	private HashSet<Long> syncedDisplays = new HashSet<Long>();
+	
 	public boolean overridePickBlock = false;
 	public HitResult trueGameHitResult = null;
 	
@@ -304,13 +306,25 @@ public class WaylandCraft implements ClientModInitializer {
 		checkKeybinds(minecraft);
 		
 		for(WindowDisplay display : displays) {
-			if(!(display.window instanceof WLCToplevel)) continue;
+			long handle = display.window.getHandle();
+			if(handle == 0) continue;
+			
 			DisplayProperties props = display.getProperties();
 			if(!props.equals(display.prevProperties)) {
-				ClientPlayNetworking.send(new ServerboundDisplayPayload(display.window.getHandle(), display.getProperties()));
+				ClientPlayNetworking.send(new ServerboundDisplayPayload(handle, display.getProperties(), ServerboundDisplayPayload.NONE));
 				display.prevProperties = props;
 			}
+			syncedDisplays.add(handle);
 		}
+		
+		ArrayList<Long> removedDisplays = new ArrayList<Long>();
+		for(Long handle : syncedDisplays) {
+			if(!displays.stream().anyMatch((d) -> d.window.getHandle() == handle)) {
+				ClientPlayNetworking.send(new ServerboundDisplayPayload(handle, new DisplayProperties(), ServerboundDisplayPayload.REMOVED));
+				removedDisplays.add(handle);
+			}
+		}
+		syncedDisplays.removeAll(removedDisplays);
 	}
 	
 	private void checkKeybinds(Minecraft minecraft) {

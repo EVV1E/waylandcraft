@@ -7,7 +7,6 @@ import org.jetbrains.annotations.Nullable;
 import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.network.ClientboundDisplayPayload;
 import dev.evvie.waylandcraft.network.ServerboundDisplayPayload;
-import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
@@ -18,16 +17,6 @@ public class ServerDisplayManager {
 	public ArrayList<ServerWindowDisplay> displays = new ArrayList<ServerWindowDisplay>();
 	
 	public void tick(MinecraftServer server) {
-		ArrayList<ServerWindowDisplay> removeDisplays = new ArrayList<ServerWindowDisplay>();
-		for(ServerWindowDisplay display : displays) {
-			if(!WaylandCraftUtils.isHandleValid(server, display.handle)) {
-				ClientboundDisplayPayload payload = new ClientboundDisplayPayload(display.handle, display.getProperties(), ClientboundDisplayPayload.REMOVED);
-				sendDisplayPayload(server, payload);
-				removeDisplays.add(display);
-			}
-		}
-		displays.removeAll(removeDisplays);
-		
 		for(ServerWindowDisplay display : displays) {
 			if(display.propertiesDirty) {
 				ClientboundDisplayPayload payload = new ClientboundDisplayPayload(display.handle, display.getProperties(), ClientboundDisplayPayload.NONE);
@@ -51,8 +40,17 @@ public class ServerDisplayManager {
 	
 	public void handleDisplayPayload(ServerboundDisplayPayload payload, ServerPlayNetworking.Context ctx) {
 		WindowHandle handle = WindowHandle.forPlayer(ctx.player(), payload.handle());
-		
 		ServerWindowDisplay display = getDisplay(handle);
+		
+		if(payload.removed()) {
+			if(display == null) return;
+			displays.remove(display);
+			
+			ClientboundDisplayPayload payload2 = new ClientboundDisplayPayload(display.handle, new DisplayProperties(), ClientboundDisplayPayload.REMOVED);
+			sendDisplayPayload(ctx.server(), payload2);
+			return;
+		}
+		
 		if(display == null) {
 			display = new ServerWindowDisplay(handle, payload.properties());
 			displays.add(display);

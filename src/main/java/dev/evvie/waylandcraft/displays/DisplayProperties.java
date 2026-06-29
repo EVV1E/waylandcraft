@@ -20,4 +20,8 @@ public record DisplayProperties(Vec3 pivot, Vec3 normal, Vec3 down, int width, i
 			DisplayProperties::new
 	);
 	
+	public DisplayProperties() {
+		this(Vec3.ZERO, Vec3.ZERO, Vec3.ZERO, 0, 0, 0, 0, 0);
+	}
+	
 }
