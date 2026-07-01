@@ -8,7 +8,9 @@ import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 
 public class RemoteDisplay extends AbstractWindowDisplay {
@@ -29,7 +31,9 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	
 	@Override
 	public boolean isValid() {
-		return true;
+		ChunkPos pos = this.getChunkPos();
+		boolean chunkExists = Minecraft.getInstance().level.getChunkSource().getChunk(pos.x(), pos.z(), false) != null;
+		return chunkExists;
 	}
 	
 	public void setSize(int width, int height) {

@@ -1,6 +1,11 @@
 package dev.evvie.waylandcraft.displays;
 
 import dev.evvie.waylandcraft.item.WindowHandle;
+import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 
 public class ServerWindowDisplay {
@@ -27,6 +32,14 @@ public class ServerWindowDisplay {
 	
 	public DisplayProperties getProperties() {
 		return new DisplayProperties(pivot, normal, down, width, height, geometryX, geometryY, pixelScale);
+	}
+	
+	public ServerPlayer getPlayer(MinecraftServer server) {
+		return WaylandCraftUtils.getPlayerByUUID(server, handle.player());
+	}
+	
+	public ChunkPos getChunkPos() {
+		return ChunkPos.containing(BlockPos.containing(pivot));
 	}
 	
 	public void applyProperties(DisplayProperties properties) {

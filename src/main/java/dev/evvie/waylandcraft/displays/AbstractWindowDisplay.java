@@ -8,6 +8,8 @@ import dev.evvie.waylandcraft.math.WorldPlane;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
 
 public abstract class AbstractWindowDisplay {
@@ -85,6 +87,10 @@ public abstract class AbstractWindowDisplay {
 	
 	public DisplayProperties getProperties() {
 		return new DisplayProperties(pivot, normal, down, width, height, geometryX, geometryY, pixelScale);
+	}
+	
+	public ChunkPos getChunkPos() {
+		return ChunkPos.containing(BlockPos.containing(pivot));
 	}
 	
 	public void tick() {

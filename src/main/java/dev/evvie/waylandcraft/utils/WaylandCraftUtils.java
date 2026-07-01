@@ -2,6 +2,7 @@ package dev.evvie.waylandcraft.utils;
 
 import java.util.UUID;
 
+import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -67,13 +68,20 @@ public class WaylandCraftUtils {
 		return player.getGameProfile().id();
 	}
 	
-	public static boolean isHandleValid(MinecraftServer server, WindowHandle handle) {
+	public static @Nullable ServerPlayer getPlayerByUUID(MinecraftServer server, UUID uuid) {
 		for(ServerPlayer player : PlayerLookup.all(server)) {
-			if(getPlayerUUID(player).equals(handle.player())) {
-				return ((IMyServerPlayer) player).getAliveWindows().contains(handle.handle());
+			if(getPlayerUUID(player).equals(uuid)) {
+				return player;
 			}
 		}
-		return false;
+		return null;
+	}
+	
+	public static boolean isHandleValid(MinecraftServer server, WindowHandle handle) {
+		ServerPlayer player = getPlayerByUUID(server, handle.player());
+		if(player == null) return false;
+		
+		return ((IMyServerPlayer) player).getAliveWindows().contains(handle.handle());
 	}
 	
 }

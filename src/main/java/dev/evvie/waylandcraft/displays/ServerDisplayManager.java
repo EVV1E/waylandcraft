@@ -10,7 +10,9 @@ import dev.evvie.waylandcraft.network.ServerboundDisplayPayload;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.ChunkPos;
 
 public class ServerDisplayManager {
 	
@@ -19,14 +21,16 @@ public class ServerDisplayManager {
 	public void tick(MinecraftServer server) {
 		for(ServerWindowDisplay display : displays) {
 			if(display.propertiesDirty) {
-				ClientboundDisplayPayload payload = new ClientboundDisplayPayload(display.handle, display.getProperties(), ClientboundDisplayPayload.NONE);
-				sendDisplayPayload(server, payload);
+				ServerPlayer player = display.getPlayer(server);
+				sendDisplayPayload(player.level(), display.getChunkPos(), display.handle, display.getProperties(), ClientboundDisplayPayload.NONE);
 			}
 		}
 	}
 	
-	public void sendDisplayPayload(MinecraftServer server, ClientboundDisplayPayload payload) {
-		for(ServerPlayer player : PlayerLookup.all(server)) {
+	public void sendDisplayPayload(ServerLevel level, ChunkPos pos, WindowHandle handle, DisplayProperties properties, short flags) {
+		ClientboundDisplayPayload payload = new ClientboundDisplayPayload(handle, properties, flags);
+		
+		for(ServerPlayer player : PlayerLookup.tracking(level, pos)) {
 			ServerPlayNetworking.send(player, payload);
 		}
 	}
@@ -46,8 +50,7 @@ public class ServerDisplayManager {
 			if(display == null) return;
 			displays.remove(display);
 			
-			ClientboundDisplayPayload payload2 = new ClientboundDisplayPayload(display.handle, new DisplayProperties(), ClientboundDisplayPayload.REMOVED);
-			sendDisplayPayload(ctx.server(), payload2);
+			sendDisplayPayload(ctx.player().level(), display.getChunkPos(), display.handle, new DisplayProperties(), ClientboundDisplayPayload.REMOVED);
 			return;
 		}
 		
