@@ -271,9 +271,12 @@ public class WaylandCraft implements ClientModInitializer {
 		RemoteDisplay display = getRemoteDisplay(payload.handle());
 		if(display == null) {
 			display = new RemoteDisplay(payload.handle());
+			display.applyProperties(payload.properties(), true);
 			remoteDisplays.add(display);
+			return;
 		}
-		display.applyProperties(payload.properties());
+		
+		display.applyProperties(payload.properties(), false);
 	}
 	
 	public void startUsingWindowItem() {

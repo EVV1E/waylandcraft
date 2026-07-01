@@ -25,6 +25,8 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	private Vec3 packetDown = down;
 	private Vec3 prevDown = down;
 	
+	private int lerpSteps = 0;
+	
 	public RemoteDisplay(WindowHandle handle) {
 		this.handle = handle;
 	}
@@ -47,7 +49,14 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 		prevNormal = normal;
 		prevDown = down;
 		
-		pivot = packetPivot;
+		if(lerpSteps > 0) {
+			pivot = pivot.lerp(packetPivot, 1.0 / lerpSteps);
+			lerpSteps--;
+		}
+		else {
+			pivot = packetPivot;
+		}
+		
 		normal = packetNormal;
 		down = packetDown;
 	}
@@ -96,10 +105,26 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 		poseStack.popPose();
 	}
 	
-	public void applyProperties(DisplayProperties properties) {
-		this.packetPivot = properties.pivot();
-		this.packetNormal = properties.normal();
-		this.packetDown = properties.down();
+	public void applyProperties(DisplayProperties properties, boolean immediate) {
+		if(immediate) {
+			this.pivot = this.packetPivot = properties.pivot();
+			this.normal = this.packetNormal = properties.normal();
+			this.down = this.packetDown = properties.down();
+			this.lerpSteps = 0;
+		}
+		else {
+			if(lerpSteps == 0) {
+				this.pivot = this.packetPivot;
+				this.normal = this.packetNormal;
+				this.down = this.packetDown;
+			}
+			
+			this.packetPivot = properties.pivot();
+			this.packetNormal = properties.normal();
+			this.packetDown = properties.down();
+			
+			this.lerpSteps = 3;
+		}
 		
 		this.width = properties.width();
 		this.height = properties.height();
