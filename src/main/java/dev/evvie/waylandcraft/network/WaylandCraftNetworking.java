@@ -12,8 +12,9 @@ public class WaylandCraftNetworking {
 	public static void register() {
 		PayloadTypeRegistry.serverboundPlay().register(ServerboundGiveItemsPayload.TYPE, ServerboundGiveItemsPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ServerboundAliveWindowsPayload.TYPE, ServerboundAliveWindowsPayload.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(ServerboundDisplayPayload.TYPE, ServerboundDisplayPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(ClientboundDisplayPayload.TYPE, ClientboundDisplayPayload.CODEC);
+		
+		PayloadTypeRegistry.serverboundPlay().register(DisplayPayload.TYPE, DisplayPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(DisplayPayload.TYPE, DisplayPayload.CODEC);
 		
 		ServerPlayNetworking.registerGlobalReceiver(ServerboundAliveWindowsPayload.TYPE, (payload, ctx) -> {
 			IMyServerPlayer plr = (IMyServerPlayer) ctx.player();
@@ -26,7 +27,7 @@ public class WaylandCraftNetworking {
 		});
 		
 		ServerPlayNetworking.registerGlobalReceiver(ServerboundGiveItemsPayload.TYPE, WaylandCraftCommon.instance.serverItemManager::handleGiveItemsPayload);
-		ServerPlayNetworking.registerGlobalReceiver(ServerboundDisplayPayload.TYPE, WaylandCraftCommon.instance.serverDisplayManager::handleDisplayPayload);
+		ServerPlayNetworking.registerGlobalReceiver(DisplayPayload.TYPE, WaylandCraftCommon.instance.serverDisplayManager::handleDisplayPayload);
 	}
 	
 }

@@ -5,8 +5,7 @@ import java.util.ArrayList;
 import org.jetbrains.annotations.Nullable;
 
 import dev.evvie.waylandcraft.item.WindowHandle;
-import dev.evvie.waylandcraft.network.ClientboundDisplayPayload;
-import dev.evvie.waylandcraft.network.ServerboundDisplayPayload;
+import dev.evvie.waylandcraft.network.DisplayPayload;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.MinecraftServer;
@@ -22,13 +21,13 @@ public class ServerDisplayManager {
 		for(ServerWindowDisplay display : displays) {
 			if(display.propertiesDirty) {
 				ServerPlayer player = display.getPlayer(server);
-				sendDisplayPayload(player.level(), display.getChunkPos(), display.handle, display.getProperties(), ClientboundDisplayPayload.NONE);
+				sendDisplayPayload(player.level(), display.getChunkPos(), display.handle, display.getProperties(), DisplayPayload.NONE);
 			}
 		}
 	}
 	
 	public void sendDisplayPayload(ServerLevel level, ChunkPos pos, WindowHandle handle, DisplayProperties properties, short flags) {
-		ClientboundDisplayPayload payload = new ClientboundDisplayPayload(handle, properties, flags);
+		DisplayPayload payload = new DisplayPayload(handle, properties, flags);
 		
 		for(ServerPlayer player : PlayerLookup.tracking(level, pos)) {
 			ServerPlayNetworking.send(player, payload);
@@ -42,20 +41,21 @@ public class ServerDisplayManager {
 		return null;
 	}
 	
-	public void handleDisplayPayload(ServerboundDisplayPayload payload, ServerPlayNetworking.Context ctx) {
-		WindowHandle handle = WindowHandle.forPlayer(ctx.player(), payload.handle());
-		ServerWindowDisplay display = getDisplay(handle);
+	public void handleDisplayPayload(DisplayPayload payload, ServerPlayNetworking.Context ctx) {
+		if(!payload.handle().matchesPlayer(ctx.player())) return;
+		
+		ServerWindowDisplay display = getDisplay(payload.handle());
 		
 		if(payload.removed()) {
 			if(display == null) return;
 			displays.remove(display);
 			
-			sendDisplayPayload(ctx.player().level(), display.getChunkPos(), display.handle, new DisplayProperties(), ClientboundDisplayPayload.REMOVED);
+			sendDisplayPayload(ctx.player().level(), display.getChunkPos(), display.handle, new DisplayProperties(), DisplayPayload.REMOVED);
 			return;
 		}
 		
 		if(display == null) {
-			display = new ServerWindowDisplay(handle, payload.properties());
+			display = new ServerWindowDisplay(payload.handle(), payload.properties());
 			displays.add(display);
 		}
 		else {

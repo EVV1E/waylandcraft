@@ -35,8 +35,7 @@ import dev.evvie.waylandcraft.gui.WindowManagerScreen;
 import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemManager;
-import dev.evvie.waylandcraft.network.ClientboundDisplayPayload;
-import dev.evvie.waylandcraft.network.ServerboundDisplayPayload;
+import dev.evvie.waylandcraft.network.DisplayPayload;
 import dev.evvie.waylandcraft.render.WindowInHandRenderer;
 import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
 import dev.evvie.waylandcraft.render.model.WindowItemModel;
@@ -136,7 +135,7 @@ public class WaylandCraft implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register(this::onClientDisconnect);
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		
-		ClientPlayNetworking.registerGlobalReceiver(ClientboundDisplayPayload.TYPE, this::handleDisplayPayload);
+		ClientPlayNetworking.registerGlobalReceiver(DisplayPayload.TYPE, this::handleDisplayPayload);
 		
 		if(Platform.get() != Platform.LINUX) {
 			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");
@@ -262,7 +261,7 @@ public class WaylandCraft implements ClientModInitializer {
 		return remoteDisplays.stream().filter((d) -> d.handle.equals(handle)).findAny().orElse(null);
 	}
 	
-	public void handleDisplayPayload(ClientboundDisplayPayload payload, ClientPlayNetworking.Context ctx) {
+	public void handleDisplayPayload(DisplayPayload payload, ClientPlayNetworking.Context ctx) {
 		if(payload.removed()) {
 			remoteDisplays.removeIf((d) -> d.handle.equals(payload.handle()));
 			return;
@@ -314,7 +313,7 @@ public class WaylandCraft implements ClientModInitializer {
 			
 			DisplayProperties props = display.getProperties();
 			if(!props.equals(display.prevProperties)) {
-				ClientPlayNetworking.send(new ServerboundDisplayPayload(handle, display.getProperties(), ServerboundDisplayPayload.NONE));
+				ClientPlayNetworking.send(new DisplayPayload(WindowHandle.forPlayer(minecraft.player, handle), display.getProperties(), DisplayPayload.NONE));
 				display.prevProperties = props;
 			}
 			syncedDisplays.add(handle);
@@ -323,7 +322,7 @@ public class WaylandCraft implements ClientModInitializer {
 		ArrayList<Long> removedDisplays = new ArrayList<Long>();
 		for(Long handle : syncedDisplays) {
 			if(!displays.stream().anyMatch((d) -> d.window.getHandle() == handle)) {
-				ClientPlayNetworking.send(new ServerboundDisplayPayload(handle, new DisplayProperties(), ServerboundDisplayPayload.REMOVED));
+				ClientPlayNetworking.send(new DisplayPayload(WindowHandle.forPlayer(minecraft.player, handle), new DisplayProperties(), DisplayPayload.REMOVED));
 				removedDisplays.add(handle);
 			}
 		}
