@@ -32,7 +32,6 @@ import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCSurface.SurfaceDamage;
 import dev.evvie.waylandcraft.bridge.WLCSurface.ViewportSource;
-import dev.evvie.waylandcraft.displays.FramebufferRenderable;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform;
@@ -42,7 +41,7 @@ import net.minecraft.client.renderer.texture.MissingTextureAtlasSprite;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.Identifier;
 
-public class WindowFramebuffer implements FramebufferRenderable {
+public class WindowFramebuffer {
 	
 	public static final RenderPipeline WINDOW_PIPELINE = RenderPipelines.register(
 		RenderPipeline.builder()
@@ -302,22 +301,18 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		tempTarget = null;
 	}
 	
-	@Override
 	public int getWidth() {
 		return width;
 	}
 	
-	@Override
 	public int getHeight() {
 		return height;
 	}
 	
-	@Override
 	public int getXOff() {
 		return xoff;
 	}
 	
-	@Override
 	public int getYOff() {
 		return yoff;
 	}

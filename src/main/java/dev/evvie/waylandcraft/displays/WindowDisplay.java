@@ -12,11 +12,12 @@ import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.math.WorldPlane;
 import dev.evvie.waylandcraft.render.RenderUtils;
+import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
 import net.minecraft.util.Mth;
@@ -31,6 +32,9 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	public final WLCAbstractWindow window;
 	public double anchorDistance = 2.0;
 	public DisplayProperties prevProperties = null;
+	
+	protected int geometryX = 0;
+	protected int geometryY = 0;
 	
 	public WindowDisplay(WLCAbstractWindow window) {
 		this.window = window;
@@ -51,13 +55,32 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	}
 	
 	@Override
-	public void renderFramebuffer(PoseStack poseStack, SubmitNodeCollector collector, Vec3 origin, Vec3 spanX, Vec3 spanY) {
-		RenderUtils.renderFramebuffer(window.framebuffer, poseStack, collector, true, origin, spanX, spanY);
+	public void render(LevelRenderContext ctx) {
+		WindowFramebuffer framebuffer = window.framebuffer;
+		if(framebuffer == null) return;
+		
+		int xoff = framebuffer.getXOff();
+		int yoff = framebuffer.getYOff();
+		int bufWidth = framebuffer.getWidth();
+		int bufHeight = framebuffer.getHeight();
+		
+		Vec3 localX = localX();
+		Vec3 localY = localY();
+		
+		Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
+		Vec3 originRel = origin().subtract(cameraPos);
+		
+		Vec3 bufOffset = localX.scale(-xoff - geometryX).add(localY.scale(-yoff - geometryY));
+		
+		PoseStack poseStack = ctx.poseStack();
+		poseStack.pushPose();
+		poseStack.translate(originRel.x, originRel.y, originRel.z);
+		RenderUtils.renderFramebuffer(window.framebuffer, poseStack, ctx.submitNodeCollector(), true, bufOffset, localX.scale(bufWidth), localY.scale(bufHeight));
+		poseStack.popPose();
 	}
 	
-	@Override
-	public @Nullable FramebufferRenderable getFramebuffer() {
-		return window.framebuffer;
+	public DisplayProperties getProperties() {
+		return new DisplayProperties(pivot, normal, down, width, height, pixelScale);
 	}
 	
 	/* Perform ray-window plane intersection

@@ -1,13 +1,8 @@
 package dev.evvie.waylandcraft.displays;
 
-import org.jetbrains.annotations.Nullable;
-
-import com.mojang.blaze3d.vertex.PoseStack;
-
 import dev.evvie.waylandcraft.math.WorldPlane;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.phys.Vec3;
@@ -26,18 +21,12 @@ public abstract class AbstractWindowDisplay {
 	protected int width;
 	protected int height;
 	
-	protected int geometryX = 0;
-	protected int geometryY = 0;
-	
 	protected float pixelScale;
 	
 	public AbstractWindowDisplay() {
 	}
 	
 	public abstract boolean isValid();
-	
-	public abstract void renderFramebuffer(PoseStack poseStack, SubmitNodeCollector collector, Vec3 origin, Vec3 spanX, Vec3 spanY);
-	public abstract @Nullable FramebufferRenderable getFramebuffer();
 	
 	public void rotate(Vec3 normal, Vec3 down) {
 		this.normal = normal;
@@ -85,10 +74,6 @@ public abstract class AbstractWindowDisplay {
 		pivot = pos.add(localX().scale(width/2)).add(localY().scale(height/2));
 	}
 	
-	public DisplayProperties getProperties() {
-		return new DisplayProperties(pivot, normal, down, width, height, geometryX, geometryY, pixelScale);
-	}
-	
 	public ChunkPos getChunkPos() {
 		return ChunkPos.containing(BlockPos.containing(pivot));
 	}
@@ -100,27 +85,6 @@ public abstract class AbstractWindowDisplay {
 	}
 	
 	public void render(LevelRenderContext ctx) {
-		FramebufferRenderable framebuffer = getFramebuffer();
-		if(framebuffer == null) return;
-		
-		int xoff = framebuffer.getXOff();
-		int yoff = framebuffer.getYOff();
-		int bufWidth = framebuffer.getWidth();
-		int bufHeight = framebuffer.getHeight();
-		
-		Vec3 localX = localX();
-		Vec3 localY = localY();
-		
-		Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
-		Vec3 originRel = origin().subtract(cameraPos);
-		
-		Vec3 bufOffset = localX.scale(-xoff - geometryX).add(localY.scale(-yoff - geometryY));
-		
-		PoseStack poseStack = ctx.poseStack();
-		poseStack.pushPose();
-		poseStack.translate(originRel.x, originRel.y, originRel.z);
-		renderFramebuffer(poseStack, ctx.submitNodeCollector(), bufOffset, localX.scale(bufWidth), localY.scale(bufHeight));
-		poseStack.popPose();
 	}
 	
 	/* Transform absolute world coordinates to surface-local pixel coordinates relative to geometry (0, 0)

@@ -20,9 +20,6 @@ public class ServerWindowDisplay {
 	public int width = 0;
 	public int height = 0;
 	
-	public int geometryX = 0;
-	public int geometryY = 0;
-	
 	public float pixelScale;
 	
 	public ServerWindowDisplay(WindowHandle handle, DisplayProperties properties) {
@@ -31,7 +28,7 @@ public class ServerWindowDisplay {
 	}
 	
 	public DisplayProperties getProperties() {
-		return new DisplayProperties(pivot, normal, down, width, height, geometryX, geometryY, pixelScale);
+		return new DisplayProperties(pivot, normal, down, width, height, pixelScale);
 	}
 	
 	public ServerPlayer getPlayer(MinecraftServer server) {
@@ -48,8 +45,6 @@ public class ServerWindowDisplay {
 		this.down = properties.down();
 		this.width = properties.width();
 		this.height = properties.height();
-		this.geometryX = properties.geometryX();
-		this.geometryY = properties.geometryY();
 		this.pixelScale = properties.pixelScale();
 	}
 	
