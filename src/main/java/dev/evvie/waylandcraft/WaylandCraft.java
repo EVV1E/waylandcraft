@@ -19,6 +19,8 @@ import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.ResizeRequest;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
+import dev.evvie.waylandcraft.datasync.WindowDataExporter;
+import dev.evvie.waylandcraft.datasync.WindowDataImporter;
 import dev.evvie.waylandcraft.desktop.XDGDesktopManager;
 import dev.evvie.waylandcraft.displays.DisplayProperties;
 import dev.evvie.waylandcraft.displays.RemoteDisplay;
@@ -36,6 +38,7 @@ import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemManager;
 import dev.evvie.waylandcraft.network.DisplayPayload;
+import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.render.WindowInHandRenderer;
 import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
 import dev.evvie.waylandcraft.render.model.WindowItemModel;
@@ -84,6 +87,8 @@ public class WaylandCraft implements ClientModInitializer {
 	public ArrayList<RemoteDisplay> remoteDisplays = new ArrayList<RemoteDisplay>();
 	
 	private HashSet<Long> syncedDisplays = new HashSet<Long>();
+	public WindowDataExporter windowDataExporter = new WindowDataExporter();
+	public WindowDataImporter windowDataImporter = new WindowDataImporter();
 	
 	public boolean overridePickBlock = false;
 	public HitResult trueGameHitResult = null;
@@ -96,6 +101,8 @@ public class WaylandCraft implements ClientModInitializer {
 	public KeyMapping keyOpenScreen;
 	public KeyMapping keyOpenAppLauncher;
 	public KeyMapping keyCaptureKeyboard;
+	public KeyMapping keyDebug1;
+	public KeyMapping keyDebug2;
 	
 	public WindowInHandRenderer windowInHandRenderer = new WindowInHandRenderer();
 	public WindowInItemFrameRenderer windowInItemFrameRenderer = new WindowInItemFrameRenderer();
@@ -116,6 +123,8 @@ public class WaylandCraft implements ClientModInitializer {
 	
 	public @Nullable CursorShape cursorShape = null;
 	
+	public boolean debugRemoteDisplays = false;
+	
 	@Override
 	public void onInitializeClient() {
 		WaylandCraftCommon.LOGGER.info("Initializing WaylandCraft");
@@ -125,6 +134,8 @@ public class WaylandCraft implements ClientModInitializer {
 		keyOpenScreen = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.windowManager", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, KEYBIND_CATEGORY));
 		keyOpenAppLauncher = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.appLauncher", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, KEYBIND_CATEGORY));
 		keyCaptureKeyboard = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.captureKeyboard", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, KEYBIND_CATEGORY));
+		keyDebug1 = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.debug1", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_U, KEYBIND_CATEGORY));
+		keyDebug2 = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.debug2", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_I, KEYBIND_CATEGORY));
 		
 		WindowItemModel.register();
 		
@@ -136,6 +147,7 @@ public class WaylandCraft implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		
 		ClientPlayNetworking.registerGlobalReceiver(DisplayPayload.TYPE, this::handleDisplayPayload);
+		ClientPlayNetworking.registerGlobalReceiver(WindowDataPayload.TYPE, windowDataImporter::handleWindowDataPayload);
 		
 		if(Platform.get() != Platform.LINUX) {
 			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");
@@ -303,6 +315,8 @@ public class WaylandCraft implements ClientModInitializer {
 		displays.forEach((d) -> d.tick());
 		remoteDisplays.forEach((d) -> d.tick());
 		
+		windowDataImporter.update();
+		
 		if(bridge == null) return;
 		
 		checkKeybinds(minecraft);
@@ -327,6 +341,13 @@ public class WaylandCraft implements ClientModInitializer {
 			}
 		}
 		syncedDisplays.removeAll(removedDisplays);
+		
+		windowDataExporter.update();
+		WindowDataPayload windowDataPayload;
+		while((windowDataPayload = windowDataExporter.payloads.pollLast()) != null) {
+			System.out.println("Sending " + windowDataPayload.data().length + " bytes");
+			ClientPlayNetworking.send(windowDataPayload);
+		}
 	}
 	
 	private void checkKeybinds(Minecraft minecraft) {
@@ -340,6 +361,15 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		else if(keyCaptureKeyboard.consumeClick()) {
 			enableKeyboardCapture(false);
+		}
+		else if(keyDebug1.consumeClick()) {
+			WLCToplevel[] mapped = bridge.getMappedToplevels();
+			if(mapped.length < 1) return;
+			
+			windowDataExporter.export(mapped[0]);
+		}
+		else if(keyDebug2.consumeClick()) {
+			debugRemoteDisplays = !debugRemoteDisplays;
 		}
 	}
 	

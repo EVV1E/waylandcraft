@@ -20,6 +20,7 @@ import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
@@ -141,17 +142,17 @@ public class WindowFramebuffer {
 		if(width != prevWidth || height != prevHeight) destroy();
 		
 		if(tempTarget == null) {
-			tempTarget = new TextureTarget(name() + "-temp", width, height, false);
+			tempTarget = new TextureTarget(getName() + "-temp", width, height, false);
 		}
 		
 		if(target == null) {
-			target = new TextureTarget(name(), width, height, false);
+			target = new TextureTarget(getName(), width, height, false);
 		}
 		
 		if(texture == null) registerTexture();
 	}
 	
-	private String name() {
+	public String getName() {
 		return "wayland-framebuffer-" + this.hashCode() + "-" + surfaceTree.hashCode();
 	}
 	
@@ -281,7 +282,7 @@ public class WindowFramebuffer {
 		if(target == null) return;
 		
 		texture = new FramebufferTexture(getTextureView());
-		location = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, name());
+		location = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, getName());
 		
 		Minecraft.getInstance().getTextureManager().register(location, texture);
 	}
@@ -315,6 +316,11 @@ public class WindowFramebuffer {
 	
 	public int getYOff() {
 		return yoff;
+	}
+	
+	public GpuTexture getTexture() {
+		if(target == null) return null;
+		return target.getColorTexture();
 	}
 	
 	public GpuTextureView getTextureView() {

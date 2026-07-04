@@ -1,0 +1,59 @@
+package dev.evvie.waylandcraft.datasync;
+
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+
+import org.jetbrains.annotations.Nullable;
+
+import com.mojang.blaze3d.platform.NativeImage.Format;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.GpuTexture;
+import com.mojang.blaze3d.textures.TextureFormat;
+
+import dev.evvie.waylandcraft.item.WindowHandle;
+import dev.evvie.waylandcraft.network.WindowDataPayload;
+import dev.evvie.waylandcraft.render.RemoteFramebuffer;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+
+public class WindowDataImporter {
+	
+	public ArrayList<RemoteFramebuffer> framebuffers = new ArrayList<RemoteFramebuffer>();
+	
+	public void update() {
+	}
+	
+	public @Nullable RemoteFramebuffer getFramebuffer(WindowHandle handle) {
+		return framebuffers.stream().filter((f) -> f.handle.equals(handle)).findAny().orElse(null);
+	}
+	
+	public void handleWindowDataPayload(WindowDataPayload payload, ClientPlayNetworking.Context ctx) {
+		RemoteFramebuffer framebuf = getFramebuffer(payload.handle());
+		if(framebuf != null && (framebuf.width != payload.width() || framebuf.height != payload.height())) {
+			framebuf.destroy();
+			framebuffers.remove(framebuf);
+			framebuf = null;
+		}
+		if(framebuf == null) {
+			framebuf = new RemoteFramebuffer(payload.handle(), payload.width(), payload.height(), payload.xoff(), payload.yoff());
+			framebuffers.add(framebuf);
+		}
+		
+		GpuTexture texture = importTextureARGB(payload.width(), payload.height(), payload.data());
+		framebuf.renderPatch(0, 0, payload.width(), payload.height(), texture);
+		texture.close();
+	}
+	
+	private static final int TEXTURE_USAGE = GpuTexture.USAGE_COPY_SRC | GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING;
+	
+	private GpuTexture importTextureARGB(int width, int height, byte[] data) {
+		ByteBuffer buf = ByteBuffer.allocateDirect(data.length);
+		buf.put(data);
+		buf.rewind();
+		
+		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
+		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, buf, Format.RGBA, 0, 0, 0, 0, width, height);
+		
+		return texture;
+	}
+	
+}

@@ -58,6 +58,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	public void render(LevelRenderContext ctx) {
 		WindowFramebuffer framebuffer = window.framebuffer;
 		if(framebuffer == null) return;
+		if(WaylandCraft.instance.debugRemoteDisplays) return;
 		
 		int xoff = framebuffer.getXOff();
 		int yoff = framebuffer.getYOff();

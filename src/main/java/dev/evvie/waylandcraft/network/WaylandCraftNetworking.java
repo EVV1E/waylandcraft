@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.utils.IMyServerPlayer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.server.level.ServerPlayer;
 
 public class WaylandCraftNetworking {
 	
@@ -16,6 +18,9 @@ public class WaylandCraftNetworking {
 		PayloadTypeRegistry.serverboundPlay().register(DisplayPayload.TYPE, DisplayPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DisplayPayload.TYPE, DisplayPayload.CODEC);
 		
+		PayloadTypeRegistry.serverboundPlay().register(WindowDataPayload.TYPE, WindowDataPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(WindowDataPayload.TYPE, WindowDataPayload.CODEC);
+		
 		ServerPlayNetworking.registerGlobalReceiver(ServerboundAliveWindowsPayload.TYPE, (payload, ctx) -> {
 			IMyServerPlayer plr = (IMyServerPlayer) ctx.player();
 			ArrayList<Long> handles = plr.getAliveWindows();
@@ -23,6 +28,14 @@ public class WaylandCraftNetworking {
 			
 			for(long handle : payload.handles()) {
 				handles.add(handle);
+			}
+		});
+		
+		ServerPlayNetworking.registerGlobalReceiver(WindowDataPayload.TYPE, (payload, ctx) -> {
+			if(!payload.handle().matchesPlayer(ctx.player())) return;
+			
+			for(ServerPlayer player : PlayerLookup.all(ctx.server())) {
+				ServerPlayNetworking.send(player, payload);
 			}
 		});
 		

@@ -2,7 +2,9 @@ package dev.evvie.waylandcraft.displays;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
+import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.item.WindowHandle;
+import dev.evvie.waylandcraft.render.RemoteFramebuffer;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
@@ -75,6 +77,8 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 	
 	@Override
 	public void render(LevelRenderContext ctx) {
+		if(!WaylandCraft.instance.debugRemoteDisplays) return;
+		
 		Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
 		
 		PoseStack poseStack = ctx.poseStack();
@@ -98,6 +102,14 @@ public class RemoteDisplay extends AbstractWindowDisplay {
 				origin
 		};
 		RenderUtils.renderLineStrip(poseStack, ctx.submitNodeCollector(), points, 0xffffffff, 2.0f);
+		
+		RemoteFramebuffer framebuffer = WaylandCraft.instance.windowDataImporter.getFramebuffer(handle);
+		if(framebuffer != null) {
+			origin = origin.subtract(localX.scale(framebuffer.xoff)).subtract(localY.scale(framebuffer.yoff));
+			spanX = localX.scale(framebuffer.width);
+			spanY = localY.scale(framebuffer.height);
+			RenderUtils.renderFramebuffer(framebuffer.getTextureLocation(), poseStack, ctx.submitNodeCollector(), true, origin, spanX, spanY);
+		}
 		
 		poseStack.popPose();
 	}

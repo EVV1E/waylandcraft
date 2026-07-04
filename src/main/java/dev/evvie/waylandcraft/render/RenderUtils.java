@@ -138,10 +138,15 @@ public class RenderUtils {
 	
 	public static void renderFramebuffer(WindowFramebuffer framebuffer, PoseStack poseStack, SubmitNodeCollector collector, boolean cutout, Vec3 origin, Vec3 spanX, Vec3 spanY) {
 		if(!framebuffer.isValid()) return;
+		renderFramebuffer(framebuffer.getTextureLocation(), poseStack, collector, cutout, origin, spanX, spanY);
+	}
+	
+	public static void renderFramebuffer(Identifier textureLocation, PoseStack poseStack, SubmitNodeCollector collector, boolean cutout, Vec3 origin, Vec3 spanX, Vec3 spanY) {
+		if(textureLocation == null) return;
 		
 		if(IrisCompat.isShaderActive()) {
-			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutoutCull(framebuffer.getTextureLocation()), new FramebufferRenderInstanceEntity(origin, spanX, spanY, ARGB.white(1.0f), OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, false));
-			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutoutCull(framebuffer.getTextureLocation()), new FramebufferRenderInstanceEntity(origin, spanX, spanY, ARGB.black(1.0f), OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, true));
+			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutoutCull(textureLocation), new FramebufferRenderInstanceEntity(origin, spanX, spanY, ARGB.white(1.0f), OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, false));
+			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutoutCull(textureLocation), new FramebufferRenderInstanceEntity(origin, spanX, spanY, ARGB.black(1.0f), OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, true));
 			return;
 		}
 		
@@ -152,11 +157,11 @@ public class RenderUtils {
 		// Front quad
 		if(antialiasing) renderType = cutout ? WINDOW_CUTOUT_ANTIALIAS : WINDOW_TRANSLUCENT_ANTIALIAS;
 		else renderType = cutout ? WINDOW_CUTOUT : WINDOW_TRANSLUCENT;
-		collector.submitCustomGeometry(poseStack, renderType.apply(framebuffer.getTextureLocation()), new FramebufferRenderInstance(origin, spanX, spanY, false));
+		collector.submitCustomGeometry(poseStack, renderType.apply(textureLocation), new FramebufferRenderInstance(origin, spanX, spanY, false));
 		
 		// Back quad
 		renderType = cutout ? WINDOW_BACKGROUND_CUTOUT : WINDOW_BACKGROUND_TRANSLUCENT;
-		collector.submitCustomGeometry(poseStack, renderType.apply(framebuffer.getTextureLocation()), new FramebufferRenderInstance(origin, spanX, spanY, true));
+		collector.submitCustomGeometry(poseStack, renderType.apply(textureLocation), new FramebufferRenderInstance(origin, spanX, spanY, true));
 	}
 	
 	public static final record FramebufferRenderInstance(Vec3 origin, Vec3 spanX, Vec3 spanY, boolean reverse) implements CustomGeometryRenderer {
