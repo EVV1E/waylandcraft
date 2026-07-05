@@ -18,6 +18,15 @@ public class ServerDisplayManager {
 	public ArrayList<ServerWindowDisplay> displays = new ArrayList<ServerWindowDisplay>();
 	
 	public void tick(MinecraftServer server) {
+		ArrayList<ServerWindowDisplay> toRemove = new ArrayList<ServerWindowDisplay>();
+		for(ServerWindowDisplay display : displays) {
+			if(display.getPlayer(server) == null) {
+				toRemove.add(display);
+				sendDisplayRemovePayload(server, display.handle);
+			}
+		}
+		displays.removeAll(toRemove);
+		
 		for(ServerWindowDisplay display : displays) {
 			if(display.propertiesDirty) {
 				ServerPlayer player = display.getPlayer(server);
@@ -30,6 +39,14 @@ public class ServerDisplayManager {
 		DisplayPayload payload = new DisplayPayload(handle, properties, flags);
 		
 		for(ServerPlayer player : PlayerLookup.tracking(level, pos)) {
+			ServerPlayNetworking.send(player, payload);
+		}
+	}
+	
+	public void sendDisplayRemovePayload(MinecraftServer server, WindowHandle handle) {
+		DisplayPayload payload = new DisplayPayload(handle, new DisplayProperties(), DisplayPayload.REMOVED);
+		
+		for(ServerPlayer player : PlayerLookup.all(server)) {
 			ServerPlayNetworking.send(player, payload);
 		}
 	}
