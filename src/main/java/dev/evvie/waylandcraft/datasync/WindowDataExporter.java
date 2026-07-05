@@ -1,6 +1,5 @@
 package dev.evvie.waylandcraft.datasync;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 
 import org.jetbrains.annotations.Nullable;
@@ -12,18 +11,28 @@ import com.mojang.blaze3d.textures.TextureFormat;
 
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.item.WindowHandle;
-import dev.evvie.waylandcraft.network.WindowDataPayload;
+import dev.evvie.waylandcraft.network.WindowMetadataPayload;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 
 public class WindowDataExporter {
 	
 	public ArrayList<WindowExportState> exports = new ArrayList<WindowExportState>();
-	public ArrayDeque<WindowDataPayload> payloads = new ArrayDeque<WindowDataPayload>();
+	private boolean reset = false;
 	
 	public void update() {
+		if(reset) {
+			for(WindowExportState export : exports) {
+				export.destroy();
+			}
+			exports.clear();
+			reset = false;
+		}
+		
 		ArrayList<WindowExportState> toRemove = new ArrayList<WindowExportState>();
 		for(WindowExportState export : exports) {
 			if(!export.window.isAlive()) {
+				ClientPlayNetworking.send(new WindowMetadataPayload(export.handle, WindowMetadataPayload.REMOVED, 0, 0, 0, 0));
 				export.destroy();
 				toRemove.add(export);
 			}
@@ -31,12 +40,12 @@ public class WindowDataExporter {
 		exports.removeAll(toRemove);
 		
 		for(WindowExportState export : exports) {
-			if(export.data == null) return; // No new data
+			if(!export.metadataDirty) continue;
 			
 			WindowHandle handle = WindowHandle.forPlayer(Minecraft.getInstance().player, export.window.getHandle());
-			payloads.add(new WindowDataPayload(handle, export.width, export.height, export.xoff, export.yoff, export.data));
+			ClientPlayNetworking.send(new WindowMetadataPayload(handle, WindowMetadataPayload.NONE, export.width, export.height, export.xoff, export.yoff));
 			
-			export.data = null;
+			export.metadataDirty = false;
 		}
 	}
 	
@@ -44,7 +53,6 @@ public class WindowDataExporter {
 		return exports.stream().filter((e) -> e.window == window).findAny().orElse(null);
 	}
 	
-	// NOTE: Doesn't add the export to the list yet
 	private WindowExportState getOrCreateExport(WLCAbstractWindow window) {
 		WindowExportState export = getExport(window);
 		if(export != null) return export;
@@ -60,14 +68,21 @@ public class WindowDataExporter {
 		export.readTarget();
 	}
 	
+	public void reset() {
+		reset = true;
+	}
+	
 	public static class WindowExportState {
 		
 		public final WLCAbstractWindow window;
+		public final WindowHandle handle;
 		public GpuTexture target = null;
 		public int width = 0;
 		public int height = 0;
 		public int xoff = 0;
 		public int yoff = 0;
+		
+		public boolean metadataDirty = true;
 		
 		public static final int MAX_SIZE = 2048;
 		private static final int TEXTURE_USAGE = GpuTexture.USAGE_COPY_SRC | GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING;
@@ -76,6 +91,7 @@ public class WindowDataExporter {
 		
 		public WindowExportState(WLCAbstractWindow window) {
 			this.window = window;
+			this.handle = WindowHandle.forPlayer(Minecraft.getInstance().player, window.getHandle());
 		}
 		
 		public boolean copyFramebufferTexture() {
@@ -83,8 +99,14 @@ public class WindowDataExporter {
 			
 			int width = window.framebuffer.getWidth();
 			int height = window.framebuffer.getHeight();
-			this.xoff = window.framebuffer.getXOff() + window.geometry.x();
-			this.yoff = window.framebuffer.getYOff() + window.geometry.y();
+			int xoff = window.framebuffer.getXOff() + window.geometry.x();
+			int yoff = window.framebuffer.getYOff() + window.geometry.y();
+			
+			if(xoff != this.xoff || yoff != this.yoff) {
+				this.metadataDirty = true;
+				this.xoff = xoff;
+				this.yoff = yoff;
+			}
 			
 			GpuTexture tex = window.framebuffer.getTexture();
 			if(tex == null) return false;
@@ -93,6 +115,7 @@ public class WindowDataExporter {
 			if(this.width != width || this.height != height || target == null) {
 				this.width = width;
 				this.height = height;
+				this.metadataDirty = true;
 				if(target != null) target.close();
 				target = RenderSystem.getDevice().createTexture("export-" + window.framebuffer.getName(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
 			}

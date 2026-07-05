@@ -19,8 +19,8 @@ public class RemoteFramebuffer {
 	
 	public final int width;
 	public final int height;
-	public final int xoff;
-	public final int yoff;
+	public int xoff;
+	public int yoff;
 	
 	private final TextureTarget target;
 	private FramebufferTexture texture = null;

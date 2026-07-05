@@ -38,7 +38,7 @@ import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemManager;
 import dev.evvie.waylandcraft.network.DisplayPayload;
-import dev.evvie.waylandcraft.network.WindowDataPayload;
+import dev.evvie.waylandcraft.network.WindowMetadataPayload;
 import dev.evvie.waylandcraft.render.WindowInHandRenderer;
 import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
 import dev.evvie.waylandcraft.render.model.WindowItemModel;
@@ -147,7 +147,7 @@ public class WaylandCraft implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		
 		ClientPlayNetworking.registerGlobalReceiver(DisplayPayload.TYPE, this::handleDisplayPayload);
-		ClientPlayNetworking.registerGlobalReceiver(WindowDataPayload.TYPE, windowDataImporter::handleWindowDataPayload);
+		ClientPlayNetworking.registerGlobalReceiver(WindowMetadataPayload.TYPE, windowDataImporter::handleWindowMetadataPayload);
 		
 		if(Platform.get() != Platform.LINUX) {
 			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");
@@ -343,11 +343,6 @@ public class WaylandCraft implements ClientModInitializer {
 		syncedDisplays.removeAll(removedDisplays);
 		
 		windowDataExporter.update();
-		WindowDataPayload windowDataPayload;
-		while((windowDataPayload = windowDataExporter.payloads.pollLast()) != null) {
-			System.out.println("Sending " + windowDataPayload.data().length + " bytes");
-			ClientPlayNetworking.send(windowDataPayload);
-		}
 	}
 	
 	private void checkKeybinds(Minecraft minecraft) {
@@ -364,9 +359,10 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		else if(keyDebug1.consumeClick()) {
 			WLCToplevel[] mapped = bridge.getMappedToplevels();
-			if(mapped.length < 1) return;
 			
-			windowDataExporter.export(mapped[0]);
+			for(WLCToplevel toplevel : mapped) {
+				windowDataExporter.export(toplevel);
+			}
 		}
 		else if(keyDebug2.consumeClick()) {
 			debugRemoteDisplays = !debugRemoteDisplays;
@@ -383,6 +379,8 @@ public class WaylandCraft implements ClientModInitializer {
 		displays.clear();
 		remoteDisplays.clear();
 		itemManager.reset();
+		windowDataExporter.reset();
+		windowDataImporter.reset();
 	}
 	
 	@Nullable
