@@ -2,6 +2,7 @@ package dev.evvie.waylandcraft.datasync;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Random;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -15,6 +16,7 @@ import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.network.WindowMetadataPayload;
 import dev.evvie.waylandcraft.render.RemoteFramebuffer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.util.ARGB;
 
 public class WindowDataImporter {
 	
@@ -81,7 +83,14 @@ public class WindowDataImporter {
 	
 	private GpuTexture importTextureARGB(int width, int height, byte[] data) {
 		ByteBuffer buf = ByteBuffer.allocateDirect(data.length);
-		buf.put(data);
+//		buf.put(data);
+		int color = ARGB.color(1.0f, (new Random().nextInt() & 0xffffff));
+		for(int i = 0; i < width * height; i++) {
+			buf.put((byte) ARGB.red(color));
+			buf.put((byte) ARGB.green(color));
+			buf.put((byte) ARGB.blue(color));
+			buf.put((byte) ARGB.alpha(color));
+		}
 		buf.rewind();
 		
 		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);

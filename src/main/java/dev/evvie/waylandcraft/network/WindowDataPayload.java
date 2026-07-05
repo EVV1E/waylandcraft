@@ -1,6 +1,7 @@
 package dev.evvie.waylandcraft.network;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
+import dev.evvie.waylandcraft.datasync.ImagePatch;
 import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -12,8 +13,6 @@ import net.minecraft.resources.Identifier;
 public record WindowDataPayload(WindowHandle handle, short format, int x, int y, int width, int height, byte[] data) implements CustomPacketPayload {
 	
 	public static final int MAX_SIZE = (3 * Long.BYTES + 4 * Integer.BYTES) + (2048 * 2048 * 4);
-	
-	public static final short FORMAT_RAW_RGBA = 1;
 	
 	public static final Identifier WINDOW_DATA_PAYLOAD_ID = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window_data");
 	public static final CustomPacketPayload.Type<WindowDataPayload> TYPE = new CustomPacketPayload.Type<WindowDataPayload>(WINDOW_DATA_PAYLOAD_ID);
@@ -27,6 +26,10 @@ public record WindowDataPayload(WindowHandle handle, short format, int x, int y,
 			ByteBufCodecs.BYTE_ARRAY, WindowDataPayload::data,
 			WindowDataPayload::new
 	);
+	
+	public WindowDataPayload(WindowHandle handle, ImagePatch patch) {
+		this(handle, patch.format(), patch.x(), patch.y(), patch.width(), patch.height(), patch.data());
+	}
 	
 	@Override
 	public Type<? extends CustomPacketPayload> type() {
