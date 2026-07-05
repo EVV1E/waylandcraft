@@ -18,8 +18,8 @@ public class WaylandCraftNetworking {
 		PayloadTypeRegistry.serverboundPlay().register(DisplayPayload.TYPE, DisplayPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(DisplayPayload.TYPE, DisplayPayload.CODEC);
 		
-		PayloadTypeRegistry.serverboundPlay().register(WindowDataPayload.TYPE, WindowDataPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(WindowDataPayload.TYPE, WindowDataPayload.CODEC);
+		PayloadTypeRegistry.serverboundPlay().registerLarge(WindowDataPayload.TYPE, WindowDataPayload.CODEC, WindowDataPayload.MAX_SIZE);
+		PayloadTypeRegistry.clientboundPlay().registerLarge(WindowDataPayload.TYPE, WindowDataPayload.CODEC, WindowDataPayload.MAX_SIZE);
 		
 		ServerPlayNetworking.registerGlobalReceiver(ServerboundAliveWindowsPayload.TYPE, (payload, ctx) -> {
 			IMyServerPlayer plr = (IMyServerPlayer) ctx.player();

@@ -10,6 +10,8 @@ import net.minecraft.resources.Identifier;
 
 public record WindowDataPayload(WindowHandle handle, int width, int height, int xoff, int yoff, byte[] data) implements CustomPacketPayload {
 	
+	public static final int MAX_SIZE = (3 * Long.BYTES + 4 * Integer.BYTES) + (2048 * 2048 * 4);
+	
 	public static final Identifier WINDOW_DATA_PAYLOAD_ID = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window_data");
 	public static final CustomPacketPayload.Type<WindowDataPayload> TYPE = new CustomPacketPayload.Type<WindowDataPayload>(WINDOW_DATA_PAYLOAD_ID);
 	public static final StreamCodec<RegistryFriendlyByteBuf, WindowDataPayload> CODEC = StreamCodec.composite(
