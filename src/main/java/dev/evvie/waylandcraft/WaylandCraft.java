@@ -38,6 +38,7 @@ import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemManager;
 import dev.evvie.waylandcraft.network.DisplayPayload;
+import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.network.WindowMetadataPayload;
 import dev.evvie.waylandcraft.render.WindowInHandRenderer;
 import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
@@ -148,6 +149,7 @@ public class WaylandCraft implements ClientModInitializer {
 		
 		ClientPlayNetworking.registerGlobalReceiver(DisplayPayload.TYPE, this::handleDisplayPayload);
 		ClientPlayNetworking.registerGlobalReceiver(WindowMetadataPayload.TYPE, windowDataImporter::handleWindowMetadataPayload);
+		ClientPlayNetworking.registerGlobalReceiver(WindowDataPayload.TYPE, windowDataImporter::handleWindowDataPayload);
 		
 		if(Platform.get() != Platform.LINUX) {
 			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");

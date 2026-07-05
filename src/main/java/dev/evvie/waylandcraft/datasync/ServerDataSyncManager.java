@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 import dev.evvie.waylandcraft.item.WindowHandle;
+import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.network.WindowMetadataPayload;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
@@ -37,6 +38,14 @@ public class ServerDataSyncManager {
 		if(!payload.handle().matchesPlayer(ctx.player())) return;
 		
 		knownWindows.add(payload.handle());
+		
+		for(ServerPlayer player : PlayerLookup.all(ctx.server())) {
+			ServerPlayNetworking.send(player, payload);
+		}
+	}
+	
+	public void handleWindowDataPayload(WindowDataPayload payload, ServerPlayNetworking.Context ctx) {
+		if(!payload.handle().matchesPlayer(ctx.player())) return;
 		
 		for(ServerPlayer player : PlayerLookup.all(ctx.server())) {
 			ServerPlayNetworking.send(player, payload);

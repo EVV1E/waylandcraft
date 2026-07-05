@@ -19,8 +19,8 @@ public class WaylandCraftNetworking {
 		PayloadTypeRegistry.serverboundPlay().register(WindowMetadataPayload.TYPE, WindowMetadataPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(WindowMetadataPayload.TYPE, WindowMetadataPayload.CODEC);
 		
-//		PayloadTypeRegistry.serverboundPlay().registerLarge(WindowDataPayload.TYPE, WindowDataPayload.CODEC, WindowDataPayload.MAX_SIZE);
-//		PayloadTypeRegistry.clientboundPlay().registerLarge(WindowDataPayload.TYPE, WindowDataPayload.CODEC, WindowDataPayload.MAX_SIZE);
+		PayloadTypeRegistry.serverboundPlay().registerLarge(WindowDataPayload.TYPE, WindowDataPayload.CODEC, WindowDataPayload.MAX_SIZE);
+		PayloadTypeRegistry.clientboundPlay().registerLarge(WindowDataPayload.TYPE, WindowDataPayload.CODEC, WindowDataPayload.MAX_SIZE);
 		
 		ServerPlayNetworking.registerGlobalReceiver(ServerboundAliveWindowsPayload.TYPE, (payload, ctx) -> {
 			IMyServerPlayer plr = (IMyServerPlayer) ctx.player();
@@ -35,6 +35,7 @@ public class WaylandCraftNetworking {
 		ServerPlayNetworking.registerGlobalReceiver(ServerboundGiveItemsPayload.TYPE, WaylandCraftCommon.instance.serverItemManager::handleGiveItemsPayload);
 		ServerPlayNetworking.registerGlobalReceiver(DisplayPayload.TYPE, WaylandCraftCommon.instance.serverDisplayManager::handleDisplayPayload);
 		ServerPlayNetworking.registerGlobalReceiver(WindowMetadataPayload.TYPE, WaylandCraftCommon.instance.serverDataSyncManager::handleWindowMetadataPayload);
+		ServerPlayNetworking.registerGlobalReceiver(WindowDataPayload.TYPE, WaylandCraftCommon.instance.serverDataSyncManager::handleWindowDataPayload);
 	}
 	
 }

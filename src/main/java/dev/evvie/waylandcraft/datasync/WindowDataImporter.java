@@ -11,6 +11,7 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
 
 import dev.evvie.waylandcraft.item.WindowHandle;
+import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.network.WindowMetadataPayload;
 import dev.evvie.waylandcraft.render.RemoteFramebuffer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -66,9 +67,15 @@ public class WindowDataImporter {
 		}
 	}
 	
-//	GpuTexture texture = importTextureARGB(payload.width(), payload.height(), payload.data());
-//	framebuf.renderPatch(0, 0, payload.width(), payload.height(), texture);
-//	texture.close();
+	public void handleWindowDataPayload(WindowDataPayload payload, ClientPlayNetworking.Context ctx) {
+		System.out.println("GOT DATA");
+		RemoteFramebuffer framebuf = getFramebuffer(payload.handle());
+		if(framebuf == null) return;
+		
+		GpuTexture texture = importTextureARGB(payload.width(), payload.height(), payload.data());
+		framebuf.renderPatch(payload.x(), payload.y(), payload.width(), payload.height(), texture);
+		texture.close();
+	}
 	
 	private static final int TEXTURE_USAGE = GpuTexture.USAGE_COPY_SRC | GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING;
 	

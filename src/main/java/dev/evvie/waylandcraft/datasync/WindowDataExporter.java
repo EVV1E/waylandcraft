@@ -11,6 +11,7 @@ import com.mojang.blaze3d.textures.TextureFormat;
 
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.item.WindowHandle;
+import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.network.WindowMetadataPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
@@ -42,10 +43,15 @@ public class WindowDataExporter {
 		for(WindowExportState export : exports) {
 			if(!export.metadataDirty) continue;
 			
-			WindowHandle handle = WindowHandle.forPlayer(Minecraft.getInstance().player, export.window.getHandle());
-			ClientPlayNetworking.send(new WindowMetadataPayload(handle, WindowMetadataPayload.NONE, export.width, export.height, export.xoff, export.yoff));
-			
+			ClientPlayNetworking.send(new WindowMetadataPayload(export.handle, WindowMetadataPayload.NONE, export.width, export.height, export.xoff, export.yoff));
 			export.metadataDirty = false;
+		}
+		
+		for(WindowExportState export : exports) {
+			if(export.data == null) continue;
+			
+			ClientPlayNetworking.send(new WindowDataPayload(export.handle, WindowDataPayload.FORMAT_RAW_RGBA, 0, 0, export.width, export.height, export.data));
+			export.data = null;
 		}
 	}
 	
