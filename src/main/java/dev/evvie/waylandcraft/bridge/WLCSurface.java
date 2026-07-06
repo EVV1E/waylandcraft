@@ -163,10 +163,10 @@ public class WLCSurface {
 			sy -= sourceView.y;
 		}
 		
-		sx *= this.width / buffer.width;
-		sy *= this.height / buffer.height;
-		sw *= this.width / buffer.width;
-		sh *= this.height / buffer.height;
+		sx *= this.width / (double) buffer.width;
+		sy *= this.height / (double) buffer.height;
+		sw *= this.width / (double) buffer.width;
+		sh *= this.height / (double) buffer.height;
 		
 		addSurfaceDamage(Mth.floor(sx), Mth.floor(sy), Mth.ceil(sw), Mth.ceil(sh));
 	}
