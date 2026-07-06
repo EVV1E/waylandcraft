@@ -167,7 +167,13 @@ public class WindowFramebuffer {
 			int sy = yoff + surface.ySubpos;
 			
 			for(SurfaceDamage d : surface.getDamage()) {
-				damageAcc.add(new FramebufferDamage(sx + d.x(), sy + d.y(), d.width(), d.height()));
+				int dx = Math.clamp(sx + d.x(), 0, width);
+				int dy = Math.clamp(sy + d.y(), 0, height);
+				int dw = Math.clamp(d.width(), 0, width - dx);
+				int dh = Math.clamp(d.height(), 0, height - dy);
+				if(dw == 0 || dh == 0) continue;
+				
+				damageAcc.add(new FramebufferDamage(dx, dy, dw, dh));
 			}
 		}
 	}
