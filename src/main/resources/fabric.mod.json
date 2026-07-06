@@ -24,6 +24,7 @@
 			"environment": "client"
 		}
 	],
+	"accessWidener": "waylandcraft.classtweaker",
 	"depends": {
 		"fabricloader": ">=0.19.2",
 		"minecraft": "~26.1.2",

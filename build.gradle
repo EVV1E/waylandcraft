@@ -110,6 +110,7 @@ jar {
 }
 
 loom {
+	accessWidenerPath = file("src/main/resources/waylandcraft.classtweaker")
 	runs {
 		client {
 			environmentVariable("LD_LIBRARY_PATH", "../native/target/debug/")

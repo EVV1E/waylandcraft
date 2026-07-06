@@ -17,7 +17,9 @@
 		"IGlTextureMixin",
 		"FramerateLimitTrackerMixin",
 		"TitleScreenMixin",
-		"PauseScreenMixin"
+		"PauseScreenMixin",
+		"GlCommandEncoderMixin",
+		"IDirectStateAccessMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
