@@ -2,7 +2,9 @@ package dev.evvie.waylandcraft.render;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.OptionalInt;
+import java.util.stream.Collectors;
 
 import org.joml.Matrix4fc;
 
@@ -81,13 +83,15 @@ public class WindowFramebuffer {
 	);
 	
 	private static DynamicUniformStorage<WindowInfoUniform> uniformStorage = null;
-	private static boolean debugDamage = false;
+	private static boolean debugDamage = true;
 	
 	public final WLCSurface surfaceTree;
 	private TextureTarget tempTarget = null;
 	private TextureTarget target = null;
 	private FramebufferTexture texture = null;
 	private Identifier location = null;
+	
+	private ArrayList<FramebufferDamage> damageAcc = new ArrayList<FramebufferDamage>();
 	
 	private int width = 0;
 	private int height = 0;
@@ -156,8 +160,39 @@ public class WindowFramebuffer {
 		return "wayland-framebuffer-" + this.hashCode() + "-" + surfaceTree.hashCode();
 	}
 	
+	private void accumulateDamage() {
+		// Add damage from all surfaces to array
+		for(WLCSurface surface = surfaceTree; surface != null; surface = surface.getNextChild()) {
+			int sx = xoff + surface.xSubpos;
+			int sy = yoff + surface.ySubpos;
+			
+			for(SurfaceDamage d : surface.getDamage()) {
+				damageAcc.add(new FramebufferDamage(sx + d.x(), sy + d.y(), d.width(), d.height()));
+			}
+		}
+	}
+	
+	public List<FramebufferDamage> collectDamage() {
+		List<FramebufferDamage> damage = damageAcc;
+		damageAcc = new ArrayList<FramebufferDamage>();
+		
+		// Deduplicate damage list (exact matches)
+		damage = damage.stream().distinct().collect(Collectors.toList());
+		
+		ArrayList<FramebufferDamage> ddamage = new ArrayList<FramebufferDamage>();
+		
+		// Deduplicate damage list (old damage rect fully contained in new damage rect)
+		for(FramebufferDamage d : damage) {
+			ddamage.removeIf((d2) -> d.contains(d2));
+			ddamage.add(d);
+		}
+		
+		return ddamage;
+	}
+	
 	public void render() {
 		updateTarget();
+		accumulateDamage();
 		if(target == null || tempTarget == null) return;
 		
 		PoseStack poseStack = new PoseStack();
@@ -334,6 +369,16 @@ public class WindowFramebuffer {
 	
 	public boolean isValid() {
 		return target != null;
+	}
+	
+	public static record FramebufferDamage(int x, int y, int width, int height) {
+		
+		public boolean contains(FramebufferDamage other) {
+			int diffX = other.x - x;
+			int diffY = other.y - y;
+			return diffX >= 0 && diffY >= 0 && other.width <= width - diffX && other.height <= height - diffY;
+		}
+		
 	}
 	
 	private static class FramebufferTexture extends AbstractTexture {

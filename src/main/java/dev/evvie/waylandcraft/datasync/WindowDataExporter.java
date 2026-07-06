@@ -1,16 +1,20 @@
 package dev.evvie.waylandcraft.datasync;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
 
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.item.WindowHandle;
+import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.network.WindowMetadataPayload;
+import dev.evvie.waylandcraft.render.WindowFramebuffer.FramebufferDamage;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ArrayListDeque;
@@ -46,12 +50,12 @@ public class WindowDataExporter {
 			export.metadataDirty = false;
 		}
 		
-//		for(WindowExportState export : exports) {
-//			if(export.data == null) continue;
-//			
-//			ClientPlayNetworking.send(new WindowDataPayload(export.handle, WindowDataPayload.FORMAT_RAW_RGBA, 0, 0, export.width, export.height, export.data));
-//			export.data = null;
-//		}
+		for(WindowExportState export : exports) {
+			ImagePatch patch;
+			while((patch = export.patches.pollLast()) != null) {
+				ClientPlayNetworking.send(new WindowDataPayload(export.handle, patch));
+			}
+		}
 	}
 	
 	private @Nullable WindowExportState getExport(WLCAbstractWindow window) {
@@ -69,8 +73,21 @@ public class WindowDataExporter {
 	
 	public void export(WLCAbstractWindow window) {
 		WindowExportState export = getOrCreateExport(window);
-//		if(!export.copyFramebufferTexture()) return;
-//		export.readTarget();
+		if(!export.updateMetadata()) return;
+		
+		if(export.metadataDirty) {
+			// Create full-sized patch if metadata dirty
+			System.out.println("Creating full-sized patch");
+			export.createPatch(0, 0, export.fbWidth, export.fbHeight);
+			return;
+		}
+		
+		// Create patches for damage updates
+		List<FramebufferDamage> damage = window.framebuffer.collectDamage();
+		for(FramebufferDamage d : damage) {
+			System.out.println("Creating patch (x=" + d.x() + ", y=" + d.y() + ", width=" + d.width() + ", height=" + d.height() + ")");
+			export.createPatch(d.x(), d.y(), d.width(), d.height());
+		}
 	}
 	
 	public void reset() {
@@ -81,14 +98,44 @@ public class WindowDataExporter {
 		
 		private static final int TEXTURE_USAGE = GpuTexture.USAGE_COPY_SRC | GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING;
 		
-		public final GpuTexture texture;
-		public final int width;
-		public final int height;
+		private String name;
+		private GpuTexture texture;
+		private int width = -1;
+		private int height = -1;
 		
 		public PatchTexture(String name, int width, int height) {
+			this.name = name;
+			setSize(width, height);
+		}
+		
+		public void setSize(int width, int height) {
+			if(width < 1 || height < 1) throw new IllegalStateException("width and height have to be positive");
+			if(width == this.width && height == this.height) return;
+			
+			this.destroy();
+			
 			this.width = width;
 			this.height = height;
 			this.texture = RenderSystem.getDevice().createTexture(name, TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
+		}
+		
+		public GpuTexture getTexture() {
+			return texture;
+		}
+		
+		public int width() {
+			return width;
+		}
+		
+		public int height() {
+			return height;
+		}
+		
+		public void destroy() {
+			if(texture == null) return;
+			
+			texture.close();
+			texture = null;
 		}
 		
 	}
@@ -97,7 +144,8 @@ public class WindowDataExporter {
 		
 		public final WLCAbstractWindow window;
 		public final WindowHandle handle;
-//		public GpuTexture target = null;
+		
+		public PatchTexture target = null;
 		
 		public int fbWidth = 0;
 		public int fbHeight = 0;
@@ -134,7 +182,33 @@ public class WindowDataExporter {
 			return true;
 		}
 		
+		public void createPatch(int x, int y, int width, int height) {
+			GpuTexture tex = window.framebuffer.getTexture();
+			if(tex == null) return;
+			if(width > MAX_SIZE || height > MAX_SIZE) return;
+			
+			if(target == null) target = new PatchTexture("export-" + window.framebuffer.getName(), width, height);
+			else target.setSize(width, height);
+			
+			// Copy framebuffer region to patch
+			RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(tex, target.getTexture(), 0, 0, 0, x, y, width, height);
+			
+			// Read patch to RGBA bytes
+			GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "export-" + window.framebuffer.getName(), GpuBuffer.USAGE_COPY_DST | GpuBuffer.USAGE_MAP_READ, target.width() * target.height() * 4);
+			RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(target.getTexture(), buffer, 0l, () -> {
+				try(GpuBuffer.MappedView view = RenderSystem.getDevice().createCommandEncoder().mapBuffer(buffer, true, false)) {
+					byte[] data = new byte[view.data().remaining()];
+					view.data().get(data);
+					
+					ImagePatch patch = new ImagePatch(ImagePatch.FORMAT_RAW_RGBA, x, y, width, height, data);
+					this.patches.add(patch);
+				}
+				buffer.close();
+			}, 0);
+		}
+		
 		public void destroy() {
+			if(target != null) target.destroy();
 		}
 		
 //		public boolean copyFramebufferTexture() {
