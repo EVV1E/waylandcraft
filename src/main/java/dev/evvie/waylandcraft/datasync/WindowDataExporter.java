@@ -53,6 +53,7 @@ public class WindowDataExporter {
 		for(WindowExportState export : exports) {
 			ImagePatch patch;
 			while((patch = export.patches.pollLast()) != null) {
+				patch = optimizeOpaquePatch(patch);
 				ClientPlayNetworking.send(new WindowDataPayload(export.handle, patch));
 			}
 		}
@@ -88,6 +89,27 @@ public class WindowDataExporter {
 			System.out.println("Creating patch (x=" + d.x() + ", y=" + d.y() + ", width=" + d.width() + ", height=" + d.height() + ")");
 			export.createPatch(d.x(), d.y(), d.width(), d.height());
 		}
+	}
+	
+	// Attempt to convert a FORMAT_RAW_RGBA patch into a FORMAT_RAW_RGB patch if it is fully opaque
+	private ImagePatch optimizeOpaquePatch(ImagePatch patch) {
+		if(patch.format() != ImagePatch.FORMAT_RAW_RGBA) return patch;
+		
+		byte[] data = patch.data();
+		short opaque = 0xff;
+		for(int i = 0; i < data.length / 4; i++) {
+			opaque &= data[i * 4 + 3];
+		}
+		if(opaque != 0xff) return patch;
+		
+		byte[] ndata = new byte[patch.width() * patch.height() * 3];
+		for(int i = 0; i < data.length / 4; i++) {
+			ndata[i * 3 + 0] = data[i * 4 + 0];
+			ndata[i * 3 + 1] = data[i * 4 + 1];
+			ndata[i * 3 + 2] = data[i * 4 + 2];
+		}
+		
+		return new ImagePatch(ImagePatch.FORMAT_RAW_RGB, patch.x(), patch.y(), patch.width(), patch.height(), ndata);
 	}
 	
 	public void reset() {

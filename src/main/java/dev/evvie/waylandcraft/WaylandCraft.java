@@ -360,10 +360,10 @@ public class WaylandCraft implements ClientModInitializer {
 			enableKeyboardCapture(false);
 		}
 		else if(keyDebug1.consumeClick()) {
-			WLCToplevel[] mapped = bridge.getMappedToplevels();
+			List<WLCAbstractWindow> mapped = Stream.of(bridge.getMappedToplevels(), bridge.getMappedPopups()).flatMap((l) -> Stream.of(l)).toList();
 			
-			for(WLCToplevel toplevel : mapped) {
-				windowDataExporter.export(toplevel);
+			for(WLCAbstractWindow window : mapped) {
+				windowDataExporter.export(window);
 			}
 		}
 		else if(keyDebug2.consumeClick()) {
