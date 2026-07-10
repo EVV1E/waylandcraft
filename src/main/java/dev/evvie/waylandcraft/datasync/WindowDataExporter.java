@@ -233,43 +233,6 @@ public class WindowDataExporter {
 			if(target != null) target.destroy();
 		}
 		
-//		public boolean copyFramebufferTexture() {
-//			GpuTexture tex = window.framebuffer.getTexture();
-//			if(tex == null) return false;
-//			if(width > MAX_SIZE || height > MAX_SIZE) return false;
-//			
-//			if(this.width != width || this.height != height || target == null) {
-//				this.width = width;
-//				this.height = height;
-//				this.metadataDirty = true;
-//				if(target != null) target.close();
-//				target = RenderSystem.getDevice().createTexture("export-" + window.framebuffer.getName(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
-//			}
-//			
-//			RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(tex, target, 0, 0, 0, 0, 0, width, height);
-//			
-//			return true;
-//		}
-		
-//		public void readTarget() {
-//			this.data = null;
-//			
-//			if(target == null) return;
-//			
-//			GpuBuffer buffer = RenderSystem.getDevice().createBuffer(() -> "export-" + window.framebuffer.getName(), GpuBuffer.USAGE_COPY_DST | GpuBuffer.USAGE_MAP_READ, width * height * 4);
-//			RenderSystem.getDevice().createCommandEncoder().copyTextureToBuffer(target, buffer, 0l, () -> {
-//				try(GpuBuffer.MappedView view = RenderSystem.getDevice().createCommandEncoder().mapBuffer(buffer, true, false)) {
-//					this.data = new byte[view.data().remaining()];
-//					view.data().get(this.data);
-//				}
-//				buffer.close();
-//			}, 0);
-//		}
-		
-//		public void destroy() {
-//			target.close();
-//		}
-		
 	}
 	
 }

@@ -344,6 +344,12 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		syncedDisplays.removeAll(removedDisplays);
 		
+		List<WLCAbstractWindow> mapped = Stream.of(bridge.getMappedToplevels(), bridge.getMappedPopups()).flatMap((l) -> Stream.of(l)).toList();
+		
+		for(WLCAbstractWindow window : mapped) {
+			windowDataExporter.export(window);
+		}
+		
 		windowDataExporter.update();
 	}
 	
@@ -360,11 +366,6 @@ public class WaylandCraft implements ClientModInitializer {
 			enableKeyboardCapture(false);
 		}
 		else if(keyDebug1.consumeClick()) {
-			List<WLCAbstractWindow> mapped = Stream.of(bridge.getMappedToplevels(), bridge.getMappedPopups()).flatMap((l) -> Stream.of(l)).toList();
-			
-			for(WLCAbstractWindow window : mapped) {
-				windowDataExporter.export(window);
-			}
 		}
 		else if(keyDebug2.consumeClick()) {
 			debugRemoteDisplays = !debugRemoteDisplays;
