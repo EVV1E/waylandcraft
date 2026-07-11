@@ -73,14 +73,16 @@ public class WindowDataImporter {
 		RemoteFramebuffer framebuf = getFramebuffer(payload.handle());
 		if(framebuf == null) return;
 		
+		ImagePatch patch = payload.patch();
+		
 		GpuTexture texture;
-		if(payload.format() == ImagePatch.FORMAT_RAW_RGBA) {
+		if(patch.format() == ImagePatch.FORMAT_RAW_RGBA) {
 			System.out.println("IMPORTING RGBA");
-			texture = importTextureRGBA(payload.width(), payload.height(), payload.data());
+			texture = importTextureRGBA(patch.width(), patch.height(), patch.data());
 		}
-		else if(payload.format() == ImagePatch.FORMAT_RAW_RGB) {
+		else if(patch.format() == ImagePatch.FORMAT_RAW_RGB) {
 			System.out.println("IMPORTING RGB");
-			texture = importTextureRGB(payload.width(), payload.height(), payload.data());
+			texture = importTextureRGB(patch.width(), patch.height(), patch.data());
 		}
 		else {
 			return;
@@ -88,7 +90,7 @@ public class WindowDataImporter {
 		
 		if(texture == null) return;
 		
-		framebuf.renderPatch(payload.x(), payload.y(), payload.width(), payload.height(), texture);
+		framebuf.renderPatch(patch.x(), patch.y(), patch.width(), patch.height(), texture);
 		texture.close();
 	}
 	
