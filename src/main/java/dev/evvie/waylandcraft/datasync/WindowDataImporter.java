@@ -1,6 +1,7 @@
 package dev.evvie.waylandcraft.datasync;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 
 import org.jetbrains.annotations.Nullable;
@@ -20,6 +21,8 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 public class WindowDataImporter {
 	
 	public ArrayList<RemoteFramebuffer> framebuffers = new ArrayList<RemoteFramebuffer>();
+	private ArrayDeque<WindowDataPayload> dataPayloads = new ArrayDeque<WindowDataPayload>();
+	private ArrayDeque<WindowMetadataPayload> metadataPayloads = new ArrayDeque<WindowMetadataPayload>();
 	private boolean reset = false;
 	
 	public void update() {
@@ -29,6 +32,16 @@ public class WindowDataImporter {
 			}
 			framebuffers.clear();
 			reset = false;
+		}
+		
+		WindowMetadataPayload metadataPayload;
+		while((metadataPayload = metadataPayloads.pollLast()) != null) {
+			importMetadataPayload(metadataPayload);
+		}
+		
+		WindowDataPayload dataPayload;
+		while((dataPayload = dataPayloads.pollLast()) != null) {
+			importDataPayload(dataPayload);
 		}
 	}
 	
@@ -41,6 +54,10 @@ public class WindowDataImporter {
 	}
 	
 	public void handleWindowMetadataPayload(WindowMetadataPayload payload, ClientPlayNetworking.Context ctx) {
+		metadataPayloads.add(payload);
+	}
+	
+	private void importMetadataPayload(WindowMetadataPayload payload) {
 		RemoteFramebuffer framebuf = getFramebuffer(payload.handle());
 		if(payload.removed()) {
 			System.out.println("GOT REMOVE");
@@ -69,7 +86,10 @@ public class WindowDataImporter {
 	}
 	
 	public void handleWindowDataPayload(WindowDataPayload payload, ClientPlayNetworking.Context ctx) {
-		System.out.println("GOT DATA");
+		dataPayloads.push(payload);
+	}
+	
+	private void importDataPayload(WindowDataPayload payload) {
 		RemoteFramebuffer framebuf = getFramebuffer(payload.handle());
 		if(framebuf == null) return;
 		

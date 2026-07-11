@@ -80,6 +80,7 @@ public class WindowDataExporter {
 			// Create full-sized patch if metadata dirty
 			System.out.println("Creating full-sized patch");
 			export.createPatch(0, 0, export.fbWidth, export.fbHeight);
+			window.framebuffer.collectDamage(); // Clear damage here because metadata is dirty
 			return;
 		}
 		

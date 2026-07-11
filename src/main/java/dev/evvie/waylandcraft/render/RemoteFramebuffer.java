@@ -44,7 +44,10 @@ public class RemoteFramebuffer {
 	}
 	
 	public void renderPatch(int x, int y, int w, int h, GpuTexture texture) {
-		System.out.println("renderPatch(x=" + x + ", y=" + y + ", width=" + w + ", height=" + h + ")");
+//		System.out.println("renderPatch(x=" + x + ", y=" + y + ", width=" + w + ", height=" + h + ")");
+		
+		if(x < 0 || y < 0 || x + w > width || y + h > height) return;
+		
 		RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(texture, target.getColorTexture(), 0, x, y, 0, 0, w, h);
 	}
 	
