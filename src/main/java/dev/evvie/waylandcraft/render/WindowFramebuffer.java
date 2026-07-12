@@ -4,7 +4,6 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalInt;
-import java.util.stream.Collectors;
 
 import org.joml.Matrix4fc;
 
@@ -182,18 +181,7 @@ public class WindowFramebuffer {
 		List<FramebufferDamage> damage = damageAcc;
 		damageAcc = new ArrayList<FramebufferDamage>();
 		
-		// Deduplicate damage list (exact matches)
-		damage = damage.stream().distinct().collect(Collectors.toList());
-		
-		ArrayList<FramebufferDamage> ddamage = new ArrayList<FramebufferDamage>();
-		
-		// Deduplicate damage list (old damage rect fully contained in new damage rect)
-		for(FramebufferDamage d : damage) {
-			ddamage.removeIf((d2) -> d.contains(d2));
-			ddamage.add(d);
-		}
-		
-		return ddamage;
+		return damage;
 	}
 	
 	public void render() {

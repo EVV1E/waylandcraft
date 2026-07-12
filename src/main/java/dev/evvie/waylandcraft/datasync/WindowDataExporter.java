@@ -2,6 +2,7 @@ package dev.evvie.waylandcraft.datasync;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -76,20 +77,55 @@ public class WindowDataExporter {
 		WindowExportState export = getOrCreateExport(window);
 		if(!export.updateMetadata()) return;
 		
+		/* Create full-sized patch if metadata dirty (framebuffer size changed, ...) */
 		if(export.metadataDirty) {
-			// Create full-sized patch if metadata dirty
 			System.out.println("Creating full-sized patch");
 			export.createPatch(0, 0, export.fbWidth, export.fbHeight);
 			window.framebuffer.collectDamage(); // Clear damage here because metadata is dirty
 			return;
 		}
 		
-		// Create patches for damage updates
+		/* Get damage updates and deduplicate them */
 		List<FramebufferDamage> damage = window.framebuffer.collectDamage();
+		damage = dedupDamage(damage);
+		
+		/* Create full patch if enough total pixels were damaged */
+		int pixels = 0;
+		int count = 0;
+		for(FramebufferDamage d : damage) {
+			pixels += d.width() * d.height();
+			count++;
+		}
+		if(pixels > 0.8 * export.fbWidth * export.fbHeight) {
+			System.out.println("Damage above 80% of pixels! (over " + count + " damage rects) Creating full patch");
+			export.createPatch(0, 0, export.fbWidth, export.fbHeight);
+			return;
+		}
+		
+		/* Create individual patches for the damage regions */
 		for(FramebufferDamage d : damage) {
 			System.out.println("Creating patch (x=" + d.x() + ", y=" + d.y() + ", width=" + d.width() + ", height=" + d.height() + ")");
 			export.createPatch(d.x(), d.y(), d.width(), d.height());
 		}
+	}
+	
+	private ArrayList<FramebufferDamage> dedupDamage(List<FramebufferDamage> damage) {
+		int count = damage.size();
+		
+		// Deduplicate damage list (exact matches)
+		damage = damage.stream().distinct().collect(Collectors.toList());
+		
+		ArrayList<FramebufferDamage> ndamage = new ArrayList<FramebufferDamage>();
+		
+		// Deduplicate damage list (old damage rect fully contained in new damage rect)
+		for(FramebufferDamage d : damage) {
+			ndamage.removeIf((d2) -> d.contains(d2));
+			ndamage.add(d);
+		}
+		
+		if(damage.size() < count) System.out.println("Deduplicated " + count + " damage regions down to " + damage.size());
+		
+		return ndamage;
 	}
 	
 	// Attempt to convert a FORMAT_RAW_RGBA patch into a FORMAT_RAW_RGB patch if it is fully opaque
