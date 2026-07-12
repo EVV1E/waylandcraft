@@ -82,7 +82,7 @@ public class WindowFramebuffer {
 	);
 	
 	private static DynamicUniformStorage<WindowInfoUniform> uniformStorage = null;
-	private static boolean debugDamage = true;
+	private static boolean debugDamage = false;
 	
 	public final WLCSurface surfaceTree;
 	private TextureTarget tempTarget = null;
