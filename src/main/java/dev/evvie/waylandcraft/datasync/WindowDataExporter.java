@@ -1,8 +1,10 @@
 package dev.evvie.waylandcraft.datasync;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -11,14 +13,19 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.TextureFormat;
 
+import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
+import dev.evvie.waylandcraft.bridge.WaylandCraftBridge;
 import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.network.WindowMetadataPayload;
 import dev.evvie.waylandcraft.render.WindowFramebuffer.FramebufferDamage;
+import dev.evvie.waylandcraft.utils.TwoBitElementArray;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ArrayListDeque;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 
 public class WindowDataExporter {
 	
@@ -26,12 +33,22 @@ public class WindowDataExporter {
 	private boolean reset = false;
 	
 	public void update() {
+		ProfilerFiller profiler = Profiler.get();
+		profiler.push("wayland-export");
+		
 		if(reset) {
 			for(WindowExportState export : exports) {
 				export.destroy();
 			}
 			exports.clear();
 			reset = false;
+		}
+		
+		WaylandCraftBridge bridge = WaylandCraft.instance.bridge;
+		List<WLCAbstractWindow> mapped = Stream.of(bridge.getMappedToplevels(), bridge.getMappedPopups()).flatMap((l) -> Stream.of(l)).toList();
+		
+		for(WLCAbstractWindow window : mapped) {
+			export(window);
 		}
 		
 		ArrayList<WindowExportState> toRemove = new ArrayList<WindowExportState>();
@@ -54,10 +71,12 @@ public class WindowDataExporter {
 		for(WindowExportState export : exports) {
 			ImagePatch patch;
 			while((patch = export.patches.pollLast()) != null) {
-				patch = optimizeOpaquePatch(patch);
+				patch = optimizePatchAlpha(patch);
 				ClientPlayNetworking.send(new WindowDataPayload(export.handle, patch));
 			}
 		}
+		
+		profiler.pop();
 	}
 	
 	private @Nullable WindowExportState getExport(WLCAbstractWindow window) {
@@ -73,7 +92,7 @@ public class WindowDataExporter {
 		return export;
 	}
 	
-	public void export(WLCAbstractWindow window) {
+	private void export(WLCAbstractWindow window) {
 		WindowExportState export = getOrCreateExport(window);
 		if(!export.updateMetadata()) return;
 		
@@ -128,25 +147,38 @@ public class WindowDataExporter {
 		return ndamage;
 	}
 	
-	// Attempt to convert a FORMAT_RAW_RGBA patch into a FORMAT_RAW_RGB patch if it is fully opaque
-	private ImagePatch optimizeOpaquePatch(ImagePatch patch) {
-		if(patch.format() != ImagePatch.FORMAT_RAW_RGBA) return patch;
-		
+	// Convert the patch from RGBA to RGBsA and if opaque, to RGB
+	private ImagePatch optimizePatchAlpha(ImagePatch patch) {
+		if(patch.format() != ImagePatch.FORMAT_RGBA) return patch;
 		byte[] data = patch.data();
+		
+		byte[] rgb = new byte[patch.width() * patch.height() * 3];
+		TwoBitElementArray alphaArray = new TwoBitElementArray(patch.width() * patch.height());
+		
 		short opaque = 0xff;
 		for(int i = 0; i < data.length / 4; i++) {
-			opaque &= data[i * 4 + 3];
-		}
-		if(opaque != 0xff) return patch;
-		
-		byte[] ndata = new byte[patch.width() * patch.height() * 3];
-		for(int i = 0; i < data.length / 4; i++) {
-			ndata[i * 3 + 0] = data[i * 4 + 0];
-			ndata[i * 3 + 1] = data[i * 4 + 1];
-			ndata[i * 3 + 2] = data[i * 4 + 2];
+			rgb[i * 3 + 0] = data[i * 4 + 0];
+			rgb[i * 3 + 1] = data[i * 4 + 1];
+			rgb[i * 3 + 2] = data[i * 4 + 2];
+			
+			byte a = data[i * 4 + 3];
+			opaque &= a;
+			alphaArray.put(i, (byte) (a >> 6));
 		}
 		
-		return new ImagePatch(ImagePatch.FORMAT_RAW_RGB, patch.x(), patch.y(), patch.width(), patch.height(), ndata);
+		if(opaque == 0xff) {
+			// Patch is fully opaque, use RGB
+			return new ImagePatch(ImagePatch.FORMAT_RGB, patch.x(), patch.y(), patch.width(), patch.height(), rgb);
+		}
+		
+		byte[] alpha = alphaArray.getData();
+		
+		byte[] ndata = new byte[rgb.length + alpha.length];
+		ByteBuffer buf = ByteBuffer.wrap(ndata);
+		buf.put(rgb);
+		buf.put(alpha);
+		
+		return new ImagePatch(ImagePatch.FORMAT_RGBsA, patch.x(), patch.y(), patch.width(), patch.height(), ndata);
 	}
 	
 	public void reset() {
@@ -259,7 +291,7 @@ public class WindowDataExporter {
 					byte[] data = new byte[view.data().remaining()];
 					view.data().get(data);
 					
-					ImagePatch patch = new ImagePatch(ImagePatch.FORMAT_RAW_RGBA, x, y, width, height, data);
+					ImagePatch patch = new ImagePatch(ImagePatch.FORMAT_RGBA, x, y, width, height, data);
 					this.patches.add(patch);
 				}
 				buffer.close();

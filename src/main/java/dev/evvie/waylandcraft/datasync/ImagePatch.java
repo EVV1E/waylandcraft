@@ -7,8 +7,9 @@ import net.minecraft.network.codec.StreamCodec;
 
 public record ImagePatch(short format, int x, int y, int width, int height, byte[] data) {
 	
-	public static final short FORMAT_RAW_RGBA = 1;
-	public static final short FORMAT_RAW_RGB = 2;
+	public static final short FORMAT_RGBA = 1; // RGBA 8:8:8:8
+	public static final short FORMAT_RGB = 2; // RGB 8:8:8
+	public static final short FORMAT_RGBsA = 3; // Split RGB 8:8:8 and 2-bit alpha
 	
 	public static final StreamCodec<ByteBuf, ImagePatch> STREAM_CODEC = StreamCodec.composite(
 			WaylandCraftUtils.UNSIGNED_BYTE, ImagePatch::format,

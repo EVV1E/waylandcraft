@@ -344,12 +344,6 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		syncedDisplays.removeAll(removedDisplays);
 		
-		List<WLCAbstractWindow> mapped = Stream.of(bridge.getMappedToplevels(), bridge.getMappedPopups()).flatMap((l) -> Stream.of(l)).toList();
-		
-		for(WLCAbstractWindow window : mapped) {
-			windowDataExporter.export(window);
-		}
-		
 		windowDataExporter.update();
 	}
 	

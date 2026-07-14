@@ -16,7 +16,10 @@ import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.network.WindowDataPayload;
 import dev.evvie.waylandcraft.network.WindowMetadataPayload;
 import dev.evvie.waylandcraft.render.RemoteFramebuffer;
+import dev.evvie.waylandcraft.utils.TwoBitElementArray;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 
 public class WindowDataImporter {
 	
@@ -26,6 +29,9 @@ public class WindowDataImporter {
 	private boolean reset = false;
 	
 	public void update() {
+		ProfilerFiller profiler = Profiler.get();
+		profiler.push("wayland-import");
+		
 		if(reset) {
 			for(RemoteFramebuffer framebuf : framebuffers) {
 				framebuf.destroy();
@@ -43,6 +49,8 @@ public class WindowDataImporter {
 		while((dataPayload = dataPayloads.pollLast()) != null) {
 			importDataPayload(dataPayload);
 		}
+		
+		profiler.pop();
 	}
 	
 	public void reset() {
@@ -96,13 +104,17 @@ public class WindowDataImporter {
 		ImagePatch patch = payload.patch();
 		
 		GpuTexture texture;
-		if(patch.format() == ImagePatch.FORMAT_RAW_RGBA) {
+		if(patch.format() == ImagePatch.FORMAT_RGBA) {
 			System.out.println("IMPORTING RGBA");
 			texture = importTextureRGBA(patch.width(), patch.height(), patch.data());
 		}
-		else if(patch.format() == ImagePatch.FORMAT_RAW_RGB) {
+		else if(patch.format() == ImagePatch.FORMAT_RGB) {
 			System.out.println("IMPORTING RGB");
 			texture = importTextureRGB(patch.width(), patch.height(), patch.data());
+		}
+		else if(patch.format() == ImagePatch.FORMAT_RGBsA) {
+			System.out.println("IMPORTING RGBsA");
+			texture = importTextureRGBsA(patch.width(), patch.height(), patch.data());
 		}
 		else {
 			return;
@@ -129,6 +141,38 @@ public class WindowDataImporter {
 		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
 		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, buf, Format.RGBA, 0, 0, 0, 0, width, height);
 		
+		RenderSystem.queueFencedTask(() -> buf.flip()); // HACK: Keep ByteBuffer alive until it was imported to OpenGL
+		
+		return texture;
+	}
+	
+	private @Nullable GpuTexture importTextureRGBsA(int width, int height, byte[] data) {
+		int alphaByteCount = TwoBitElementArray.bytesForElements(width * height);
+		if(data.length != width * height * 3 + alphaByteCount) {
+			WaylandCraftCommon.LOGGER.error("Received RGBsA image patch with incorrect length. width: " + width + ", height: " + height + ", bytes: " + data.length);
+			return null;
+		}
+		
+		ByteBuffer dataBuf = ByteBuffer.wrap(data);
+		byte[] alpha = new byte[alphaByteCount];
+		dataBuf.position(width * height * 3);
+		dataBuf.get(alpha);
+		
+		TwoBitElementArray alphaArray = new TwoBitElementArray(width * height, alpha);
+		
+		// Convert to RGBA, then import to OpenGL
+		ByteBuffer buf = ByteBuffer.allocateDirect(width * height * 4);
+		for(int i = 0; i < width * height; i++) {
+			buf.put(data[i * 3 + 0]);
+			buf.put(data[i * 3 + 1]);
+			buf.put(data[i * 3 + 2]);
+			buf.put((byte) (alphaArray.get(i) * (255 / 3)));
+		}
+		
+		buf.rewind();
+		
+		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
+		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, buf, Format.RGBA, 0, 0, 0, 0, width, height);
 		RenderSystem.queueFencedTask(() -> buf.flip()); // HACK: Keep ByteBuffer alive until it was imported to OpenGL
 		
 		return texture;
