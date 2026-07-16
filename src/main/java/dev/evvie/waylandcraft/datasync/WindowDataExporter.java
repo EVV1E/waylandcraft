@@ -149,26 +149,31 @@ public class WindowDataExporter {
 	
 	// Convert the patch from RGBA to RGBsA and if opaque, to RGB
 	private ImagePatch optimizePatchAlpha(ImagePatch patch) {
+		ProfilerFiller profiler = Profiler.get();
+		profiler.push("optimize-patch-alpha");
+		
 		if(patch.format() != ImagePatch.FORMAT_RGBA) return patch;
 		byte[] data = patch.data();
 		
 		byte[] rgb = new byte[patch.width() * patch.height() * 3];
-		TwoBitElementArray alphaArray = new TwoBitElementArray(patch.width() * patch.height());
 		
 		short opaque = 0xff;
 		for(int i = 0; i < data.length / 4; i++) {
 			rgb[i * 3 + 0] = data[i * 4 + 0];
 			rgb[i * 3 + 1] = data[i * 4 + 1];
 			rgb[i * 3 + 2] = data[i * 4 + 2];
-			
-			byte a = data[i * 4 + 3];
-			opaque &= a;
-			alphaArray.put(i, (byte) (a >> 6));
+			opaque &= data[i * 4 + 3];
 		}
 		
 		if(opaque == 0xff) {
 			// Patch is fully opaque, use RGB
+			profiler.pop();
 			return new ImagePatch(ImagePatch.FORMAT_RGB, patch.x(), patch.y(), patch.width(), patch.height(), rgb);
+		}
+		
+		TwoBitElementArray alphaArray = new TwoBitElementArray(patch.width() * patch.height());
+		for(int i = 0; i < data.length / 4; i++) {
+			alphaArray.put(i, (byte) (data[i * 4 + 3] >> 6));
 		}
 		
 		byte[] alpha = alphaArray.getData();
@@ -177,6 +182,8 @@ public class WindowDataExporter {
 		ByteBuffer buf = ByteBuffer.wrap(ndata);
 		buf.put(rgb);
 		buf.put(alpha);
+		
+		profiler.pop();
 		
 		return new ImagePatch(ImagePatch.FORMAT_RGBsA, patch.x(), patch.y(), patch.width(), patch.height(), ndata);
 	}
@@ -274,6 +281,9 @@ public class WindowDataExporter {
 		}
 		
 		public void createPatch(int x, int y, int width, int height) {
+			ProfilerFiller profiler = Profiler.get();
+			profiler.push("create-patch");
+			
 			GpuTexture tex = window.framebuffer.getTexture();
 			if(tex == null) return;
 			if(width > MAX_SIZE || height > MAX_SIZE) return;
@@ -296,6 +306,8 @@ public class WindowDataExporter {
 				}
 				buffer.close();
 			}, 0);
+			
+			profiler.pop();
 		}
 		
 		public void destroy() {

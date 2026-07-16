@@ -122,8 +122,13 @@ public class WindowDataImporter {
 		
 		if(texture == null) return;
 		
+		ProfilerFiller profiler = Profiler.get();
+		profiler.push("render-patch");
+		
 		framebuf.renderPatch(patch.x(), patch.y(), patch.width(), patch.height(), texture);
 		texture.close();
+		
+		profiler.pop();
 	}
 	
 	private static final int TEXTURE_USAGE = GpuTexture.USAGE_COPY_SRC | GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING;
@@ -153,11 +158,12 @@ public class WindowDataImporter {
 			return null;
 		}
 		
-		ByteBuffer dataBuf = ByteBuffer.wrap(data);
-		byte[] alpha = new byte[alphaByteCount];
-		dataBuf.position(width * height * 3);
-		dataBuf.get(alpha);
+		ProfilerFiller profiler = Profiler.get();
+		profiler.push("data-processing-rgbsa");
 		
+		int alphaOffset = width * height * 3; // After RGB bytes
+		byte[] alpha = new byte[alphaByteCount];
+		System.arraycopy(data, alphaOffset, alpha, 0, alphaByteCount);
 		TwoBitElementArray alphaArray = new TwoBitElementArray(width * height, alpha);
 		
 		// Convert to RGBA, then import to OpenGL
@@ -171,9 +177,13 @@ public class WindowDataImporter {
 		
 		buf.rewind();
 		
+		profiler.popPush("gpu-import");
+		
 		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
 		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, buf, Format.RGBA, 0, 0, 0, 0, width, height);
 		RenderSystem.queueFencedTask(() -> buf.flip()); // HACK: Keep ByteBuffer alive until it was imported to OpenGL
+		
+		profiler.pop();
 		
 		return texture;
 	}
@@ -183,6 +193,9 @@ public class WindowDataImporter {
 			WaylandCraftCommon.LOGGER.error("Received RGB image patch with incorrect length. width: " + width + ", height: " + height + ", bytes: " + data.length);
 			return null;
 		}
+		
+		ProfilerFiller profiler = Profiler.get();
+		profiler.push("data-processing-rgb");
 		
 		// Convert to RGBA, then import to OpenGL
 		ByteBuffer buf = ByteBuffer.allocateDirect(width * height * 4);
@@ -195,9 +208,13 @@ public class WindowDataImporter {
 		
 		buf.rewind();
 		
+		profiler.popPush("gpu-import");
+		
 		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
 		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, buf, Format.RGBA, 0, 0, 0, 0, width, height);
 		RenderSystem.queueFencedTask(() -> buf.flip()); // HACK: Keep ByteBuffer alive until it was imported to OpenGL
+		
+		profiler.pop();
 		
 		return texture;
 	}
