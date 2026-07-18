@@ -165,7 +165,14 @@ public class WindowDataImporter {
 		}
 	}
 	
+	public static final int MAX_SIZE = 2048;
+	
 	public void handleWindowDataPayload(WindowDataPayload payload, ClientPlayNetworking.Context ctx) {
+		if(payload.patch().width() > MAX_SIZE || payload.patch().height() > MAX_SIZE) {
+			WaylandCraftCommon.LOGGER.error("Received window data with size exceeding 2048x2048!");
+			return;
+		}
+		
 		synchronized(dataPayloads) {
 			dataPayloads.push(payload);
 			dataPayloads.notify();
