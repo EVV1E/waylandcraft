@@ -24,9 +24,18 @@ import net.minecraft.util.profiling.ProfilerFiller;
 public class WindowDataImporter {
 	
 	public ArrayList<RemoteFramebuffer> framebuffers = new ArrayList<RemoteFramebuffer>();
-	private ArrayDeque<WindowDataPayload> dataPayloads = new ArrayDeque<WindowDataPayload>();
 	private ArrayDeque<WindowMetadataPayload> metadataPayloads = new ArrayDeque<WindowMetadataPayload>();
+	private ArrayDeque<WindowDataPayload> dataPayloads = new ArrayDeque<WindowDataPayload>();
+	private ArrayDeque<DrawablePatch> drawablePatches = new ArrayDeque<DrawablePatch>();
+	
+	private Thread workerThread;
 	private boolean reset = false;
+	
+	public WindowDataImporter() {
+		workerThread = new Thread(() -> {while(true) {this.doWork();}});
+		workerThread.setDaemon(true);
+		workerThread.start();
+	}
 	
 	public void update() {
 		ProfilerFiller profiler = Profiler.get();
@@ -45,16 +54,83 @@ public class WindowDataImporter {
 			importMetadataPayload(metadataPayload);
 		}
 		
-		WindowDataPayload dataPayload;
-		while((dataPayload = dataPayloads.pollLast()) != null) {
-			importDataPayload(dataPayload);
-		}
+		renderPatches();
 		
 		profiler.pop();
 	}
 	
 	public void reset() {
 		reset = true;
+	}
+	
+	private void renderPatches() {
+		ArrayDeque<DrawablePatch> patches;
+		synchronized(drawablePatches) {
+			if(drawablePatches.isEmpty()) return;
+			
+			patches = drawablePatches.clone();
+			drawablePatches.clear();
+		}
+		
+		DrawablePatch patch;
+		while((patch = patches.pollLast()) != null) {
+			renderPatch(patch);
+		}
+	}
+	
+	private void renderPatch(DrawablePatch drawable) {
+		RemoteFramebuffer framebuf = getFramebuffer(drawable.handle());
+		if(framebuf == null) return;
+		
+		ProfilerFiller profiler = Profiler.get();
+		profiler.push("upload-patch");
+		
+		PatchRGBA patch = drawable.inner();
+		GpuTexture texture = uploadPatch(patch);
+		
+		profiler.popPush("render-patch");
+		
+		framebuf.renderPatch(patch.x(), patch.y(), patch.width(), patch.height(), texture);
+		texture.close();
+		
+		profiler.pop();
+	}
+	
+	private void doWork() {
+		WindowDataPayload payload;
+		synchronized(dataPayloads) {
+			while((payload = dataPayloads.pollLast()) == null) {
+				try {
+					dataPayloads.wait();
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				}
+			}
+		}
+		
+		ImagePatch patch = payload.patch();
+		PatchRGBA converted;
+		if(patch.format() == ImagePatch.FORMAT_RGBA) {
+			System.out.println("IMPORTING RGBA");
+			converted = importPatchRGBA(patch);
+		}
+		else if(patch.format() == ImagePatch.FORMAT_RGB) {
+			System.out.println("IMPORTING RGB");
+			converted = importPatchRGB(patch);
+		}
+		else if(patch.format() == ImagePatch.FORMAT_RGBsA) {
+			System.out.println("IMPORTING RGBsA");
+			converted = importPatchRGBsA(patch);
+		}
+		else {
+			return;
+		}
+		
+		if(converted == null) return;
+		
+		synchronized(drawablePatches) {
+			drawablePatches.push(new DrawablePatch(payload.handle(), converted));
+		}
 	}
 	
 	public @Nullable RemoteFramebuffer getFramebuffer(WindowHandle handle) {
@@ -94,46 +170,27 @@ public class WindowDataImporter {
 	}
 	
 	public void handleWindowDataPayload(WindowDataPayload payload, ClientPlayNetworking.Context ctx) {
-		dataPayloads.push(payload);
-	}
-	
-	private void importDataPayload(WindowDataPayload payload) {
-		RemoteFramebuffer framebuf = getFramebuffer(payload.handle());
-		if(framebuf == null) return;
-		
-		ImagePatch patch = payload.patch();
-		
-		GpuTexture texture;
-		if(patch.format() == ImagePatch.FORMAT_RGBA) {
-			System.out.println("IMPORTING RGBA");
-			texture = importTextureRGBA(patch.width(), patch.height(), patch.data());
+		synchronized(dataPayloads) {
+			dataPayloads.push(payload);
+			dataPayloads.notify();
 		}
-		else if(patch.format() == ImagePatch.FORMAT_RGB) {
-			System.out.println("IMPORTING RGB");
-			texture = importTextureRGB(patch.width(), patch.height(), patch.data());
-		}
-		else if(patch.format() == ImagePatch.FORMAT_RGBsA) {
-			System.out.println("IMPORTING RGBsA");
-			texture = importTextureRGBsA(patch.width(), patch.height(), patch.data());
-		}
-		else {
-			return;
-		}
-		
-		if(texture == null) return;
-		
-		ProfilerFiller profiler = Profiler.get();
-		profiler.push("render-patch");
-		
-		framebuf.renderPatch(patch.x(), patch.y(), patch.width(), patch.height(), texture);
-		texture.close();
-		
-		profiler.pop();
 	}
 	
 	private static final int TEXTURE_USAGE = GpuTexture.USAGE_COPY_SRC | GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_RENDER_ATTACHMENT | GpuTexture.USAGE_TEXTURE_BINDING;
 	
-	private @Nullable GpuTexture importTextureRGBA(int width, int height, byte[] data) {
+	private GpuTexture uploadPatch(PatchRGBA patch) {
+		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + patch.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, patch.width(), patch.height(), 1, 1);
+		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, patch.data(), Format.RGBA, 0, 0, 0, 0, patch.width(), patch.height());
+		
+		RenderSystem.queueFencedTask(() -> patch.data().flip()); // HACK: Keep ByteBuffer alive until it was imported to OpenGL
+		return texture;
+	}
+	
+	private @Nullable PatchRGBA importPatchRGBA(ImagePatch patch) {
+		int width = patch.width();
+		int height = patch.height();
+		byte[] data = patch.data();
+		
 		if(data.length != width * height * 4) {
 			WaylandCraftCommon.LOGGER.error("Received RGBA image patch with incorrect length. width: " + width + ", height: " + height + ", bytes: " + data.length);
 			return null;
@@ -143,15 +200,14 @@ public class WindowDataImporter {
 		buf.put(data);
 		buf.rewind();
 		
-		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
-		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, buf, Format.RGBA, 0, 0, 0, 0, width, height);
-		
-		RenderSystem.queueFencedTask(() -> buf.flip()); // HACK: Keep ByteBuffer alive until it was imported to OpenGL
-		
-		return texture;
+		return new PatchRGBA(patch, buf);
 	}
 	
-	private @Nullable GpuTexture importTextureRGBsA(int width, int height, byte[] data) {
+	private @Nullable PatchRGBA importPatchRGBsA(ImagePatch patch) {
+		int width = patch.width();
+		int height = patch.height();
+		byte[] data = patch.data();
+		
 		int alphaByteCount = TwoBitElementArray.bytesForElements(width * height);
 		if(data.length != width * height * 3 + alphaByteCount) {
 			WaylandCraftCommon.LOGGER.error("Received RGBsA image patch with incorrect length. width: " + width + ", height: " + height + ", bytes: " + data.length);
@@ -176,19 +232,16 @@ public class WindowDataImporter {
 		}
 		
 		buf.rewind();
-		
-		profiler.popPush("gpu-import");
-		
-		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
-		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, buf, Format.RGBA, 0, 0, 0, 0, width, height);
-		RenderSystem.queueFencedTask(() -> buf.flip()); // HACK: Keep ByteBuffer alive until it was imported to OpenGL
-		
 		profiler.pop();
 		
-		return texture;
+		return new PatchRGBA(patch, buf);
 	}
 	
-	private @Nullable GpuTexture importTextureRGB(int width, int height, byte[] data) {
+	private @Nullable PatchRGBA importPatchRGB(ImagePatch patch) {
+		int width = patch.width();
+		int height = patch.height();
+		byte[] data = patch.data();
+		
 		if(data.length != width * height * 3) {
 			WaylandCraftCommon.LOGGER.error("Received RGB image patch with incorrect length. width: " + width + ", height: " + height + ", bytes: " + data.length);
 			return null;
@@ -207,16 +260,20 @@ public class WindowDataImporter {
 		}
 		
 		buf.rewind();
-		
-		profiler.popPush("gpu-import");
-		
-		GpuTexture texture = RenderSystem.getDevice().createTexture("imported-wayland-framebuf-" + data.hashCode(), TEXTURE_USAGE, TextureFormat.RGBA8, width, height, 1, 1);
-		RenderSystem.getDevice().createCommandEncoder().writeToTexture(texture, buf, Format.RGBA, 0, 0, 0, 0, width, height);
-		RenderSystem.queueFencedTask(() -> buf.flip()); // HACK: Keep ByteBuffer alive until it was imported to OpenGL
-		
 		profiler.pop();
 		
-		return texture;
+		return new PatchRGBA(patch, buf);
+	}
+	
+	private static record PatchRGBA(int x, int y, int width, int height, ByteBuffer data) {
+		
+		public PatchRGBA(ImagePatch patch, ByteBuffer data) {
+			this(patch.x(), patch.y(), patch.width(), patch.height(), data);
+		}
+		
+	}
+	
+	private static record DrawablePatch(WindowHandle handle, PatchRGBA inner) {
 	}
 	
 }
