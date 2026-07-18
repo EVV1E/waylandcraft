@@ -74,7 +74,7 @@ public class CategorySelectorWidget extends AbstractWidget {
 			int by = idxPosY(i);
 			
 			context.blitSprite(RenderPipelines.GUI_TEXTURED, BUTTON_SPRITES.get(active, i == selected), bx, by, elementSize, elementSize);
-			context.blitSprite(RenderPipelines.GUI_TEXTURED, entries.get(i).icon, bx + 2, by + 2, 15, 15);
+			context.blitSprite(RenderPipelines.GUI_TEXTURED, entries.get(i).icon, bx + (elementSize - 15) / 2, by + (elementSize - 15) / 2, 15, 15);
 			
 			if(mouseX > bx && mouseY > by && mouseX < bx + elementSize && mouseY < by + elementSize) {
 				context.setTooltipForNextFrame(entries.get(i).title, mouseX, mouseY);

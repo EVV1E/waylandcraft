@@ -51,7 +51,7 @@ public class AppLauncherScreen extends Screen {
 		
 		createCategories();
 		
-		int categoryButtonSize = 19;
+		int categoryButtonSize = 23;
 		int catSelW = categoryButtonSize * 2;
 		List<CategorySelectorWidget.Entry> categoryEntries = categories.stream().map((category) -> new CategorySelectorWidget.Entry(category.title, category.icon)).toList();
 		categorySelector = new CategorySelectorWidget(Component.literal("Categories"), this::filterSetCategory, categoryEntries);
