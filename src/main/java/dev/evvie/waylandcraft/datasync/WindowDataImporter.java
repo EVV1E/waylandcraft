@@ -54,7 +54,8 @@ public class WindowDataImporter {
 			importMetadataPayload(metadataPayload);
 		}
 		
-		renderPatches();
+		// Render at most one patch per frame
+		renderSinglePatch();
 		
 		profiler.pop();
 	}
@@ -63,19 +64,14 @@ public class WindowDataImporter {
 		reset = true;
 	}
 	
-	private void renderPatches() {
-		ArrayDeque<DrawablePatch> patches;
+	private void renderSinglePatch() {
+		DrawablePatch patch;
 		synchronized(drawablePatches) {
-			if(drawablePatches.isEmpty()) return;
-			
-			patches = drawablePatches.clone();
-			drawablePatches.clear();
+			patch = drawablePatches.pollLast();
+			if(patch == null) return;
 		}
 		
-		DrawablePatch patch;
-		while((patch = patches.pollLast()) != null) {
-			renderPatch(patch);
-		}
+		renderPatch(patch);
 	}
 	
 	private void renderPatch(DrawablePatch drawable) {

@@ -207,6 +207,8 @@ public class WaylandCraft implements ClientModInitializer {
 		displays.forEach((d) -> d.extract(ctx));
 		remoteDisplays.forEach((d) -> d.extract(ctx));
 		
+		windowDataImporter.update();
+		
 		if(bridge == null) return;
 		
 		for(WLCPopup popup : bridge.getMappedPopups()) {
@@ -316,8 +318,6 @@ public class WaylandCraft implements ClientModInitializer {
 		
 		displays.forEach((d) -> d.tick());
 		remoteDisplays.forEach((d) -> d.tick());
-		
-		windowDataImporter.update();
 		
 		if(bridge == null) return;
 		
