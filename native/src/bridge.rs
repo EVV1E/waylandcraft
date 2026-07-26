@@ -1893,6 +1893,8 @@ fn exec_app<'local>(
         ("QT_QPA_PLATFORM".into(), "wayland".into()),
         ("ELECTRON_OZONE_PLATFORM_HINT".into(), "auto".into()),
         ("GDK_BACKEND".into(), "wayland".into()),
+        ("DBUS_SESSION_BUS_ADDRESS".into(), "unix:path=/dev/null".into()),
+
     ];
     if let Some(ref s) = instance.state.satellite {
         env_vars.push(("DISPLAY".into(), s.get_display().into()));
