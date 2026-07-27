@@ -11,6 +11,7 @@ import dev.evvie.waylandcraft.item.WindowItemInteractionProvider;
 import dev.evvie.waylandcraft.network.WaylandCraftNetworking;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.loader.api.FabricLoader;
 
 public class WaylandCraftCommon implements ModInitializer {
 	
@@ -25,7 +26,18 @@ public class WaylandCraftCommon implements ModInitializer {
 	public void onInitialize() {
 		instance = this;
 		WindowItem.register();
-		PolymerCompat.register();
+
+		// Must be gated here, before PolymerCompat is referenced at all --
+		// PolymerCompat implements Polymer's PolymerItem interface on a
+		// nested class, and merely loading that class (which happens as
+		// soon as any of its methods are invoked, regardless of an internal
+		// isModLoaded guard) throws NoClassDefFoundError when polymer-core
+		// isn't present, since verifying its bytecode requires resolving
+		// PolymerItem.
+		if(FabricLoader.getInstance().isModLoaded("polymer-core")) {
+			PolymerCompat.register();
+		}
+
 		WaylandCraftNetworking.register();
 		
 		ServerTickEvents.START_LEVEL_TICK.register(serverItemManager);

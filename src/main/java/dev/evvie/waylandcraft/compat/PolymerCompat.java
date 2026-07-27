@@ -2,7 +2,6 @@ package dev.evvie.waylandcraft.compat;
 
 import eu.pb4.polymer.core.api.item.PolymerItem;
 import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -15,12 +14,13 @@ import dev.evvie.waylandcraft.item.WindowItem;
  * directly on the item classes -- this keeps WindowItem free of any
  * compile-time or class-load-time dependency on Polymer, so the mod works
  * fine with Polymer absent.
+ *
+ * This class itself must never be referenced unless polymer-core is
+ * confirmed loaded -- see the call site in WaylandCraftCommon.
  */
 public class PolymerCompat {
 
 	public static void register() {
-		if(!FabricLoader.getInstance().isModLoaded("polymer-core")) return;
-
 		PolymerItem.registerOverlay(WindowItem.WINDOW, new WindowItemPolymerOverlay());
 	}
 
