@@ -55,6 +55,7 @@ dependencies {
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	compileOnly "maven.modrinth:iris:${project.iris_version}"
 	compileOnly "eu.pb4:polymer-core:${project.polymer_version}"
+	compileOnly "eu.pb4:polymer-resource-pack:${project.polymer_version}"
 }
 
 processResources {
