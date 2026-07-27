@@ -238,7 +238,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 			long now = System.currentTimeMillis();
 			if(now - lastUnpremultiplyDebugLog > 5000) {
 				lastUnpremultiplyDebugLog = now;
-				WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] unpremultiply draw issued: target={}x{} tempTarget={}x{}", target.getWidth(), target.getHeight(), tempTarget.getWidth(), tempTarget.getHeight());
+				WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] unpremultiply draw issued: target={}x{}", width, height);
 			}
 		}
 	}
