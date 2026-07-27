@@ -7,20 +7,24 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
 
 @Mixin(KeyboardHandler.class)
 public class KeyboardHandlerMixin {
-	
+
 	@Inject(method = "keyPress", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/InputConstants;getKey(Lnet/minecraft/client/input/KeyEvent;)Lcom/mojang/blaze3d/platform/InputConstants$Key;", ordinal = 1), cancellable = true)
 	public void onPressInGame(long windowHandle, int action, KeyEvent event, CallbackInfo info) {
 		int scancode = WaylandCraft.correctScancode(event.scancode());
-		
+
+		// TEMP DIAGNOSTIC
+		WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] onPressInGame: key={} scancode={} action={} mods={} level={} screen={}", event.key(), scancode, action, event.modifiers(), Minecraft.getInstance().level != null, Minecraft.getInstance().gui.screen());
+
 		if(Minecraft.getInstance().level == null) return;
 		if(Minecraft.getInstance().gui.screen() != null) return;
-		
+
 		if(WaylandCraft.instance.onKeyPress(windowHandle, event.key(), scancode, action, event.modifiers())) info.cancel();
 	}
 	
