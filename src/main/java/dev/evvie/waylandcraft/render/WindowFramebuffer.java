@@ -98,6 +98,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 	private static DynamicUniformStorage<WindowInfoUniform> uniformStorage = null;
 	private static boolean debugDamage = false;
 	private static long lastBakeDebugLog = 0;
+	private static long lastUnpremultiplyDebugLog = 0;
 	private static boolean pipelinesPrecompiled = false;
 
 	// Custom RenderPipelines can compile lazily on first use; our manual,
@@ -233,6 +234,12 @@ public class WindowFramebuffer implements FramebufferRenderable {
 			RenderSystem.bindDefaultUniforms(pass);
 			pass.bindTexture("sampler", tempTarget.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
 			pass.draw(0, 3, 1, 0);
+
+			long now = System.currentTimeMillis();
+			if(now - lastUnpremultiplyDebugLog > 5000) {
+				lastUnpremultiplyDebugLog = now;
+				WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] unpremultiply draw issued: target={}x{} tempTarget={}x{}", target.getWidth(), target.getHeight(), tempTarget.getWidth(), tempTarget.getHeight());
+			}
 		}
 	}
 	
