@@ -26,6 +26,7 @@ import dev.evvie.waylandcraft.grabs.DNDGrab;
 import dev.evvie.waylandcraft.grabs.MoveGrab;
 import dev.evvie.waylandcraft.grabs.PointerGrabMap;
 import dev.evvie.waylandcraft.grabs.PointerGrabMap.ImplicitGrab;
+import dev.evvie.waylandcraft.gpu.EglAvailability;
 import dev.evvie.waylandcraft.grabs.ResizeGrab;
 import dev.evvie.waylandcraft.gui.AppLauncherScreen;
 import dev.evvie.waylandcraft.gui.WaylandHudRenderer;
@@ -128,7 +129,13 @@ public class WaylandCraft implements ClientModInitializer {
 			WaylandCraft.fallbackMode = true;
 			return;
 		}
-		
+
+		// Must run before the game window is created (which is why this
+		// happens here, in mod init, rather than lazily) — GlBackendMixin
+		// reads the cached result to decide whether it's safe to force EGL
+		// context creation for the OpenGL backend.
+		EglAvailability.probe();
+
 		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
 		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
