@@ -13,11 +13,11 @@ import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.utils.CursorShape;
 import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.resources.Identifier;
 
-@Mixin(Gui.class)
+@Mixin(Hud.class)
 public class GuiMixin {
 	
 	private static final Identifier TLBR_DIAGONAL_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/tlbr_diagonal");
