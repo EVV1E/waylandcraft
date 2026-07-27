@@ -16,6 +16,7 @@
 		"ItemFrameRenderStateMixin",
 		"IGlTextureMixin",
 		"IGlDeviceMixin",
+		"IGpuDeviceMixin",
 		"FramerateLimitTrackerMixin",
 		"TitleScreenMixin",
 		"PauseScreenMixin"
