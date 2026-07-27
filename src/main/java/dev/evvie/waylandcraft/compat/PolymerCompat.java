@@ -71,7 +71,7 @@ public class PolymerCompat {
 		private static boolean hasWaylandCraft(PacketContext context) {
 			ServerPlayer player = PolymerCommonUtils.getPlayer(context);
 			boolean result = player != null && ServerPlayNetworking.canSend(player, ServerboundGiveItemsPayload.TYPE);
-			WaylandCraftCommon.LOGGER.info("PolymerCompat.hasWaylandCraft: player={} result={}", player == null ? "null" : player.getGameProfile().getName(), result);
+			WaylandCraftCommon.LOGGER.info("PolymerCompat.hasWaylandCraft: player={} result={}", player == null ? "null" : player.getGameProfile().name(), result);
 			return result;
 		}
 
