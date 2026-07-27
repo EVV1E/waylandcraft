@@ -99,7 +99,6 @@ public class PolymerCompat {
 			if(hasWaylandCraft(context) && itemStack.has(WindowItem.WINDOW_HANDLE)) {
 				out.set(WindowItem.WINDOW_HANDLE, itemStack.get(WindowItem.WINDOW_HANDLE));
 			}
-			WaylandCraftCommon.LOGGER.info("PolymerCompat.getPolymerItemStack: item={} itemModel={}", out.getItem(), out.get(net.minecraft.core.component.DataComponents.ITEM_MODEL));
 			return out;
 		}
 
@@ -109,9 +108,7 @@ public class PolymerCompat {
 		// real item/data, not the vanilla-safe fallback.
 		private static boolean hasWaylandCraft(PacketContext context) {
 			ServerPlayer player = PolymerCommonUtils.getPlayer(context);
-			boolean result = player != null && ServerPlayNetworking.canSend(player, ClientboundHelloPayload.TYPE);
-			WaylandCraftCommon.LOGGER.info("PolymerCompat.hasWaylandCraft: player={} result={}", player == null ? "null" : player.getGameProfile().name(), result);
-			return result;
+			return player != null && ServerPlayNetworking.canSend(player, ClientboundHelloPayload.TYPE);
 		}
 
 	}
