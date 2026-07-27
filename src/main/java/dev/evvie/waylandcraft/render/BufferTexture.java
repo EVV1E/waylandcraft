@@ -216,7 +216,10 @@ public abstract class BufferTexture {
 		public void copyData() {
 			if(eglImageView == null) return;
 			
-			try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), Optional.of(new Vector4f(0, 0, 0, 0)))) {
+			// TEMP DIAGNOSTIC: opaque magenta clear to check whether the blit
+			// draw call below actually covers the render target at all, or
+			// whether it's degenerate/culled/otherwise producing no fragments.
+			try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), Optional.of(new Vector4f(1, 0, 1, 1)))) {
 				renderPass.setPipeline(DMABUF_BLIT);
 				RenderSystem.bindDefaultUniforms(renderPass);
 				renderPass.bindTexture("InSampler", eglImageView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
