@@ -58,7 +58,7 @@ public abstract class BufferTexture {
 		public BasicBufferTexture(int width, int height, int format) {
 			super(width, height, format);
 			this.id = GlStateManager._genTexture();
-			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "buffertexture-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, id, ((IGlDeviceMixin) RenderSystem.getDevice()).frameBufferCache());
+			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "buffertexture-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, id, ((IGlDeviceMixin) RenderSystem.getDevice()).invokeFrameBufferCache());
 			this.textureView = RenderSystem.getDevice().createTextureView(glTexture);
 		}
 		
@@ -206,7 +206,7 @@ public abstract class BufferTexture {
 			long glEGLImageTargetTexture2DOES = GLFW.glfwGetProcAddress("glEGLImageTargetTexture2DOES");
 			JNI.invokeJV(GL33.GL_TEXTURE_2D, this.eglImage, glEGLImageTargetTexture2DOES);
 			
-			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, eglImageTex, ((IGlDeviceMixin) RenderSystem.getDevice()).frameBufferCache());
+			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, eglImageTex, ((IGlDeviceMixin) RenderSystem.getDevice()).invokeFrameBufferCache());
 			eglImageView = RenderSystem.getDevice().createTextureView(glTexture);
 			
 			copyData();
