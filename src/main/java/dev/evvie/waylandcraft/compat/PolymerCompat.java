@@ -31,12 +31,15 @@ import dev.evvie.waylandcraft.network.ClientboundHelloPayload;
  */
 public class PolymerCompat {
 
-	// The model shown to non-WaylandCraft clients: a plain generated model
-	// (assets/waylandcraft/models/item/window.json) using the static window
-	// texture, as opposed to the real item's model, which selects between a
-	// custom special renderer/broken-window state that only our own client
-	// code can evaluate.
-	private static final Identifier FALLBACK_MODEL = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "item/window");
+	// The model shown to non-WaylandCraft clients. DataComponents.ITEM_MODEL
+	// resolves through the *item definition* convention (assets/<ns>/items/
+	// <path>.json, the same kind of file as items/window.json itself), not
+	// directly to a models/ file -- so this points at a small dedicated
+	// definition (items/window_icon.json) that in turn references the plain
+	// generated model/texture, as opposed to the real item's own definition,
+	// which selects between a custom special renderer/broken-window state
+	// that only our own client code can evaluate.
+	private static final Identifier FALLBACK_MODEL = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window_icon");
 
 	public static void register() {
 		// Makes our own textures/models (including FALLBACK_MODEL above)
