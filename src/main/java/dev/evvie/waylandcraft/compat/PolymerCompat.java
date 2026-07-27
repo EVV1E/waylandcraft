@@ -96,6 +96,7 @@ public class PolymerCompat {
 			if(hasWaylandCraft(context) && itemStack.has(WindowItem.WINDOW_HANDLE)) {
 				out.set(WindowItem.WINDOW_HANDLE, itemStack.get(WindowItem.WINDOW_HANDLE));
 			}
+			WaylandCraftCommon.LOGGER.info("PolymerCompat.getPolymerItemStack: item={} itemModel={}", out.getItem(), out.get(net.minecraft.core.component.DataComponents.ITEM_MODEL));
 			return out;
 		}
 
