@@ -208,7 +208,11 @@ public class WindowFramebuffer implements FramebufferRenderable {
 
 		if(debugDamage) drawDebugDamage(opaqueUniforms);
 
-		try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer unpremultiply", target.getColorTextureView(), Optional.empty())) {
+		// TEMP DIAGNOSTIC: opaque cyan clear to check whether this pass (and
+		// the final 2D blit that displays it) shows the clear at all,
+		// bisecting the pipeline against the magenta clear on DmabufTexture's
+		// own internal blit target upstream.
+		try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer unpremultiply", target.getColorTextureView(), Optional.of(new Vector4f(0, 1, 1, 1)))) {
 			pass.setPipeline(UNPREMULTIPLY_PIPELINE);
 			pass.bindTexture("sampler", tempTarget.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
 			pass.draw(0, 3, 1, 0);
