@@ -35,13 +35,13 @@ public class PolymerCompat {
 			// Only virtualize for clients that don't actually have
 			// WaylandCraft -- players who do (detected via the mod's own
 			// networking channel being registered on their connection)
-			// should see and interact with the real item, not a Spyglass.
+			// should see and interact with the real item, not the fallback.
 			ServerPlayer player = PolymerCommonUtils.getPlayer(context);
 			if(player != null && ServerPlayNetworking.canSend(player, ServerboundGiveItemsPayload.TYPE)) {
 				return WindowItem.WINDOW;
 			}
 
-			return Items.SPYGLASS;
+			return Items.PAPER;
 		}
 
 	}
