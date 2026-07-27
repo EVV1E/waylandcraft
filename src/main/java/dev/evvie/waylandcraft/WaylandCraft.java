@@ -122,6 +122,7 @@ public class WaylandCraft implements ClientModInitializer {
 		// support for this channel, so the server can detect WaylandCraft's
 		// presence via ServerPlayNetworking#canSend (see PolymerCompat).
 		ClientPlayNetworking.registerGlobalReceiver(ClientboundHelloPayload.TYPE, (payload, ctx) -> {});
+		WaylandCraftCommon.LOGGER.info("[BUILD CHECK] ClientboundHelloPayload receiver registered ({})", ClientboundHelloPayload.HELLO_PAYLOAD_ID);
 
 		keyOpenScreen = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.windowManager", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, KEYBIND_CATEGORY));
 		keyOpenAppLauncher = KeyMappingHelper.registerKeyMapping(new KeyMapping("waylandcraft.key.appLauncher", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, KEYBIND_CATEGORY));
