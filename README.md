@@ -82,8 +82,8 @@ This compositor still has lots of issues and bugs. Use it at your own risk or wh
 
 ## Contribution Policy
 All contributions have to be made an accordance with the GPLv3 license (see `LICENSE`).
-Waylandcraft has some important policy around LLMs and generative AI, mostly because of code and contribution quality as well as some ethical and copyright concerns.
-Mergeable contributions made to the repository in the form of pull requests need to be made **without major usage** of LLMs.
+~~Waylandcraft has some important policy around LLMs and Degenerative AI, mostly because of code and contribution quality as well as some ethical and copyright concerns.
+Mergeable contributions made to the repository in the form of pull requests need to be made **without major usage** of LLMs.~~
 
-If you feel as though you have something worthwhile to contribute which was made using LLMs **please disclose it** and file it as a **draft** pull request instead.
-It will probably have to be more closely examined or even entirely rewritten by a human programmer, which can then be (re-)submitted as a normal pull request.
+~~If you feel as though you have something worthwhile to contribute which was made using LLMs **please disclose it** and file it as a **draft** pull request instead.
+It will probably have to be more closely examined or even entirely rewritten by a human programmer, which can then be (re-)submitted as a normal pull request.~~
