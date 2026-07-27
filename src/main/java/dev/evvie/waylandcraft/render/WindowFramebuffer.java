@@ -96,6 +96,22 @@ public class WindowFramebuffer implements FramebufferRenderable {
 	private static DynamicUniformStorage<WindowInfoUniform> uniformStorage = null;
 	private static boolean debugDamage = false;
 	private static long lastBakeDebugLog = 0;
+	private static boolean pipelinesPrecompiled = false;
+
+	// Custom RenderPipelines can compile lazily on first use; our manual,
+	// low-level createRenderPass calls don't wait for that, so a pipeline
+	// that isn't ready yet can silently produce no fragments on its first
+	// few draws. Force eager compilation the first time we actually have a
+	// GPU device (Window/RenderSystem must already exist by the time any
+	// window is rendered).
+	private static void ensurePipelinesCompiled() {
+		if(pipelinesPrecompiled) return;
+		pipelinesPrecompiled = true;
+
+		RenderSystem.getDevice().precompilePipeline(WINDOW_PIPELINE);
+		RenderSystem.getDevice().precompilePipeline(UNPREMULTIPLY_PIPELINE);
+		RenderSystem.getDevice().precompilePipeline(DAMAGE_PIPELINE);
+	}
 	
 	public final WLCSurface surfaceTree;
 	private TextureTarget tempTarget = null;
@@ -171,6 +187,8 @@ public class WindowFramebuffer implements FramebufferRenderable {
 	}
 	
 	public void render() {
+		ensurePipelinesCompiled();
+
 		updateTarget();
 		if(target == null || tempTarget == null) return;
 		
