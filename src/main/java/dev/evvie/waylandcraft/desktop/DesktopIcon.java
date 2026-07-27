@@ -11,7 +11,7 @@ import org.lwjgl.system.MemoryUtil;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.TextureFormat;
+import com.mojang.blaze3d.GpuFormat;
 
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
@@ -137,7 +137,7 @@ public class DesktopIcon {
 		public void upload() {
 			NativeImage nativeImage = image.nativeImage;
 			
-			this.texture = RenderSystem.getDevice().createTexture("icon texture", GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_COPY_DST, TextureFormat.RGBA8, nativeImage.getWidth(), nativeImage.getHeight(), 1, 1);
+			this.texture = RenderSystem.getDevice().createTexture("icon texture", GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_COPY_DST, GpuFormat.RGBA8_UNORM, nativeImage.getWidth(), nativeImage.getHeight(), 1, 1);
 			RenderSystem.getDevice().createCommandEncoder().writeToTexture(this.texture, nativeImage);
 			this.textureView = RenderSystem.getDevice().createTextureView(this.texture);
 			
