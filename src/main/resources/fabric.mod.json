@@ -1,11 +1,13 @@
 {
 	"schemaVersion": 1,
 	"id": "waylandcraft",
-	"version": "2.0.3",
-	"name": "WaylandCraft",
-	"description": "Wayland Compositor in Minecraft",
+	"version": "3.0",
+	"name": "WaylandCraft++",
+	"description": "Wayland Compositor in Minecraft, plus some improvements. Greetz to EVV1E for the original mod",
 	"authors": [
 		"EVV1E"
+		"twinec"
+		"claude"
 	],
 	"icon": "assets/waylandcraft/icon.png",
 	"environment": "*",
