@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
 
+import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.IndexType;
 import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
@@ -154,11 +155,11 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		if(width != prevWidth || height != prevHeight) destroy();
 		
 		if(tempTarget == null) {
-			tempTarget = new TextureTarget(name() + "-temp", width, height, false);
+			tempTarget = new TextureTarget(name() + "-temp", width, height, false, GpuFormat.RGBA8_UNORM);
 		}
-		
+
 		if(target == null) {
-			target = new TextureTarget(name(), width, height, false);
+			target = new TextureTarget(name(), width, height, false, GpuFormat.RGBA8_UNORM);
 		}
 		
 		if(texture == null) registerTexture();

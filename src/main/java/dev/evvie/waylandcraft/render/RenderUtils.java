@@ -24,7 +24,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.compat.IrisCompat;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeCollector.CustomGeometryRenderer;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -43,9 +43,10 @@ public class RenderUtils {
 			.withSampler("Sampler0")
 			.build();
 
-	private static final RenderPipeline.Snippet WINDOW_PIPELINE_SNIPPET = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+	private static final RenderPipeline.Snippet WINDOW_PIPELINE_SNIPPET = RenderPipeline.builder()
 			.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "core/rendertype_window"))
 			.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "core/rendertype_window"))
+			.withBindGroupLayout(BindGroupLayouts.MATRICES_PROJECTION)
 			.withBindGroupLayout(WINDOW_SAMPLER_LAYOUT)
 			.withDepthStencilState(DepthStencilState.DEFAULT)
 			.withVertexBinding(0, DefaultVertexFormat.POSITION_TEX)

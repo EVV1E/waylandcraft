@@ -19,7 +19,7 @@ public class KeyboardHandlerMixin {
 		int scancode = WaylandCraft.correctScancode(event.scancode());
 		
 		if(Minecraft.getInstance().level == null) return;
-		if(Minecraft.getInstance().screen != null) return;
+		if(Minecraft.getInstance().gui.screen() != null) return;
 		
 		if(WaylandCraft.instance.onKeyPress(windowHandle, event.key(), scancode, action, event.modifiers())) info.cancel();
 	}

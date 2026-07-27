@@ -11,7 +11,6 @@ import org.lwjgl.system.JNI;
 
 import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.PrimitiveTopology;
-import com.mojang.blaze3d.opengl.GlDevice;
 import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.pipeline.BindGroupLayout;
@@ -28,6 +27,7 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
+import dev.evvie.waylandcraft.mixin.IGlDeviceMixin;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
@@ -58,7 +58,7 @@ public abstract class BufferTexture {
 		public BasicBufferTexture(int width, int height, int format) {
 			super(width, height, format);
 			this.id = GlStateManager._genTexture();
-			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "buffertexture-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, id, ((GlDevice) RenderSystem.getDevice()).frameBufferCache());
+			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "buffertexture-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, id, ((IGlDeviceMixin) RenderSystem.getDevice()).frameBufferCache());
 			this.textureView = RenderSystem.getDevice().createTextureView(glTexture);
 		}
 		
@@ -181,7 +181,7 @@ public abstract class BufferTexture {
 			this.handle = handle;
 			this.eglImage = eglImage;
 			
-			target = new TextureTarget("dmabuf-target-" + this.hashCode(), width, height, false);
+			target = new TextureTarget("dmabuf-target-" + this.hashCode(), width, height, false, GpuFormat.RGBA8_UNORM);
 			
 			init();
 		}
@@ -206,7 +206,7 @@ public abstract class BufferTexture {
 			long glEGLImageTargetTexture2DOES = GLFW.glfwGetProcAddress("glEGLImageTargetTexture2DOES");
 			JNI.invokeJV(GL33.GL_TEXTURE_2D, this.eglImage, glEGLImageTargetTexture2DOES);
 			
-			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, eglImageTex, ((GlDevice) RenderSystem.getDevice()).frameBufferCache());
+			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, eglImageTex, ((IGlDeviceMixin) RenderSystem.getDevice()).frameBufferCache());
 			eglImageView = RenderSystem.getDevice().createTextureView(glTexture);
 			
 			copyData();
