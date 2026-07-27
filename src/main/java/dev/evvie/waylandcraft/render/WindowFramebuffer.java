@@ -37,6 +37,7 @@ import dev.evvie.waylandcraft.bridge.WLCSurface.SurfaceDamage;
 import dev.evvie.waylandcraft.bridge.WLCSurface.ViewportSource;
 import dev.evvie.waylandcraft.displays.FramebufferRenderable;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.DynamicUniformStorage;
 import net.minecraft.client.renderer.DynamicUniformStorage.DynamicUniform;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -75,6 +76,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "unpremultiply"))
 		.withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
 		.withColorTargetState(ColorTargetState.DEFAULT)
+		.withBindGroupLayout(BindGroupLayouts.GLOBALS)
 		.withBindGroupLayout(WINDOW_SAMPLER_LAYOUT)
 		.withCull(false)
 		.build()
@@ -228,6 +230,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 
 		try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer unpremultiply", target.getColorTextureView(), Optional.empty())) {
 			pass.setPipeline(UNPREMULTIPLY_PIPELINE);
+			RenderSystem.bindDefaultUniforms(pass);
 			pass.bindTexture("sampler", tempTarget.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
 			pass.draw(0, 3, 1, 0);
 		}

@@ -30,6 +30,7 @@ import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.mixin.IGlDeviceMixin;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
 import dev.evvie.waylandcraft.mixin.IGpuDeviceMixin;
+import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
@@ -160,6 +161,7 @@ public abstract class BufferTexture {
 			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/dmabuf_blit"))
 			.withVertexShader("core/screenquad")
 			.withFragmentShader("core/blit_screen")
+			.withBindGroupLayout(BindGroupLayouts.GLOBALS)
 			.withBindGroupLayout(DMABUF_BLIT_SAMPLER_LAYOUT)
 			.withColorTargetState(new ColorTargetState(new BlendFunction(BlendFactor.ONE, BlendFactor.ONE_MINUS_SRC_ALPHA)))
 			.withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
