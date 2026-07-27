@@ -35,7 +35,10 @@ public class WaylandCraftCommon implements ModInitializer {
 		// isn't present, since verifying its bytecode requires resolving
 		// PolymerItem.
 		if(FabricLoader.getInstance().isModLoaded("polymer-core")) {
+			LOGGER.info("polymer-core detected, registering Polymer compat");
 			PolymerCompat.register();
+		} else {
+			LOGGER.info("polymer-core not detected, skipping Polymer compat");
 		}
 
 		WaylandCraftNetworking.register();

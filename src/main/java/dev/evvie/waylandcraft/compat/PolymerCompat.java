@@ -13,6 +13,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.network.ServerboundGiveItemsPayload;
 
@@ -69,7 +70,9 @@ public class PolymerCompat {
 		// real item/data, not the vanilla-safe fallback.
 		private static boolean hasWaylandCraft(PacketContext context) {
 			ServerPlayer player = PolymerCommonUtils.getPlayer(context);
-			return player != null && ServerPlayNetworking.canSend(player, ServerboundGiveItemsPayload.TYPE);
+			boolean result = player != null && ServerPlayNetworking.canSend(player, ServerboundGiveItemsPayload.TYPE);
+			WaylandCraftCommon.LOGGER.info("PolymerCompat.hasWaylandCraft: player={} result={}", player == null ? "null" : player.getGameProfile().getName(), result);
+			return result;
 		}
 
 	}
