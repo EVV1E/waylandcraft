@@ -1,12 +1,16 @@
 package dev.evvie.waylandcraft.compat;
 
+import eu.pb4.polymer.common.api.PolymerCommonUtils;
 import eu.pb4.polymer.core.api.item.PolymerItem;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.context.PacketContext;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 import dev.evvie.waylandcraft.item.WindowItem;
+import dev.evvie.waylandcraft.network.ServerboundGiveItemsPayload;
 
 /**
  * Registers WaylandCraft's items as Polymer overlays, using
@@ -28,6 +32,15 @@ public class PolymerCompat {
 
 		@Override
 		public Item getPolymerItem(ItemStack itemStack, PacketContext context) {
+			// Only virtualize for clients that don't actually have
+			// WaylandCraft -- players who do (detected via the mod's own
+			// networking channel being registered on their connection)
+			// should see and interact with the real item, not a Spyglass.
+			ServerPlayer player = PolymerCommonUtils.getPlayer(context);
+			if(player != null && ServerPlayNetworking.canSend(player, ServerboundGiveItemsPayload.TYPE)) {
+				return WindowItem.WINDOW;
+			}
+
 			return Items.SPYGLASS;
 		}
 
