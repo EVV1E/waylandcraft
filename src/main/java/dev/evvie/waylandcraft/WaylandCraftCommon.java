@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import dev.evvie.waylandcraft.compat.PolymerCompat;
 import dev.evvie.waylandcraft.item.ServerItemManager;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemInteractionProvider;
@@ -24,6 +25,7 @@ public class WaylandCraftCommon implements ModInitializer {
 	public void onInitialize() {
 		instance = this;
 		WindowItem.register();
+		PolymerCompat.register();
 		WaylandCraftNetworking.register();
 		
 		ServerTickEvents.START_LEVEL_TICK.register(serverItemManager);

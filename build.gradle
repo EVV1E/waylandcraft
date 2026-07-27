@@ -38,6 +38,7 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	compileOnly "maven.modrinth:iris:${project.iris_version}"
+	compileOnly "maven.modrinth:polymer:${project.polymer_version}"
 }
 
 processResources {
