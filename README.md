@@ -17,6 +17,7 @@ Now available on [Modrinth](https://modrinth.com/mod/waylandcraft)!
 Additionally recommended:
 - Prism Launcher
 - Sodium
+- Polymer (server-side only)
 
 ## Important notes for installing / using!!!
 1. Do not use a Minecraft launcher packaged as a flatpak! You won't be able to use your apps.
