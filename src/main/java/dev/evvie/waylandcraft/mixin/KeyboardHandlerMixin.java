@@ -7,7 +7,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import dev.evvie.waylandcraft.WaylandCraft;
-import dev.evvie.waylandcraft.WaylandCraftCommon;
 import net.minecraft.client.KeyboardHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.input.KeyEvent;
@@ -15,12 +14,16 @@ import net.minecraft.client.input.KeyEvent;
 @Mixin(KeyboardHandler.class)
 public class KeyboardHandlerMixin {
 
-	@Inject(method = "keyPress", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/InputConstants;getKey(Lnet/minecraft/client/input/KeyEvent;)Lcom/mojang/blaze3d/platform/InputConstants$Key;", ordinal = 1), cancellable = true)
+	// ordinal=2: the getKey() call at the top of keyPress's unconditional,
+	// screen-independent branch (feeds KeyMapping.set() for key-release
+	// handling on every key). ordinal=1 targets a getKey() call scoped
+	// entirely inside an `if(screen != null)` block handling the case where
+	// Screen#keyPressed() causes the screen itself to close -- it never
+	// fires for ordinary in-game key presses, only for keys like Escape
+	// that close whatever screen is open.
+	@Inject(method = "keyPress", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/InputConstants;getKey(Lnet/minecraft/client/input/KeyEvent;)Lcom/mojang/blaze3d/platform/InputConstants$Key;", ordinal = 2), cancellable = true)
 	public void onPressInGame(long windowHandle, int action, KeyEvent event, CallbackInfo info) {
 		int scancode = WaylandCraft.correctScancode(event.scancode());
-
-		// TEMP DIAGNOSTIC
-		WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] onPressInGame: key={} scancode={} action={} mods={} level={} screen={}", event.key(), scancode, action, event.modifiers(), Minecraft.getInstance().level != null, Minecraft.getInstance().gui.screen());
 
 		if(Minecraft.getInstance().level == null) return;
 		if(Minecraft.getInstance().gui.screen() != null) return;
