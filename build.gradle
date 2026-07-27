@@ -28,6 +28,22 @@ repositories {
 			includeGroup "maven.modrinth"
 		}
 	}
+
+	// Polymer's own repo -- publishes each submodule (e.g. polymer-core)
+	// unbundled. Modrinth's maven only exposes the combined jar-in-jar
+	// "polymer-bundled" artifact, whose classes aren't visible at compile
+	// time since Fabric Loader only unpacks jar-in-jar contents at runtime.
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = "Nucleoid"
+				url = "https://maven.nucleoid.xyz/"
+			}
+		}
+		filter {
+			includeGroup "eu.pb4"
+		}
+	}
 }
 
 dependencies {
@@ -38,6 +54,8 @@ dependencies {
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 	compileOnly "maven.modrinth:iris:${project.iris_version}"
+	compileOnly "eu.pb4:polymer-core:${project.polymer_version}"
+	compileOnly "eu.pb4:polymer-resource-pack:${project.polymer_version}"
 }
 
 processResources {

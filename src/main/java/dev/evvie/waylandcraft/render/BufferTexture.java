@@ -1,33 +1,36 @@
 package dev.evvie.waylandcraft.render;
 
 import java.nio.ByteBuffer;
-import java.util.OptionalInt;
+import java.util.Optional;
 
+import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeEGL;
 import org.lwjgl.opengl.GL33;
 import org.lwjgl.system.JNI;
 
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.opengl.GlTexture;
+import com.mojang.blaze3d.pipeline.BindGroupLayout;
 import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.platform.BlendFactor;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.textures.TextureFormat;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
+import dev.evvie.waylandcraft.mixin.IGlDeviceMixin;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
+import dev.evvie.waylandcraft.mixin.IGpuDeviceMixin;
+import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
@@ -57,7 +60,7 @@ public abstract class BufferTexture {
 		public BasicBufferTexture(int width, int height, int format) {
 			super(width, height, format);
 			this.id = GlStateManager._genTexture();
-			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "buffertexture-" + this.hashCode(), TextureFormat.RGBA8, width, height, 1, 1, id);
+			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "buffertexture-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, id, ((IGlDeviceMixin) ((IGpuDeviceMixin) RenderSystem.getDevice()).getBackend()).invokeFrameBufferCache());
 			this.textureView = RenderSystem.getDevice().createTextureView(glTexture);
 		}
 		
@@ -149,17 +152,32 @@ public abstract class BufferTexture {
 		
 	}
 	
+	private static final BindGroupLayout DMABUF_BLIT_SAMPLER_LAYOUT = BindGroupLayout.builder()
+		.withSampler("InSampler")
+		.build();
+
 	public static final RenderPipeline DMABUF_BLIT = RenderPipelines.register(
 		RenderPipeline.builder()
 			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/dmabuf_blit"))
 			.withVertexShader("core/screenquad")
 			.withFragmentShader("core/blit_screen")
-			.withSampler("InSampler")
-			.withColorTargetState(new ColorTargetState(new BlendFunction(SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA)))
-			.withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
+			.withBindGroupLayout(BindGroupLayouts.GLOBALS)
+			.withBindGroupLayout(DMABUF_BLIT_SAMPLER_LAYOUT)
+			.withColorTargetState(new ColorTargetState(new BlendFunction(BlendFactor.ONE, BlendFactor.ONE_MINUS_SRC_ALPHA)))
+			.withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+			.withCull(false)
 			.build()
 	);
-	
+
+	private static boolean dmabufBlitPipelinePrecompiled = false;
+
+	// See WindowFramebuffer.ensurePipelinesCompiled() for why this exists.
+	private static void ensurePipelineCompiled() {
+		if(dmabufBlitPipelinePrecompiled) return;
+		dmabufBlitPipelinePrecompiled = true;
+		RenderSystem.getDevice().precompilePipeline(DMABUF_BLIT);
+	}
+
 	public static class DmabufTexture extends BufferTexture {
 		
 		public final long handle;
@@ -175,7 +193,7 @@ public abstract class BufferTexture {
 			this.handle = handle;
 			this.eglImage = eglImage;
 			
-			target = new TextureTarget("dmabuf-target-" + this.hashCode(), width, height, false);
+			target = new TextureTarget("dmabuf-target-" + this.hashCode(), width, height, false, GpuFormat.RGBA8_UNORM);
 			
 			init();
 		}
@@ -200,7 +218,7 @@ public abstract class BufferTexture {
 			long glEGLImageTargetTexture2DOES = GLFW.glfwGetProcAddress("glEGLImageTargetTexture2DOES");
 			JNI.invokeJV(GL33.GL_TEXTURE_2D, this.eglImage, glEGLImageTargetTexture2DOES);
 			
-			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), TextureFormat.RGBA8, width, height, 1, 1, eglImageTex);
+			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), GpuFormat.RGBA8_UNORM, width, height, 1, 1, eglImageTex, ((IGlDeviceMixin) ((IGpuDeviceMixin) RenderSystem.getDevice()).getBackend()).invokeFrameBufferCache());
 			eglImageView = RenderSystem.getDevice().createTextureView(glTexture);
 			
 			copyData();
@@ -208,12 +226,14 @@ public abstract class BufferTexture {
 		
 		public void copyData() {
 			if(eglImageView == null) return;
-			
-			try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), OptionalInt.of(0x00000000))) {
+
+			ensurePipelineCompiled();
+
+			try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), Optional.of(new Vector4f(0, 0, 0, 0)))) {
 				renderPass.setPipeline(DMABUF_BLIT);
 				RenderSystem.bindDefaultUniforms(renderPass);
 				renderPass.bindTexture("InSampler", eglImageView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-				renderPass.draw(0, 3);
+				renderPass.draw(3, 1, 0, 0);
 			}
 		}
 		

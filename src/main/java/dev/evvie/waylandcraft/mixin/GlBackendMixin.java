@@ -9,13 +9,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.mojang.blaze3d.opengl.GlBackend;
 
+import dev.evvie.waylandcraft.gpu.EglAvailability;
+
 @Mixin(GlBackend.class)
 public class GlBackendMixin {
-	
+
 	@Inject(method = "setWindowHints", at = @At("TAIL"))
 	public void changeContextApi(CallbackInfo info) {
 		if(Platform.get() != Platform.LINUX) return;
+		if(!EglAvailability.probe()) return;
 		GLFW.glfwWindowHint(GLFW.GLFW_CONTEXT_CREATION_API, GLFW.GLFW_EGL_CONTEXT_API);
 	}
-	
+
 }
