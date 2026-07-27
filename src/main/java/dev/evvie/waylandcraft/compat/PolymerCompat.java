@@ -15,7 +15,7 @@ import net.minecraft.world.item.TooltipFlag;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.item.WindowItem;
-import dev.evvie.waylandcraft.network.ServerboundGiveItemsPayload;
+import dev.evvie.waylandcraft.network.ClientboundHelloPayload;
 
 /**
  * Registers WaylandCraft's items as Polymer overlays, using
@@ -70,7 +70,7 @@ public class PolymerCompat {
 		// real item/data, not the vanilla-safe fallback.
 		private static boolean hasWaylandCraft(PacketContext context) {
 			ServerPlayer player = PolymerCommonUtils.getPlayer(context);
-			boolean result = player != null && ServerPlayNetworking.canSend(player, ServerboundGiveItemsPayload.TYPE);
+			boolean result = player != null && ServerPlayNetworking.canSend(player, ClientboundHelloPayload.TYPE);
 			WaylandCraftCommon.LOGGER.info("PolymerCompat.hasWaylandCraft: player={} result={}", player == null ? "null" : player.getGameProfile().name(), result);
 			return result;
 		}
