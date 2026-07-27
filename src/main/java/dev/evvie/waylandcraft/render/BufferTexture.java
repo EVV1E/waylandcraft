@@ -233,7 +233,7 @@ public abstract class BufferTexture {
 				renderPass.setPipeline(DMABUF_BLIT);
 				RenderSystem.bindDefaultUniforms(renderPass);
 				renderPass.bindTexture("InSampler", eglImageView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-				renderPass.draw(0, 3, 1, 0);
+				renderPass.draw(3, 1, 0, 0);
 			}
 		}
 		

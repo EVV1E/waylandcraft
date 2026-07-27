@@ -6,7 +6,6 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import dev.evvie.waylandcraft.WaylandCraft;
-import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.render.BufferTexture;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.BufferTexture.ShmBufferTexture;
@@ -74,7 +73,6 @@ public class WLCSurface {
 	// Attach a shared memory buffer
 	// The surface width and height are reset to the given buffer dimensions.
 	protected void attachShmBuffer(long ptr, int width, int height, int format, int stride) {
-		WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] attachShmBuffer: {}x{} format={} stride={}", width, height, format, stride);
 		if(this.buffer != null) {
 			this.buffer.release();
 		}
@@ -116,7 +114,6 @@ public class WLCSurface {
 	// Create and attach a new DmabufTexture
 	// MUST only be used when attachDmabuf returns false for this handle!
 	protected void attachNewDmabuf(long handle, long eglImage, int width, int height) {
-		WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] attachNewDmabuf: {}x{}", width, height);
 		DmabufTexture dmabuf = new DmabufTexture(handle, eglImage, width, height);
 		WaylandCraft.instance.bridge.addDmabuf(dmabuf);
 		

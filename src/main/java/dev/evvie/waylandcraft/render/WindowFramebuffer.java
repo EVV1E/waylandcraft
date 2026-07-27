@@ -97,8 +97,6 @@ public class WindowFramebuffer implements FramebufferRenderable {
 	
 	private static DynamicUniformStorage<WindowInfoUniform> uniformStorage = null;
 	private static boolean debugDamage = false;
-	private static long lastBakeDebugLog = 0;
-	private static long lastUnpremultiplyDebugLog = 0;
 	private static boolean pipelinesPrecompiled = false;
 
 	// Custom RenderPipelines can compile lazily on first use; our manual,
@@ -217,7 +215,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 					pass.bindTexture("sampler", element.textureView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
 					pass.setVertexBuffer(0, element.vertexBuffer.slice());
 					pass.setIndexBuffer(element.indexBuffer, element.indexType);
-					pass.drawIndexed(0, 0, element.indexCount, 1, 0);
+					pass.drawIndexed(element.indexCount, 1, 0, 0, 0);
 				}
 			}
 		}
@@ -233,13 +231,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 			pass.setPipeline(UNPREMULTIPLY_PIPELINE);
 			RenderSystem.bindDefaultUniforms(pass);
 			pass.bindTexture("sampler", tempTarget.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-			pass.draw(0, 3, 1, 0);
-
-			long now = System.currentTimeMillis();
-			if(now - lastUnpremultiplyDebugLog > 5000) {
-				lastUnpremultiplyDebugLog = now;
-				WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] unpremultiply draw issued: target={}x{}", width, height);
-			}
+			pass.draw(3, 1, 0, 0);
 		}
 	}
 	
@@ -261,7 +253,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 				for(CompiledBufferDraw element : damageElements) {
 					pass.setVertexBuffer(0, element.vertexBuffer.slice());
 					pass.setIndexBuffer(element.indexBuffer, element.indexType);
-					pass.drawIndexed(0, 0, element.indexCount, 1, 0);
+					pass.drawIndexed(element.indexCount, 1, 0, 0, 0);
 				}
 			}
 		}
@@ -290,12 +282,6 @@ public class WindowFramebuffer implements FramebufferRenderable {
 			crop_y1 = (float) (src.y() / buf.height);
 			crop_x2 = (float) ((src.x() + src.width()) / buf.width);
 			crop_y2 = (float) ((src.y() + src.height()) / buf.height);
-		}
-
-		long now = System.currentTimeMillis();
-		if(now - lastBakeDebugLog > 5000) {
-			lastBakeDebugLog = now;
-			WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] bakeSurface: quad={}x{} bufferPixels={}x{} crop=({},{})-({},{})", w, h, buf.width, buf.height, crop_x1, crop_y1, crop_x2, crop_y2);
 		}
 
 		return new BufferDraw(buf.getTextureView(), x, y, w, h, crop_x1, crop_y1, crop_x2, crop_y2, buf.format != BufferTexture.FORMAT_XRGB8888);
