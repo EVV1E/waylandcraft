@@ -12,7 +12,7 @@ public class WaylandCraftNetworking {
 	public static void register() {
 		PayloadTypeRegistry.serverboundPlay().register(ServerboundGiveItemsPayload.TYPE, ServerboundGiveItemsPayload.CODEC);
 		PayloadTypeRegistry.serverboundPlay().register(ServerboundAliveWindowsPayload.TYPE, ServerboundAliveWindowsPayload.CODEC);
-		PayloadTypeRegistry.playS2C().register(ClientboundHelloPayload.TYPE, ClientboundHelloPayload.CODEC);
+		PayloadTypeRegistry.clientboundPlay().register(ClientboundHelloPayload.TYPE, ClientboundHelloPayload.CODEC);
 		
 		ServerPlayNetworking.registerGlobalReceiver(ServerboundAliveWindowsPayload.TYPE, (payload, ctx) -> {
 			IMyServerPlayer plr = (IMyServerPlayer) ctx.player();
