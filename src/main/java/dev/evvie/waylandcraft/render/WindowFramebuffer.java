@@ -95,6 +95,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 	
 	private static DynamicUniformStorage<WindowInfoUniform> uniformStorage = null;
 	private static boolean debugDamage = false;
+	private static long lastBakeDebugLog = 0;
 	
 	public final WLCSurface surfaceTree;
 	private TextureTarget tempTarget = null;
@@ -262,7 +263,13 @@ public class WindowFramebuffer implements FramebufferRenderable {
 			crop_x2 = (float) ((src.x() + src.width()) / buf.width);
 			crop_y2 = (float) ((src.y() + src.height()) / buf.height);
 		}
-		
+
+		long now = System.currentTimeMillis();
+		if(now - lastBakeDebugLog > 5000) {
+			lastBakeDebugLog = now;
+			WaylandCraftCommon.LOGGER.info("[waylandcraft/debug] bakeSurface: quad={}x{} bufferPixels={}x{} crop=({},{})-({},{})", w, h, buf.width, buf.height, crop_x1, crop_y1, crop_x2, crop_y2);
+		}
+
 		return new BufferDraw(buf.getTextureView(), x, y, w, h, crop_x1, crop_y1, crop_x2, crop_y2, buf.format != BufferTexture.FORMAT_XRGB8888);
 	}
 	
