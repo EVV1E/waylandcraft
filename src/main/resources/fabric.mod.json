@@ -5,8 +5,8 @@
 	"name": "WaylandCraft++",
 	"description": "Wayland Compositor in Minecraft, plus some improvements. Greetz to EVV1E for the original mod",
 	"authors": [
-		"EVV1E"
-		"twinec"
+		"EVV1E",
+		"twinec",
 		"claude"
 	],
 	"icon": "assets/waylandcraft/icon.png",
