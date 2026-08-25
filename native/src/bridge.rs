@@ -28,8 +28,8 @@ use smithay::{
     utils::{Logical, Point, Size},
     wayland::{
         compositor::{
-            BufferAssignment, SubsurfaceCachedState, SurfaceAttributes,
-            SurfaceData, TraversalAction, with_states, Damage,
+            BufferAssignment, Damage, SubsurfaceCachedState, SurfaceAttributes,
+            SurfaceData, TraversalAction, with_states,
             with_states as with_surface_data, with_surface_tree_upward,
         },
         dmabuf::get_dmabuf,
@@ -496,7 +496,8 @@ fn dispatch_clients<'local>(
     instance: jlong,
 ) -> Result<(), BridgeError> {
     let instance = jptr_to_instance!(instance, "dispatchClients")?;
-    instance.event_loop
+    instance
+        .event_loop
         .dispatch(Some(Duration::ZERO), &mut instance.state)
         .unwrap();
 
@@ -537,8 +538,7 @@ fn x11_display<'local>(
     let instance = jptr_to_instance!(instance, "x11Display")?;
     if let Some(ref s) = instance.state.satellite {
         Ok(JString::new(env, s.get_display())?)
-    }
-    else {
+    } else {
         Ok(JString::null())
     }
 }
@@ -984,23 +984,19 @@ fn update_surface_data<'local>(
         for damage in &attr.damage {
             match damage {
                 Damage::Surface(d) => {
-                    jsurface.add_surface_damage(
-                        env,
-                        d.loc.x,
-                        d.loc.y,
-                        d.size.w,
-                        d.size.h
-                    ).unwrap();
-                },
+                    jsurface
+                        .add_surface_damage(
+                            env, d.loc.x, d.loc.y, d.size.w, d.size.h,
+                        )
+                        .unwrap();
+                }
                 Damage::Buffer(d) => {
-                    jsurface.add_buffer_damage(
-                        env,
-                        d.loc.x,
-                        d.loc.y,
-                        d.size.w,
-                        d.size.h
-                    ).unwrap();
-                },
+                    jsurface
+                        .add_buffer_damage(
+                            env, d.loc.x, d.loc.y, d.size.w, d.size.h,
+                        )
+                        .unwrap();
+                }
             }
         }
         attr.damage.clear();

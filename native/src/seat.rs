@@ -320,7 +320,9 @@ impl WLCSeatState {
 
     pub fn pointer_axis(&self, axis: Axis, value: f64) {
         let val120 = (value * 120.0).floor() as i32;
-        if val120 == 0 { return }
+        if val120 == 0 {
+            return;
+        }
 
         self.for_all_pointers(|pointer, data| {
             if data.focus.is_some() {

@@ -7,7 +7,7 @@ pub fn spawn<A>(
     env: Vec<(OsString, OsString)>,
 ) -> Result<(), ()>
 where
-    A: IntoIterator<Item = String>
+    A: IntoIterator<Item = String>,
 {
     let mut command = Command::new(cmd);
     command

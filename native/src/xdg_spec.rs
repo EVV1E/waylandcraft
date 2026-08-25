@@ -136,7 +136,9 @@ impl XDGSpecHelper {
         }
 
         if entry.terminal() {
-            if self.preferred_terminal.is_empty() { return None }
+            if self.preferred_terminal.is_empty() {
+                return None;
+            }
             exec.push_front("-e".into());
             exec.push_front(self.preferred_terminal.clone());
         }
