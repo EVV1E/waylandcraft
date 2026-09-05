@@ -14,12 +14,12 @@ import net.minecraft.client.input.KeyEvent;
 @Mixin(KeyboardHandler.class)
 public class KeyboardHandlerMixin {
 	
-	@Inject(method = "keyPress", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/platform/InputConstants;getKey(Lnet/minecraft/client/input/KeyEvent;)Lcom/mojang/blaze3d/platform/InputConstants$Key;", ordinal = 1), cancellable = true)
+	@Inject(method = "keyPress", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/Gui;screen()Lnet/minecraft/client/gui/screens/Screen;", ordinal = 0), cancellable = true)
 	public void onPressInGame(long windowHandle, int action, KeyEvent event, CallbackInfo info) {
 		int scancode = WaylandCraft.correctScancode(event.scancode());
 		
 		if(Minecraft.getInstance().level == null) return;
-		if(Minecraft.getInstance().screen != null) return;
+		if(Minecraft.getInstance().gui.screen() != null) return;
 		
 		if(WaylandCraft.instance.onKeyPress(windowHandle, event.key(), scancode, action, event.modifiers())) info.cancel();
 	}

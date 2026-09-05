@@ -27,7 +27,7 @@ public class TitleScreenMixin extends Screen {
 	@Inject(method = "init", at = @At("TAIL"))
 	public void addWaylandCraftButton(CallbackInfo info, @Local(ordinal = 3) int topPos) {
 		SpriteIconButton button = SpriteIconButton
-				.builder(Component.literal("waylandcraft"), (_) -> {Minecraft.getInstance().setScreen(new WaylandCraftSettingsScreen(WaylandCraft.instance));}, true)
+				.builder(Component.literal("waylandcraft"), (_) -> {Minecraft.getInstance().setScreenAndShow(new WaylandCraftSettingsScreen(WaylandCraft.instance));}, true)
 				.sprite(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "logo"), 16, 16)
 				.width(20)
 				.build();

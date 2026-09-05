@@ -201,7 +201,7 @@ public class WaylandCraft implements ClientModInitializer {
 		
 		itemManager.giveItemsIfMissing(bridge.getNewToplevels());
 		
-		boolean inWMScreen = Minecraft.getInstance().screen instanceof WindowManagerScreen;
+		boolean inWMScreen = Minecraft.getInstance().gui.screen() instanceof WindowManagerScreen;
 		
 		// Make sure the toplevels are focused in their respective order and being refocused when a toplevel disappears
 		if(!inWMScreen) {
@@ -268,10 +268,10 @@ public class WaylandCraft implements ClientModInitializer {
 		if(keyOpenScreen.consumeClick()) {
 			keyboardCaptureMode = KeyboardCaptureMode.NONE;
 			pointerGrabs.releaseAll();
-			minecraft.setScreen(new WindowManagerScreen(WaylandCraft.instance));
+			minecraft.setScreenAndShow(new WindowManagerScreen(WaylandCraft.instance));
 		}
 		else if(keyOpenAppLauncher.consumeClick()) {
-			minecraft.setScreen(new AppLauncherScreen(WaylandCraft.instance));
+			minecraft.setScreenAndShow(new AppLauncherScreen(WaylandCraft.instance));
 		}
 		else if(keyCaptureKeyboard.consumeClick()) {
 			enableKeyboardCapture(false);
@@ -279,8 +279,8 @@ public class WaylandCraft implements ClientModInitializer {
 	}
 	
 	private void onClientJoin(ClientPacketListener listener, PacketSender sender, Minecraft minecraft) {
-		minecraft.getChatListener().handleSystemMessage(Component.literal("Wayland compositor running on " + waylandSocket), false);
-		if(x11Display != null) minecraft.getChatListener().handleSystemMessage(Component.literal("xwayland-satellite running on " + x11Display), false);
+		minecraft.gui.chatListener().handleSystemMessage(Component.literal("Wayland compositor running on " + waylandSocket), false);
+		if(x11Display != null) minecraft.gui.chatListener().handleSystemMessage(Component.literal("xwayland-satellite running on " + x11Display), false);
 		itemManager.giveItemsIfMissing(bridge.getMappedToplevels());
 	}
 	
@@ -461,10 +461,10 @@ public class WaylandCraft implements ClientModInitializer {
 		this.hoveredDisplay = null;
 		this.overridePickBlock = false;
 		
-		if(Minecraft.getInstance().screen instanceof WindowManagerScreen) {
+		if(Minecraft.getInstance().gui.screen() instanceof WindowManagerScreen) {
 			return;
 		}
-		else if(Minecraft.getInstance().screen != null) {
+		else if(Minecraft.getInstance().gui.screen() != null) {
 			pointerGrabs.releaseAll();
 			bridge.sendMotionOutside();
 			return;

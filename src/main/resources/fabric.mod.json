@@ -9,6 +9,7 @@
 	],
 	"icon": "assets/waylandcraft/icon.png",
 	"environment": "*",
+	"accessWidener": "waylandcraft.classtweaker",
 	"entrypoints": {
 		"main": [
 			"dev.evvie.waylandcraft.WaylandCraftCommon"
@@ -26,7 +27,7 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.19.2",
-		"minecraft": "~26.1.2",
+		"minecraft": "~26.2",
 		"java": ">=25",
 		"fabric-api": "*"
 	}

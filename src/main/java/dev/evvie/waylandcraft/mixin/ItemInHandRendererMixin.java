@@ -21,8 +21,8 @@ import net.minecraft.world.item.ItemStack;
 @Mixin(ItemInHandRenderer.class)
 public abstract class ItemInHandRendererMixin {
 	
-	@Inject(method = "renderArmWithItem", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V"), cancellable = true)
-	public void renderArmWithItem(
+	@Inject(method = "submitArmWithItem", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V"), cancellable = true)
+	public void submitArmWithItem(
 		AbstractClientPlayer player,
 		float partialTicks,
 		float yaw,

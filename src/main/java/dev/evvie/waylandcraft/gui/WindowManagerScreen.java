@@ -229,7 +229,7 @@ public class WindowManagerScreen extends Screen {
 				makes fullscreen windows properly take up the whole screen, \
 				disabling all of the other UI elements.
 				""";
-		minecraft.setScreen(new PopupScreen.Builder(this, Component.literal("Window Manager Help"))
+		minecraft.setScreenAndShow(new PopupScreen.Builder(this, Component.literal("Window Manager Help"))
 				.addMessage(Component.literal(message))
 				.addButton(Component.literal("Done"), (popup) -> popup.onClose())
 				.build());

@@ -10,7 +10,7 @@
 		"ItemInHandRendererMixin",
 		"IItemInHandRendererMixin",
 		"MinecraftMixin",
-		"GuiMixin",
+		"HudMixin",
 		"NativeImageMixin",
 		"ItemFrameRendererMixin",
 		"ItemFrameRenderStateMixin",
