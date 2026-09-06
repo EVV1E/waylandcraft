@@ -45,6 +45,7 @@ import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelExtractionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
@@ -130,7 +131,7 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		
 		LevelRenderEvents.COLLECT_SUBMITS.register(this::renderWorld);
-		LevelRenderEvents.END_EXTRACTION.register(this::updateWorld);
+		LevelExtractionEvents.END_EXTRACTION.register(this::updateWorld);
 		ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
 		ClientPlayConnectionEvents.JOIN.register(this::onClientJoin);
 		ClientPlayConnectionEvents.DISCONNECT.register(this::onClientDisconnect);
