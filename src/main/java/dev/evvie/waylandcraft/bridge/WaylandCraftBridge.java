@@ -18,7 +18,9 @@ import org.lwjgl.system.Platform;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
+import dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
+import dev.evvie.waylandcraft.egl.EGLHelper;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import dev.evvie.waylandcraft.utils.CursorShape;
@@ -112,7 +114,10 @@ public class WaylandCraftBridge {
 			throw new RuntimeException("Failed to get EGL display!");
 		}
 		
-		long handle = init(GLFW.Functions.GetProcAddress, eglDisplay);
+		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
+		DmabufFormat[] formats = EGLHelper.queryDmabufFormats(eglDisplay).toArray(DmabufFormat[]::new);
+		
+		long handle = init(GLFW.Functions.GetProcAddress, eglDisplay, renderNodePath, formats);
 		WaylandCraftBridge bridge = new WaylandCraftBridge(handle);
 		
 		// Add shutdown thread to clean up resources on normal exit
@@ -700,7 +705,7 @@ public class WaylandCraftBridge {
 	
 	public static record ResizeRequest(int serial, int edges) {}
 	
-	private static native long init(long glfwGetProcAddress, long eglDisplay);
+	private static native long init(long glfwGetProcAddress, long eglDisplay, String renderNodePath, DmabufFormat[] formats);
 	private static native void shutdown(long instance);
 	private static native void dispatchClients(long instance);
 	private static native void flushDisplay(long instance);

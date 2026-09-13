@@ -12,7 +12,10 @@ use jni::{
     sys::{jboolean, jbyte, jdouble, jint, jlong},
 };
 use smithay::{
-    backend::allocator::{Buffer, dmabuf::WeakDmabuf},
+    backend::allocator::{
+        Buffer, Format, Fourcc, Modifier,
+        dmabuf::WeakDmabuf,
+    },
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
         wayland_server::{
@@ -92,6 +95,7 @@ bind_java_type! {
     type_map {
         WLCSurface => dev.evvie.waylandcraft.bridge.WLCSurface,
         JRawDesktopEntry => dev.evvie.waylandcraft.desktop.RawDesktopEntry,
+        JDmabufFormat => dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat,
     },
 
     methods {
@@ -100,7 +104,12 @@ bind_java_type! {
 
     native_methods {
         static extern fn init {
-            sig = (glfw_get_proc_address: jlong, egl_display: jlong) -> jlong,
+            sig = (
+                glfw_get_proc_address: jlong,
+                egl_display: jlong,
+                render_node_path: JString,
+                formats: JDmabufFormat[],
+            ) -> jlong,
             fn = init,
         },
         static extern fn shutdown {
@@ -460,19 +469,50 @@ macro_rules! jptr_to_popup {
 }
 
 fn init<'local>(
-    _env: &mut Env<'local>,
+    env: &mut Env<'local>,
     _class: JClass<'local>,
     glfw_get_proc_address: jlong,
     egl_display: jlong,
+    render_node_path: JString<'local>,
+    formats: JObjectArray<'local, JDmabufFormat<'local>>,
 ) -> Result<jlong, BridgeError> {
     let dpy: EGLDisplay = (egl_display as usize) as EGLDisplay;
     let egl = EGLHelper::new(dpy, glfw_get_proc_address as usize);
 
-    let instance = wlc_init(egl).map_err(BridgeError::Init)?;
+    let render_node_path = render_node_path.try_to_string(env)?;
+    let dmabuf_formats = formats_from_java(env, formats)?;
+
+    let instance = wlc_init(
+        egl,
+        render_node_path,
+        dmabuf_formats,
+    ).map_err(BridgeError::Init)?;
     let instance_box = Box::new(instance);
     let ptr = Box::into_raw(instance_box);
 
     Ok(ptr.addr() as jlong)
+}
+
+fn formats_from_java<'local>(
+    env: &mut Env<'local>,
+    jformats: JObjectArray<'local, JDmabufFormat<'local>>,
+) -> Result<Vec<Format>, BridgeError> {
+    let mut formats: Vec<Format> = vec![];
+    let len = jformats.len(env)?;
+    for idx in 0..len {
+        let jformat = jformats.get_element(env, idx)? as JDmabufFormat;
+        let code = jformat.code(env)? as u32;
+        let code = match Fourcc::try_from(code) {
+            Ok(f) => f,
+            Err(_) => continue,
+        };
+        let modifier = jformat.modifier(env)? as u64;
+        let modifier = Modifier::from(modifier);
+
+        formats.push(Format { code, modifier });
+    }
+
+    Ok(formats)
 }
 
 fn shutdown<'local>(
