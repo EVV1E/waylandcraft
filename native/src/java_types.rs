@@ -45,7 +45,7 @@ bind_java_type! {
             egl_image_ptr: jlong,
             width: jint,
             height: jint
-        ),
+        ) -> jboolean,
         pub fn clear_damage(),
         pub fn add_buffer_damage(x: jint, y: jint, width: jint, height: jint),
         pub fn add_surface_damage(x: jint, y: jint, width: jint, height: jint),
@@ -67,6 +67,36 @@ bind_java_type! {
     fields {
         code: jint,
         modifier: jlong
+    },
+}
+
+bind_java_type! {
+    rust_type = JDmabufPlane,
+    rust_type_vis = pub,
+    java_type = dev.evvie.waylandcraft.bridge.dmabuf.DmabufPlane,
+
+    constructors {
+        fn new(
+            fd: jint,
+            offset: jint,
+            stride: jint
+        )
+    },
+}
+
+bind_java_type! {
+    rust_type = JDmabuf,
+    rust_type_vis = pub,
+    java_type = dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf,
+
+    constructors {
+        fn new(
+            width: jint,
+            height: jint,
+            format: jint,
+            modifier: jlong,
+            planes: dev.evvie.waylandcraft.bridge.dmabuf.DmabufPlane[]
+        )
     },
 }
 
