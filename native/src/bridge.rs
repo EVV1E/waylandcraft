@@ -8,13 +8,13 @@ use crate::{WaylandCraft, wlc_init};
 use jni::objects::{JIntArray, JLongArray, JObjectArray, JPrimitiveArray};
 use jni::{
     Env, bind_java_type,
-    objects::{JClass, JString},
+    objects::{JClass, JObject, JString},
     sys::{jboolean, jbyte, jdouble, jint, jlong},
 };
 use smithay::{
     backend::allocator::{
         Buffer, Format, Fourcc, Modifier,
-        dmabuf::WeakDmabuf,
+        dmabuf::{Dmabuf, WeakDmabuf},
     },
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
@@ -49,6 +49,7 @@ use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::time::Duration;
 use thiserror::Error;
+use rustix::fd::AsRawFd;
 
 #[allow(clippy::vec_box)]
 pub(crate) struct BridgeState {
@@ -96,6 +97,8 @@ bind_java_type! {
         WLCSurface => dev.evvie.waylandcraft.bridge.WLCSurface,
         JRawDesktopEntry => dev.evvie.waylandcraft.desktop.RawDesktopEntry,
         JDmabufFormat => dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat,
+        JDmabufPlane => dev.evvie.waylandcraft.bridge.dmabuf.DmabufPlane,
+        JDmabuf => dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf,
     },
 
     methods {
@@ -904,16 +907,63 @@ fn try_attach_dmabuf(
         return BufferAttachResult::Success;
     }
 
+    let jdmabuf = match dmabuf_to_java(env, dmabuf) {
+        Ok(o) => o,
+        Err(_) => return BufferAttachResult::Error,
+    };
+
+    let _ = jdmabuf;
+
     let image = match instance.egl.dmabuf_to_image(dmabuf) {
         Ok(img) => img,
         Err(_) => return BufferAttachResult::Error,
     };
 
-    jsurface
+    let success = jsurface
         .attach_new_dmabuf(env, handle, image.addr() as jlong, width, height)
         .unwrap();
 
-    BufferAttachResult::Success
+    if success {
+        BufferAttachResult::Success
+    } else {
+        BufferAttachResult::Error
+    }
+}
+
+fn dmabuf_to_java<'local>(
+    env: &mut Env<'local>,
+    dmabuf: &Dmabuf,
+) -> Result<JDmabuf<'local>, BridgeError> {
+    let array = JObjectArray::<JDmabufPlane>::new(
+        env,
+        dmabuf.num_planes(),
+        JDmabufPlane::null(),
+    )?;
+
+    let mut handles = dmabuf.handles();
+    let mut offsets = dmabuf.offsets();
+    let mut strides = dmabuf.strides();
+
+    for idx in 0..dmabuf.num_planes() {
+        let handle = handles.next().unwrap().as_raw_fd();
+        let offset = offsets.next().unwrap();
+        let stride = strides.next().unwrap();
+        let plane =
+            JDmabufPlane::new(env, handle, offset as jint, stride as jint)?;
+        array.set_element(env, idx, plane)?;
+    }
+
+    let array = JObjectArray::<JObject>::cast_local(env, array)?;
+    let jdmabuf = JDmabuf::new(
+        env,
+        dmabuf.width() as jint,
+        dmabuf.height() as jint,
+        (dmabuf.format().code as u32) as jint,
+        u64::from(dmabuf.format().modifier) as jlong,
+        array,
+    )?;
+
+    Ok(jdmabuf)
 }
 
 fn dmabufs<'local>(
