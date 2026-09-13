@@ -99,6 +99,24 @@ bind_java_type! {
 }
 
 bind_java_type! {
+    rust_type = JDmabufFeedbackData,
+    rust_type_vis = pub,
+    java_type = dev.evvie.waylandcraft.bridge.dmabuf.DmabufFeedbackData,
+
+    constructors {
+        fn new(
+            drm_device: jlong,
+            formats: dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat[],
+        )
+    },
+
+    fields {
+        drm_device: jlong,
+        formats: dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat[],
+    },
+}
+
+bind_java_type! {
     rust_type = JRawDesktopEntry,
     rust_type_vis = pub,
     java_type = dev.evvie.waylandcraft.desktop.RawDesktopEntry,

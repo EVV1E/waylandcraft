@@ -20,6 +20,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
+import dev.evvie.waylandcraft.bridge.dmabuf.DmabufFeedbackData;
 import dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
 import dev.evvie.waylandcraft.egl.EGL;
@@ -111,12 +112,10 @@ public class WaylandCraftBridge {
 		this.instance = instance;
 	}
 	
-	private static record DmabufFeedbackData(long device, DmabufFormat[] formats) {}
-	
 	public static WaylandCraftBridge start() {
 		DmabufFeedbackData dmabufFeedbackData = initBackend();
 		
-		long handle = init(dmabufFeedbackData.device, dmabufFeedbackData.formats);
+		long handle = init(dmabufFeedbackData);
 		WaylandCraftBridge bridge = new WaylandCraftBridge(handle);
 		
 		// Add shutdown thread to clean up resources on normal exit
@@ -131,7 +130,8 @@ public class WaylandCraftBridge {
 			return initBackendEGL();
 		}
 		
-		throw new RuntimeException("Unsupported backed");
+		WaylandCraftCommon.LOGGER.error("Unsupported graphics backend!");
+		return null;
 	}
 	
 	private static DmabufFeedbackData initBackendEGL() {
@@ -726,7 +726,7 @@ public class WaylandCraftBridge {
 	
 	public static record ResizeRequest(int serial, int edges) {}
 	
-	private static native long init(long drmDevice, DmabufFormat[] formats);
+	private static native long init(@Nullable DmabufFeedbackData dmabufFeedbackData);
 	private static native void shutdown(long instance);
 	private static native void dispatchClients(long instance);
 	private static native void flushDisplay(long instance);

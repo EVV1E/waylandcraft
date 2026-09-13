@@ -42,6 +42,7 @@ use smithay::{
     },
 };
 use std::ffi::OsString;
+use std::mem::MaybeUninit;
 use std::sync::Arc;
 
 mod bridge;
@@ -71,7 +72,7 @@ pub struct WLCState {
     pub viewporter_state: ViewporterState,
     pub single_pixel_buffer_state: SinglePixelBufferState,
     pub dmabuf_state: DmabufState,
-    pub dmabuf_global: DmabufGlobal,
+    pub dmabuf_global: MaybeUninit<DmabufGlobal>,
     pub requests: WindowRequests,
     pub seat: WLCSeatState,
     pub data: WLCDataState,
@@ -96,7 +97,9 @@ pub struct DmabufFeedbackData {
 }
 
 impl WLCState {
-    fn new(disp: DisplayHandle, dmabuf_feedback: DmabufFeedbackData) -> Self {
+    fn new(
+        disp: DisplayHandle, dmabuf_feedback: Option<DmabufFeedbackData>,
+    ) -> Self {
         let compositor_state = CompositorState::new::<WLCState>(&disp);
         let shm_state = ShmState::new::<WLCState>(&disp, vec![]);
         let xdg_state = XdgShellState::new::<WLCState>(&disp);
@@ -105,8 +108,11 @@ impl WLCState {
             SinglePixelBufferState::new::<WLCState>(&disp);
 
         let mut dmabuf_state = DmabufState::new();
-        let dmabuf_global =
-            init_dmabuf(&disp, &mut dmabuf_state, dmabuf_feedback);
+        let mut dmabuf_global = MaybeUninit::uninit();
+
+        if let Some(feedback) = dmabuf_feedback {
+            dmabuf_global.write(init_dmabuf(&disp, &mut dmabuf_state, feedback));
+        }
 
         let seat = WLCSeatState::new();
         seat.create_globals(&disp);
@@ -289,7 +295,7 @@ impl ClientData for WLCClient {
 }
 
 pub(crate) fn wlc_init(
-    dmabuf_feedback: DmabufFeedbackData,
+    dmabuf_feedback: Option<DmabufFeedbackData>,
 ) -> Result<WaylandCraft<'static>, Box<dyn std::error::Error>> {
     let event_loop: EventLoop<WLCState> = EventLoop::try_new()?;
     let display: Display<WLCState> = Display::new()?;
