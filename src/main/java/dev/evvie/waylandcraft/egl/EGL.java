@@ -19,8 +19,38 @@ public class EGL {
 	// Random (non-) EGL constants
 	public static final long NULL = 0L;
 	public static final int EGL_TRUE = 1;
-	public static final int EGL_DRM_RENDER_NODE_FILE_EXT = 0x3377;
+	public static final int EGL_FALSE = 0;
+	public static final long EGL_NONE = 0x3038;
+	public static final long EGL_NO_CONTEXT = 0L;
+	public static final long EGL_NO_IMAGE = 0L;
+	public static final long EGL_WIDTH = 0x3057;
+	public static final long EGL_HEIGHT = 0x3056;
+	public static final long EGL_LINUX_DMA_BUF_EXT = 0x3270;
+	public static final long EGL_LINUX_DRM_FOURCC_EXT = 0x3271;
 	public static final int EGL_DEVICE_EXT = 0x322C;
+	public static final int EGL_DRM_RENDER_NODE_FILE_EXT = 0x3377;
+	
+	public static final long EGL_DMA_BUF_PLANE0_FD_EXT = 0x3272;
+	public static final long EGL_DMA_BUF_PLANE0_OFFSET_EXT = 0x3273;
+	public static final long EGL_DMA_BUF_PLANE0_PITCH_EXT = 0x3274;
+	public static final long EGL_DMA_BUF_PLANE1_FD_EXT = 0x3275;
+	public static final long EGL_DMA_BUF_PLANE1_OFFSET_EXT = 0x3276;
+	public static final long EGL_DMA_BUF_PLANE1_PITCH_EXT = 0x3277;
+	public static final long EGL_DMA_BUF_PLANE2_FD_EXT = 0x3278;
+	public static final long EGL_DMA_BUF_PLANE2_OFFSET_EXT = 0x3279;
+	public static final long EGL_DMA_BUF_PLANE2_PITCH_EXT = 0x327A;
+	public static final long EGL_DMA_BUF_PLANE3_FD_EXT = 0x3440;
+	public static final long EGL_DMA_BUF_PLANE3_OFFSET_EXT = 0x3441;
+	public static final long EGL_DMA_BUF_PLANE3_PITCH_EXT = 0x3442;
+	
+	public static final long EGL_DMA_BUF_PLANE0_MODIFIER_LO_EXT = 0x3443;
+	public static final long EGL_DMA_BUF_PLANE0_MODIFIER_HI_EXT = 0x3444;
+	public static final long EGL_DMA_BUF_PLANE1_MODIFIER_LO_EXT = 0x3445;
+	public static final long EGL_DMA_BUF_PLANE1_MODIFIER_HI_EXT = 0x3446;
+	public static final long EGL_DMA_BUF_PLANE2_MODIFIER_LO_EXT = 0x3447;
+	public static final long EGL_DMA_BUF_PLANE2_MODIFIER_HI_EXT = 0x3448;
+	public static final long EGL_DMA_BUF_PLANE3_MODIFIER_LO_EXT = 0x3449;
+	public static final long EGL_DMA_BUF_PLANE3_MODIFIER_HI_EXT = 0x344A;
 	
 	// EGL error codes
 	public static final int EGL_SUCCESS = 0x3000;
@@ -98,6 +128,24 @@ public class EGL {
 		case EGL_CONTEXT_LOST: return "EGL_CONTEXT_LOST";
 		default: return "<unknown EGL error code>";
 		}
+	}
+	
+	public static long eglCreateImage(long dpy, long ctx, int target, long buffer, PointerBuffer attrib_list) {
+		return neglCreateImage(dpy, ctx, target, buffer, memAddressSafe(attrib_list));
+	}
+	
+	public static long neglCreateImage(long dpy, long ctx, int target, long buffer, long attrib_list) {
+		// EGLImage eglCreateImage (EGLDisplay dpy, EGLContext ctx, EGLenum target, EGLClientBuffer buffer, const EGLAttrib *attrib_list);
+		return JNI.invokePPPPP(dpy, ctx, target, buffer, attrib_list, procCreateImage);
+	}
+	
+	public static boolean eglDestroyImage(long dpy, long image) {
+		return neglDestroyImage(dpy, image) == EGL_TRUE;
+	}
+	
+	public static int neglDestroyImage(long dpy, long image) {
+		// EGLBoolean eglDestroyImage (EGLDisplay dpy, EGLImage image);
+		return JNI.invokePPI(dpy, image, procDestroyImage);
 	}
 	
 	public static String eglQueryDeviceStringEXT(long device, int name) {

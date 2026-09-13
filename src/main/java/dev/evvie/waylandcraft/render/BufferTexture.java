@@ -27,6 +27,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
+import dev.evvie.waylandcraft.egl.EGL;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
@@ -231,9 +232,7 @@ public abstract class BufferTexture {
 			if(eglImageView == null) return;
 			
 			long display = GLFWNativeEGL.glfwGetEGLDisplay();
-			long eglDestroyImage = GLFW.glfwGetProcAddress("eglDestroyImage");
-			JNI.invokePPI(display, this.eglImage, eglDestroyImage);
-			
+			EGL.eglDestroyImage(display, this.eglImage);
 			GlStateManager._deleteTexture(eglImageTex);
 			eglImageView = null;
 		}

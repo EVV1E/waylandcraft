@@ -4,8 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFWNativeEGL;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
+import dev.evvie.waylandcraft.egl.EGL;
+import dev.evvie.waylandcraft.egl.EGLHelper;
 import dev.evvie.waylandcraft.render.BufferTexture;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.BufferTexture.ShmBufferTexture;
@@ -113,9 +117,15 @@ public class WLCSurface {
 	
 	// Create and attach a new DmabufTexture
 	// MUST only be used when attachDmabuf returns false for this handle!
-	protected boolean attachNewDmabuf(long handle, long eglImage, int width, int height) {
-		DmabufTexture dmabuf = new DmabufTexture(handle, eglImage, width, height);
-		WaylandCraft.instance.bridge.addDmabuf(dmabuf);
+	protected boolean attachNewDmabuf(long handle, Dmabuf dmabuf) {
+		long eglImage = EGLHelper.importDmabufToImage(GLFWNativeEGL.glfwGetEGLDisplay(), dmabuf);
+		if(eglImage == EGL.EGL_NO_IMAGE) {
+			System.err.println("Failed to import dmabuf! EGL error: " + EGL.eglGetErrorString());
+			return false;
+		}
+		
+		DmabufTexture dmabufTex = new DmabufTexture(handle, eglImage, dmabuf.width(), dmabuf.height());
+		WaylandCraft.instance.bridge.addDmabuf(dmabufTex);
 		
 		if(!attachDmabuf(handle)) {
 			throw new RuntimeException("Failed to attach newly created dmabuf");
