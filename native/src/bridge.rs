@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 
-use crate::egl::{EGLDisplay, EGLHelper};
 use crate::java_types::*;
 use crate::utils::get_time;
 use crate::xdg_spec::RawDesktopEntry;
@@ -108,8 +107,6 @@ bind_java_type! {
     native_methods {
         static extern fn init {
             sig = (
-                glfw_get_proc_address: jlong,
-                egl_display: jlong,
                 render_node_path: JString,
                 formats: JDmabufFormat[],
             ) -> jlong,
@@ -474,19 +471,13 @@ macro_rules! jptr_to_popup {
 fn init<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    glfw_get_proc_address: jlong,
-    egl_display: jlong,
     render_node_path: JString<'local>,
     formats: JObjectArray<'local, JDmabufFormat<'local>>,
 ) -> Result<jlong, BridgeError> {
-    let dpy: EGLDisplay = (egl_display as usize) as EGLDisplay;
-    let egl = EGLHelper::new(dpy, glfw_get_proc_address as usize);
-
     let render_node_path = render_node_path.try_to_string(env)?;
     let dmabuf_formats = formats_from_java(env, formats)?;
 
     let instance = wlc_init(
-        egl,
         render_node_path,
         dmabuf_formats,
     ).map_err(BridgeError::Init)?;
@@ -915,17 +906,6 @@ fn try_attach_dmabuf(
     let success = jsurface
         .attach_new_dmabuf(env, handle, jdmabuf)
         .unwrap();
-
-    /*
-    let image = match instance.egl.dmabuf_to_image(dmabuf) {
-        Ok(img) => img,
-        Err(_) => return BufferAttachResult::Error,
-    };
-
-    let success = jsurface
-        .attach_new_dmabuf(env, handle, image.addr() as jlong, width, height)
-        .unwrap();
-    */
 
     if success {
         BufferAttachResult::Success
