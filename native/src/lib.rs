@@ -6,7 +6,10 @@ use crate::satellite::SatelliteState;
 use crate::seat::WLCSeatState;
 use crate::xdg_spec::XDGSpecHelper;
 use smithay::{
-    backend::allocator::dmabuf::Dmabuf,
+    backend::{
+        allocator::{Format, dmabuf::Dmabuf},
+        drm::DrmNode,
+    },
     delegate_compositor, delegate_dmabuf, delegate_shm,
     delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_shell,
     reexports::{
@@ -93,7 +96,12 @@ pub struct WindowRequests {
 }
 
 impl WLCState {
-    fn new(disp: DisplayHandle, egl: &EGLHelper) -> Self {
+    fn new(
+        disp: DisplayHandle,
+        egl: &EGLHelper,
+        render_node_path: String,
+        dmabuf_formats: Vec<Format>,
+    ) -> Self {
         let compositor_state = CompositorState::new::<WLCState>(&disp);
         let shm_state = ShmState::new::<WLCState>(&disp, vec![]);
         let xdg_state = XdgShellState::new::<WLCState>(&disp);
@@ -101,8 +109,17 @@ impl WLCState {
         let single_pixel_buffer_state =
             SinglePixelBufferState::new::<WLCState>(&disp);
 
+        /* Code path switch Java/Rust impl */
+        //let render_node_path = egl.get_render_node();
+        //let dmabuf_formats = egl.query_dmabuf_formats();
+
         let mut dmabuf_state = DmabufState::new();
-        let dmabuf_global = init_dmabuf(&disp, &mut dmabuf_state, egl);
+        let dmabuf_global = init_dmabuf(
+            &disp,
+            &mut dmabuf_state,
+            render_node_path,
+            dmabuf_formats,
+        );
 
         let seat = WLCSeatState::new();
         seat.create_globals(&disp);
@@ -135,12 +152,12 @@ impl WLCState {
 fn init_dmabuf(
     disp: &DisplayHandle,
     state: &mut DmabufState,
-    egl: &EGLHelper,
+    render_node_path: String,
+    formats: Vec<Format>,
 ) -> DmabufGlobal {
-    let render_node =
-        egl.get_render_node().expect("Failed to get render node!");
+    let render_node = DrmNode::from_path(render_node_path)
+        .expect("Failed to get render node!");
     let render_node_id = render_node.dev_id();
-    let formats = egl.query_dmabuf_formats();
 
     let feedback = DmabufFeedbackBuilder::new(render_node_id, formats)
         .build()
@@ -290,12 +307,19 @@ impl ClientData for WLCClient {
 
 pub(crate) fn wlc_init(
     egl: EGLHelper,
+    render_node_path: String,
+    dmabuf_formats: Vec<Format>,
 ) -> Result<WaylandCraft<'static>, Box<dyn std::error::Error>> {
     let event_loop: EventLoop<WLCState> = EventLoop::try_new()?;
     let display: Display<WLCState> = Display::new()?;
     let socket = ListeningSocketSource::new_auto()?;
 
-    let mut state = WLCState::new(display.handle(), &egl);
+    let mut state = WLCState::new(
+        display.handle(),
+        &egl,
+        render_node_path,
+        dmabuf_formats,
+    );
     state.socket = socket.socket_name().to_os_string();
 
     let ev_handle = event_loop.handle();

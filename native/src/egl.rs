@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 
-use smithay::backend::{
-    allocator::{Buffer, Format, Fourcc, Modifier, dmabuf::Dmabuf},
-    drm::{DrmNode, NodeType},
+use smithay::backend::allocator::{
+    Buffer, Format, Fourcc, Modifier, dmabuf::Dmabuf
 };
 use std::ffi::{CStr, CString};
 use std::os::fd::AsRawFd;
@@ -125,7 +124,7 @@ impl EGLHelper {
         }
     }
 
-    pub fn get_render_node(&self) -> Result<DrmNode, ()> {
+    pub fn get_render_node(&self) -> String {
         let mut dev_ret: EGLAttrib = 0;
 
         if (self.eglQueryDisplayAttribEXT)(
@@ -134,11 +133,10 @@ impl EGLHelper {
             &mut dev_ret,
         ) != EGL_TRUE
         {
-            eprintln!(
+            panic!(
                 "Failed to query EGL_DEVICE_EXT! Error: {:x}",
                 (self.eglGetError)(),
             );
-            return Err(());
         }
 
         let dev: EGLDeviceEXT = (dev_ret as usize) as EGLDeviceEXT;
@@ -149,40 +147,13 @@ impl EGLHelper {
 
         if !path_ptr.is_null() {
             let path = unsafe { CStr::from_ptr(path_ptr).to_str().unwrap() };
-            return DrmNode::from_path(path).map_err(|_| ());
+            return path.to_string();
         }
 
-        eprintln!(
+        panic!(
             "Querying EGL_DRM_RENDER_NODE_FILE_EXT failed! Error: {:x}",
             (self.eglGetError)(),
         );
-
-        // Fall back by getting the EGL DRM device
-        let drm_path_ptr =
-            (self.eglQueryDeviceStringEXT)(dev, EGL_DRM_DEVICE_FILE_EXT);
-
-        if drm_path_ptr.is_null() {
-            eprintln!(
-                "Querying EGL_DRM_DEVICE_FILE_EXT failed! Error: {:x}",
-                (self.eglGetError)(),
-            );
-            return Err(());
-        }
-
-        let drm_path =
-            unsafe { CStr::from_ptr(drm_path_ptr).to_str().unwrap() };
-
-        let drm_device = DrmNode::from_path(drm_path).map_err(|_| ())?;
-
-        // Try to get a new render node
-        if let Some(render_node) = drm_device.node_with_type(NodeType::Render) {
-            return render_node.map_err(|_| ());
-        }
-
-        eprintln!("Failed to get render node from drm device!");
-
-        // If all else fails, just return the drm master node
-        Ok(drm_device)
     }
 
     pub fn dmabuf_to_image(&self, dmabuf: &Dmabuf) -> Result<EGLImage, ()> {

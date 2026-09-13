@@ -53,6 +53,24 @@ bind_java_type! {
 }
 
 bind_java_type! {
+    rust_type = JDmabufFormat,
+    rust_type_vis = pub,
+    java_type = dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat,
+
+    constructors {
+        fn new(
+            code: jint,
+            modifier: jlong
+        )
+    },
+
+    fields {
+        code: jint,
+        modifier: jlong
+    },
+}
+
+bind_java_type! {
     rust_type = JRawDesktopEntry,
     rust_type_vis = pub,
     java_type = dev.evvie.waylandcraft.desktop.RawDesktopEntry,
