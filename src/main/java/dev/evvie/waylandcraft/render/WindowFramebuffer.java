@@ -50,8 +50,8 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"))
 		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"))
 		.withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
-		.withSampler("sampler")
-		.withUniform("window_info", UniformType.UNIFORM_BUFFER)
+		.withSampler("Sampler0")
+		.withUniform("WindowInfo", UniformType.UNIFORM_BUFFER)
 		.withColorTargetState(new ColorTargetState(new BlendFunction(SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA)))
 		.withCull(false)
 		.build()
@@ -64,7 +64,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "unpremultiply"))
 		.withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
 		.withColorTargetState(ColorTargetState.DEFAULT)
-		.withSampler("sampler")
+		.withSampler("Sampler0")
 		.build()
 	);
 	
@@ -74,7 +74,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		.withVertexShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"))
 		.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window_damage"))
 		.withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
-		.withUniform("window_info", UniformType.UNIFORM_BUFFER)
+		.withUniform("WindowInfo", UniformType.UNIFORM_BUFFER)
 		.withColorTargetState(new ColorTargetState(new BlendFunction(SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA)))
 		.withCull(false)
 		.build()
@@ -178,8 +178,8 @@ public class WindowFramebuffer implements FramebufferRenderable {
 			try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer", tempTarget.getColorTextureView(), OptionalInt.of(0x00000000))) {
 				pass.setPipeline(WINDOW_PIPELINE);
 				for(CompiledBufferDraw element : elements) {
-					pass.setUniform("window_info", element.alpha ? alphaUniforms : opaqueUniforms);
-					pass.bindTexture("sampler", element.textureView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+					pass.setUniform("WindowInfo", element.alpha ? alphaUniforms : opaqueUniforms);
+					pass.bindTexture("Sampler0", element.textureView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
 					pass.setVertexBuffer(0, element.vertexBuffer);
 					pass.setIndexBuffer(element.indexBuffer, element.indexType);
 					pass.drawIndexed(0, 0, element.indexCount, 1);
@@ -196,7 +196,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		
 		try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer unpremultiply", target.getColorTextureView(), OptionalInt.empty())) {
 			pass.setPipeline(UNPREMULTIPLY_PIPELINE);
-			pass.bindTexture("sampler", tempTarget.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+			pass.bindTexture("Sampler0", tempTarget.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
 			pass.draw(0, 3);
 		}
 	}
@@ -215,7 +215,7 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		try {
 			try(RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "window framebuffer damage", tempTarget.getColorTextureView(), OptionalInt.empty())) {
 				pass.setPipeline(DAMAGE_PIPELINE);
-				pass.setUniform("window_info", opaqueUniforms);
+				pass.setUniform("WindowInfo", opaqueUniforms);
 				for(CompiledBufferDraw element : damageElements) {
 					pass.setVertexBuffer(0, element.vertexBuffer);
 					pass.setIndexBuffer(element.indexBuffer, element.indexType);

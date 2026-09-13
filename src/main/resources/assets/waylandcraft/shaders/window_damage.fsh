@@ -1,4 +1,4 @@
-#version 150
+#version 330
 
 out vec4 fragColor;
 
