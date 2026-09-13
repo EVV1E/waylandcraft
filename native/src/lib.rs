@@ -4,11 +4,9 @@ use crate::output::WLCOutput;
 use crate::satellite::SatelliteState;
 use crate::seat::WLCSeatState;
 use crate::xdg_spec::XDGSpecHelper;
+use libc::dev_t;
 use smithay::{
-    backend::{
-        allocator::{Format, dmabuf::Dmabuf},
-        drm::DrmNode,
-    },
+    backend::allocator::{Format, dmabuf::Dmabuf},
     delegate_compositor, delegate_dmabuf, delegate_shm,
     delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_shell,
     reexports::{
@@ -92,12 +90,13 @@ pub struct WindowRequests {
     pub resize_interactive: Vec<(Serial, ResizeEdge)>,
 }
 
+pub struct DmabufFeedbackData {
+    device: dev_t,
+    formats: Vec<Format>,
+}
+
 impl WLCState {
-    fn new(
-        disp: DisplayHandle,
-        render_node_path: String,
-        dmabuf_formats: Vec<Format>,
-    ) -> Self {
+    fn new(disp: DisplayHandle, dmabuf_feedback: DmabufFeedbackData) -> Self {
         let compositor_state = CompositorState::new::<WLCState>(&disp);
         let shm_state = ShmState::new::<WLCState>(&disp, vec![]);
         let xdg_state = XdgShellState::new::<WLCState>(&disp);
@@ -106,12 +105,8 @@ impl WLCState {
             SinglePixelBufferState::new::<WLCState>(&disp);
 
         let mut dmabuf_state = DmabufState::new();
-        let dmabuf_global = init_dmabuf(
-            &disp,
-            &mut dmabuf_state,
-            render_node_path,
-            dmabuf_formats,
-        );
+        let dmabuf_global =
+            init_dmabuf(&disp, &mut dmabuf_state, dmabuf_feedback);
 
         let seat = WLCSeatState::new();
         seat.create_globals(&disp);
@@ -144,16 +139,12 @@ impl WLCState {
 fn init_dmabuf(
     disp: &DisplayHandle,
     state: &mut DmabufState,
-    render_node_path: String,
-    formats: Vec<Format>,
+    feedback_data: DmabufFeedbackData,
 ) -> DmabufGlobal {
-    let render_node = DrmNode::from_path(render_node_path)
-        .expect("Failed to get render node!");
-    let render_node_id = render_node.dev_id();
-
-    let feedback = DmabufFeedbackBuilder::new(render_node_id, formats)
-        .build()
-        .unwrap();
+    let feedback =
+        DmabufFeedbackBuilder::new(feedback_data.device, feedback_data.formats)
+            .build()
+            .unwrap();
 
     state.create_global_with_default_feedback::<WLCState>(disp, &feedback)
 }
@@ -298,18 +289,13 @@ impl ClientData for WLCClient {
 }
 
 pub(crate) fn wlc_init(
-    render_node_path: String,
-    dmabuf_formats: Vec<Format>,
+    dmabuf_feedback: DmabufFeedbackData,
 ) -> Result<WaylandCraft<'static>, Box<dyn std::error::Error>> {
     let event_loop: EventLoop<WLCState> = EventLoop::try_new()?;
     let display: Display<WLCState> = Display::new()?;
     let socket = ListeningSocketSource::new_auto()?;
 
-    let mut state = WLCState::new(
-        display.handle(),
-        render_node_path,
-        dmabuf_formats,
-    );
+    let mut state = WLCState::new(display.handle(), dmabuf_feedback);
     state.socket = socket.socket_name().to_os_string();
 
     let ev_handle = event_loop.handle();

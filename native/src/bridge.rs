@@ -3,17 +3,21 @@
 use crate::java_types::*;
 use crate::utils::get_time;
 use crate::xdg_spec::RawDesktopEntry;
-use crate::{WaylandCraft, wlc_init};
+use crate::{DmabufFeedbackData, WaylandCraft, wlc_init};
 use jni::objects::{JIntArray, JLongArray, JObjectArray, JPrimitiveArray};
 use jni::{
     Env, bind_java_type,
     objects::{JClass, JObject, JString},
     sys::{jboolean, jbyte, jdouble, jint, jlong},
 };
+use rustix::{fd::AsRawFd, fs::makedev};
 use smithay::{
-    backend::allocator::{
-        Buffer, Format, Fourcc, Modifier,
-        dmabuf::{Dmabuf, WeakDmabuf},
+    backend::{
+        allocator::{
+            Buffer, Format, Fourcc, Modifier,
+            dmabuf::{Dmabuf, WeakDmabuf},
+        },
+        drm::{CreateDrmNodeError, DrmNode},
     },
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
@@ -48,7 +52,6 @@ use std::ops::DerefMut;
 use std::path::PathBuf;
 use std::time::Duration;
 use thiserror::Error;
-use rustix::fd::AsRawFd;
 
 #[allow(clippy::vec_box)]
 pub(crate) struct BridgeState {
@@ -107,7 +110,7 @@ bind_java_type! {
     native_methods {
         static extern fn init {
             sig = (
-                render_node_path: JString,
+                drm_device: jlong,
                 formats: JDmabufFormat[],
             ) -> jlong,
             fn = init,
@@ -399,6 +402,14 @@ bind_java_type! {
             sig = (instance: jlong) -> jlong,
             fn = dnd_icon,
         },
+        static extern fn drm_device_by_path {
+            sig = (path: JString) -> jlong,
+            fn = drm_device_by_path,
+        },
+        static extern fn drm_device_by_major_minor {
+            sig = (major: jint, minor: jint) -> jlong,
+            fn = drm_device_by_major_minor,
+        },
     },
 }
 
@@ -430,6 +441,8 @@ enum BridgeError {
     NonPositiveWidth,
     #[error("Height cannot be below 1")]
     NonPositiveHeight,
+    #[error(transparent)]
+    DrmNodeError(#[from] CreateDrmNodeError),
 }
 
 macro_rules! jptr_to_instance {
@@ -471,20 +484,41 @@ macro_rules! jptr_to_popup {
 fn init<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    render_node_path: JString<'local>,
+    drm_device: jlong,
     formats: JObjectArray<'local, JDmabufFormat<'local>>,
 ) -> Result<jlong, BridgeError> {
-    let render_node_path = render_node_path.try_to_string(env)?;
     let dmabuf_formats = formats_from_java(env, formats)?;
 
-    let instance = wlc_init(
-        render_node_path,
-        dmabuf_formats,
-    ).map_err(BridgeError::Init)?;
+    let dmabuf_feedback = DmabufFeedbackData {
+        device: drm_device as libc::dev_t,
+        formats: dmabuf_formats,
+    };
+    let instance = wlc_init(dmabuf_feedback).map_err(BridgeError::Init)?;
     let instance_box = Box::new(instance);
     let ptr = Box::into_raw(instance_box);
 
     Ok(ptr.addr() as jlong)
+}
+
+fn drm_device_by_path<'local>(
+    env: &mut Env<'local>,
+    _class: JClass<'local>,
+    path: JString<'local>,
+) -> Result<jlong, BridgeError> {
+    let path = path.try_to_string(env)?;
+    let node = DrmNode::from_path(path)?;
+    Ok(node.dev_id() as jlong)
+}
+
+fn drm_device_by_major_minor<'local>(
+    _env: &mut Env<'local>,
+    _class: JClass<'local>,
+    major: jint,
+    minor: jint,
+) -> Result<jlong, BridgeError> {
+    let id = makedev(major as u32, minor as u32);
+    let node = DrmNode::from_dev_id(id)?;
+    Ok(node.dev_id() as jlong)
 }
 
 fn formats_from_java<'local>(
@@ -903,9 +937,7 @@ fn try_attach_dmabuf(
         Err(_) => return BufferAttachResult::Error,
     };
 
-    let success = jsurface
-        .attach_new_dmabuf(env, handle, jdmabuf)
-        .unwrap();
+    let success = jsurface.attach_new_dmabuf(env, handle, jdmabuf).unwrap();
 
     if success {
         BufferAttachResult::Success

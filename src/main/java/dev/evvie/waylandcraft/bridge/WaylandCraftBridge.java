@@ -14,6 +14,10 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.Platform;
 
+import com.mojang.blaze3d.opengl.GlDevice;
+import com.mojang.blaze3d.systems.GpuDeviceBackend;
+import com.mojang.blaze3d.systems.RenderSystem;
+
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat;
@@ -107,7 +111,30 @@ public class WaylandCraftBridge {
 		this.instance = instance;
 	}
 	
+	private static record DmabufFeedbackData(long device, DmabufFormat[] formats) {}
+	
 	public static WaylandCraftBridge start() {
+		DmabufFeedbackData dmabufFeedbackData = initBackend();
+		
+		long handle = init(dmabufFeedbackData.device, dmabufFeedbackData.formats);
+		WaylandCraftBridge bridge = new WaylandCraftBridge(handle);
+		
+		// Add shutdown thread to clean up resources on normal exit
+		Runtime.getRuntime().addShutdownHook(new Thread(bridge::shutdownHook));
+		
+		return bridge;
+	}
+	
+	private static DmabufFeedbackData initBackend() {
+		GpuDeviceBackend deviceBackend = RenderSystem.getDevice().backend;
+		if(deviceBackend instanceof GlDevice) {
+			return initBackendEGL();
+		}
+		
+		throw new RuntimeException("Unsupported backed");
+	}
+	
+	private static DmabufFeedbackData initBackendEGL() {
 		long eglDisplay = EGL.getEGLDisplay();
 		if(eglDisplay == 0) {
 			throw new RuntimeException("Failed to get EGL display!");
@@ -115,14 +142,9 @@ public class WaylandCraftBridge {
 		
 		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
 		DmabufFormat[] formats = EGLHelper.queryDmabufFormats(eglDisplay).toArray(DmabufFormat[]::new);
+		long device = drmDeviceByPath(renderNodePath);
 		
-		long handle = init(renderNodePath, formats);
-		WaylandCraftBridge bridge = new WaylandCraftBridge(handle);
-		
-		// Add shutdown thread to clean up resources on normal exit
-		Runtime.getRuntime().addShutdownHook(new Thread(bridge::shutdownHook));
-		
-		return bridge;
+		return new DmabufFeedbackData(device, formats);
 	}
 	
 	private void shutdownHook() {
@@ -704,7 +726,7 @@ public class WaylandCraftBridge {
 	
 	public static record ResizeRequest(int serial, int edges) {}
 	
-	private static native long init(String renderNodePath, DmabufFormat[] formats);
+	private static native long init(long drmDevice, DmabufFormat[] formats);
 	private static native void shutdown(long instance);
 	private static native void dispatchClients(long instance);
 	private static native void flushDisplay(long instance);
@@ -837,5 +859,8 @@ public class WaylandCraftBridge {
 	private static native void dndDrop(long instance);
 	private static native void dndMotion(long instance, long surfaceHandle, double x, double y);
 	private static native long dndIcon(long instance);
+	
+	private static native long drmDeviceByPath(String path);
+	private static native long drmDeviceByMajorMinor(int major, int minor);
 	
 }
