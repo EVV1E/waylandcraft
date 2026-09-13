@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.glfw.GLFWNativeEGL;
 import org.lwjgl.system.JNI;
 import org.lwjgl.system.MemoryUtil;
 
@@ -103,6 +104,10 @@ public class EGL {
 		
 		byte[] data = stream.toByteArray();
 		return new String(data, StandardCharsets.UTF_8);
+	}
+	
+	public static long getEGLDisplay() {
+		return GLFWNativeEGL.glfwGetEGLDisplay();
 	}
 	
 	public static int eglGetError() {

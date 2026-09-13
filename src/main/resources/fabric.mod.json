@@ -9,6 +9,7 @@
 	],
 	"icon": "assets/waylandcraft/icon.png",
 	"environment": "*",
+	"accessWidener": "waylandcraft.classtweaker",
 	"entrypoints": {
 		"main": [
 			"dev.evvie.waylandcraft.WaylandCraftCommon"

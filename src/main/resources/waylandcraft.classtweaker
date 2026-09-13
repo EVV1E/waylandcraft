@@ -1,0 +1,4 @@
+classTweaker  v1  official
+
+accessible    class    com/mojang/blaze3d/opengl/GlDevice
+accessible    field    com/mojang/blaze3d/systems/GpuDevice    backend    Lcom/mojang/blaze3d/systems/GpuDeviceBackend;

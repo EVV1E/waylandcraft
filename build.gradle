@@ -117,6 +117,7 @@ loom {
 			environmentVariable("RUST_BACKTRACE", "1")
 		}
 	}
+	accessWidenerPath = file("src/main/resources/waylandcraft.classtweaker")
 }
 
 // configure the maven publication
