@@ -4,16 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFWNativeEGL;
 
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
-import dev.evvie.waylandcraft.egl.EGL;
-import dev.evvie.waylandcraft.egl.EGLHelper;
 import dev.evvie.waylandcraft.render.BufferTexture;
+import dev.evvie.waylandcraft.render.BufferTexture.DmabufImportFailedException;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
-import dev.evvie.waylandcraft.render.BufferTexture.ShmBufferTexture;
-import dev.evvie.waylandcraft.render.BufferTexture.SinglePixelBufferTexture;
 import net.minecraft.util.Mth;
 
 public class WLCSurface {
@@ -80,7 +76,7 @@ public class WLCSurface {
 		if(this.buffer != null) {
 			this.buffer.release();
 		}
-		this.buffer = new ShmBufferTexture(ptr, width, height, format, stride);
+		this.buffer = BufferTexture.createShmTexture(ptr, width, height, format, stride);
 		this.width = width;
 		this.height = height;
 	}
@@ -91,7 +87,7 @@ public class WLCSurface {
 		if(this.buffer != null) {
 			this.buffer.release();
 		}
-		this.buffer = new SinglePixelBufferTexture(r, g, b, a);
+		this.buffer = BufferTexture.createSinglePixelTexture(r, g, b, a);
 		this.width = 1;
 		this.height = 1;
 	}
@@ -117,15 +113,16 @@ public class WLCSurface {
 	
 	// Create and attach a new DmabufTexture
 	// MUST only be used when attachDmabuf returns false for this handle!
+	// Returns true if the import succeeded.
 	protected boolean attachNewDmabuf(long handle, Dmabuf dmabuf) {
-		long eglImage = EGLHelper.importDmabufToImage(GLFWNativeEGL.glfwGetEGLDisplay(), dmabuf);
-		if(eglImage == EGL.EGL_NO_IMAGE) {
-			System.err.println("Failed to import dmabuf! EGL error: " + EGL.eglGetErrorString());
+		DmabufTexture tex;
+		try {
+			tex = BufferTexture.createDmabufTexture(handle, dmabuf);
+		} catch(DmabufImportFailedException e) {
+			System.err.println("Failed to import dmabuf!");
 			return false;
 		}
-		
-		DmabufTexture dmabufTex = new DmabufTexture(handle, eglImage, dmabuf.width(), dmabuf.height());
-		WaylandCraft.instance.bridge.addDmabuf(dmabufTex);
+		WaylandCraft.instance.bridge.addDmabuf(tex);
 		
 		if(!attachDmabuf(handle)) {
 			throw new RuntimeException("Failed to attach newly created dmabuf");

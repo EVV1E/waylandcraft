@@ -12,13 +12,13 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFWNativeEGL;
 import org.lwjgl.system.Platform;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
+import dev.evvie.waylandcraft.egl.EGL;
 import dev.evvie.waylandcraft.egl.EGLHelper;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
@@ -108,7 +108,7 @@ public class WaylandCraftBridge {
 	}
 	
 	public static WaylandCraftBridge start() {
-		long eglDisplay = GLFWNativeEGL.glfwGetEGLDisplay();
+		long eglDisplay = EGL.getEGLDisplay();
 		if(eglDisplay == 0) {
 			throw new RuntimeException("Failed to get EGL display!");
 		}
@@ -217,9 +217,9 @@ public class WaylandCraftBridge {
 		long[] remainingHandles = dmabufs(instance);
 		ArrayList<DmabufTexture> dmabufs_new = new ArrayList<DmabufTexture>();
 		for(DmabufTexture dmabuf : this.dmabufs) {
-			// If the dmabuf texture is not attached to a real wl_buffer anymore, free the EGL resources
+			// If the dmabuf texture is not attached to a real wl_buffer anymore, free the imported resources
 			boolean retained = ArrayUtils.contains(remainingHandles, dmabuf.handle);
-			if(!retained) dmabuf.freeEGL();
+			if(!retained) dmabuf.doFree();
 			
 			// Remove it from the list and free the texture if no longer attached to any surface
 			boolean used = false;

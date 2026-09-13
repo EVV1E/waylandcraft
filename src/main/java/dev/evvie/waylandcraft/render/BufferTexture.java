@@ -5,7 +5,6 @@ import java.util.Optional;
 
 import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.glfw.GLFWNativeEGL;
 import org.lwjgl.opengl.GL33;
 import org.lwjgl.system.JNI;
 
@@ -19,6 +18,7 @@ import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.systems.GpuDeviceBackend;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -26,7 +26,9 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
+import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
 import dev.evvie.waylandcraft.egl.EGL;
+import dev.evvie.waylandcraft.egl.EGLHelper;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
 import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -50,12 +52,39 @@ public abstract class BufferTexture {
 	public abstract GpuTextureView getTextureView();
 	public abstract void release();
 	
-	public static abstract class BasicBufferTexture extends BufferTexture {
+	public static BufferTexture createShmTexture(long ptr, int width, int height, int format, int stride) {
+		GpuDeviceBackend deviceBackend = RenderSystem.getDevice().backend;
+		if(deviceBackend instanceof GlDevice) {
+			return new GlShmBufferTexture(ptr, width, height, format, stride);
+		}
+		
+		throw new RuntimeException("Unsupported backed");
+	}
+	
+	public static BufferTexture createSinglePixelTexture(byte r, byte g, byte b, byte a) {
+		GpuDeviceBackend deviceBackend = RenderSystem.getDevice().backend;
+		if(deviceBackend instanceof GlDevice) {
+			return new GlSinglePixelBufferTexture(r, g, b, a);
+		}
+		
+		throw new RuntimeException("Unsupported backed");
+	}
+	
+	public static DmabufTexture createDmabufTexture(long handle, Dmabuf dmabuf) throws DmabufImportFailedException {
+		GpuDeviceBackend deviceBackend = RenderSystem.getDevice().backend;
+		if(deviceBackend instanceof GlDevice) {
+			return new GlDmabufTexture(handle, dmabuf);
+		}
+		
+		throw new RuntimeException("Unsupported backed");
+	}
+	
+	private static abstract class GlBasicBufferTexture extends BufferTexture {
 		
 		public final int id;
 		private GpuTextureView textureView = null;
 		
-		public BasicBufferTexture(int width, int height, int format) {
+		private GlBasicBufferTexture(int width, int height, int format) {
 			super(width, height, format);
 			this.id = GlStateManager._genTexture();
 			
@@ -76,16 +105,15 @@ public abstract class BufferTexture {
 		
 	}
 	
-	public static class ShmBufferTexture extends BasicBufferTexture {
+	private static class GlShmBufferTexture extends GlBasicBufferTexture {
 		
 		private final long ptr;
 		private final int stride;
 		
-		public ShmBufferTexture(long ptr, int width, int height, int format, int stride) {
+		private GlShmBufferTexture(long ptr, int width, int height, int format, int stride) {
 			super(width, height, format);
 			this.ptr = ptr;
 			this.stride = stride;
-//			if(stride % 4 != 0) WaylandCraft.LOGGER.info("Stride is not a multiple of 4 bytes!!");
 			
 			init();
 		}
@@ -109,14 +137,14 @@ public abstract class BufferTexture {
 		
 	}
 	
-	public static class SinglePixelBufferTexture extends BasicBufferTexture {
+	private static class GlSinglePixelBufferTexture extends GlBasicBufferTexture {
 		
 		public final byte r;
 		public final byte g;
 		public final byte b;
 		public final byte a;
 		
-		public SinglePixelBufferTexture(byte r, byte g, byte b, byte a) {
+		private GlSinglePixelBufferTexture(byte r, byte g, byte b, byte a) {
 			super(1, 1, BufferTexture.FORMAT_ARGB8888);
 			this.r = r;
 			this.g = g;
@@ -162,30 +190,71 @@ public abstract class BufferTexture {
 			.build()
 	);
 	
-	public static class DmabufTexture extends BufferTexture {
+	public static abstract class DmabufTexture extends BufferTexture {
 		
 		public final long handle;
-		private final long eglImage;
+		protected RenderTarget target;
+		protected GpuTextureView internalView = null;
 		
-		private GpuTextureView eglImageView = null;
-		private int eglImageTex = -1;
-		
-		private RenderTarget target;
-		
-		public DmabufTexture(long handle, long eglImage, int width, int height) {
-			super(width, height, BufferTexture.FORMAT_ARGB8888);
+		private DmabufTexture(long handle, Dmabuf buf) throws DmabufImportFailedException {
+			super(buf.width(), buf.height(), BufferTexture.FORMAT_ARGB8888);
 			this.handle = handle;
-			this.eglImage = eglImage;
 			
 			target = new TextureTarget("dmabuf-target-" + this.hashCode(), width, height, false, GpuFormat.RGBA8_UNORM);
-			
-			init();
 		}
+		
+		// Destroys internal data
+		public abstract void doFree();
 		
 		@Override
 		public GpuTextureView getTextureView() {
 			if(target == null) return null;
 			return target.getColorTextureView();
+		}
+		
+		public void copyData() {
+			if(internalView == null) return;
+			
+			try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), Optional.of(new Vector4f(0, 0, 0, 0)))) {
+				renderPass.setPipeline(DMABUF_BLIT);
+				RenderSystem.bindDefaultUniforms(renderPass);
+				renderPass.bindTexture("InSampler", internalView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+				renderPass.draw(3, 1, 0, 0);
+			}
+		}
+		
+		public void doReleaseTexure() {
+			target.destroyBuffers();
+			target = null;
+		}
+		
+		@Override
+		public void release() {
+			// Don't release texture id as dmabuf textures might get reused
+		}
+		
+	}
+	
+	public static class DmabufImportFailedException extends Exception {
+	}
+	
+	private static class GlDmabufTexture extends DmabufTexture {
+		
+		private final long eglImage;
+		private int eglImageTex = -1;
+		
+		private GlDmabufTexture(long handle, Dmabuf buf) throws DmabufImportFailedException {
+			super(handle, buf);
+			
+			long dpy = EGL.getEGLDisplay();
+			eglImage = EGLHelper.importDmabufToImage(dpy, buf);
+			if(eglImage == EGL.EGL_NO_IMAGE) {
+				WaylandCraftCommon.LOGGER.error("Failed to import dmabuf! EGL error: " + EGL.eglGetErrorString());
+				throw new DmabufImportFailedException();
+			}
+			
+			init();
+			copyData();
 		}
 		
 		private void init() {
@@ -200,42 +269,21 @@ public abstract class BufferTexture {
 			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MAG_FILTER, GL33.GL_NEAREST);
 			
 			long glEGLImageTargetTexture2DOES = GLFW.glfwGetProcAddress("glEGLImageTargetTexture2DOES");
-			JNI.invokeJV(GL33.GL_TEXTURE_2D, this.eglImage, glEGLImageTargetTexture2DOES);
+			JNI.invokeJV(GL33.GL_TEXTURE_2D, eglImage, glEGLImageTargetTexture2DOES);
 			
 			GlTexture glTexture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "eglimage-" + this.hashCode(), GpuFormat.RGBA8_UINT, width, height, 1, 1, eglImageTex, ((GlDevice) RenderSystem.getDevice().backend).frameBufferCache());
-			eglImageView = RenderSystem.getDevice().createTextureView(glTexture);
-			
-			copyData();
-		}
-		
-		public void copyData() {
-			if(eglImageView == null) return;
-			
-			try (RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), Optional.of(new Vector4f(0, 0, 0, 0)))) {
-				renderPass.setPipeline(DMABUF_BLIT);
-				RenderSystem.bindDefaultUniforms(renderPass);
-				renderPass.bindTexture("InSampler", eglImageView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-				renderPass.draw(3, 1, 0, 0);
-			}
+			internalView = RenderSystem.getDevice().createTextureView(glTexture);
 		}
 		
 		@Override
-		public void release() {
-			// Don't release texture id as dmabuf textures might get reused
-		}
-		
-		public void doReleaseTexure() {
-			target.destroyBuffers();
-			target = null;
-		}
-		
-		public void freeEGL() {
-			if(eglImageView == null) return;
+		public void doFree() {
+			if(internalView == null) return;
 			
-			long display = GLFWNativeEGL.glfwGetEGLDisplay();
-			EGL.eglDestroyImage(display, this.eglImage);
+			long dpy = EGL.getEGLDisplay();
+			EGL.eglDestroyImage(dpy, eglImage);
+			
 			GlStateManager._deleteTexture(eglImageTex);
-			eglImageView = null;
+			internalView = null;
 		}
 		
 	}
