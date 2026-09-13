@@ -42,9 +42,7 @@ bind_java_type! {
         pub fn attach_dmabuf(handle: jlong) -> jboolean,
         pub fn attach_new_dmabuf(
             dmabuf_handle: jlong,
-            egl_image_ptr: jlong,
-            width: jint,
-            height: jint
+            dmabuf: dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf,
         ) -> jboolean,
         pub fn clear_damage(),
         pub fn add_buffer_damage(x: jint, y: jint, width: jint, height: jint),

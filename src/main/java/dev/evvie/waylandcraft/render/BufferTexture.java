@@ -26,6 +26,7 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
+import dev.evvie.waylandcraft.egl.EGL;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
 import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -232,9 +233,7 @@ public abstract class BufferTexture {
 			if(eglImageView == null) return;
 			
 			long display = GLFWNativeEGL.glfwGetEGLDisplay();
-			long eglDestroyImage = GLFW.glfwGetProcAddress("eglDestroyImage");
-			JNI.invokePPI(display, this.eglImage, eglDestroyImage);
-			
+			EGL.eglDestroyImage(display, this.eglImage);
 			GlStateManager._deleteTexture(eglImageTex);
 			eglImageView = null;
 		}

@@ -912,8 +912,11 @@ fn try_attach_dmabuf(
         Err(_) => return BufferAttachResult::Error,
     };
 
-    let _ = jdmabuf;
+    let success = jsurface
+        .attach_new_dmabuf(env, handle, jdmabuf)
+        .unwrap();
 
+    /*
     let image = match instance.egl.dmabuf_to_image(dmabuf) {
         Ok(img) => img,
         Err(_) => return BufferAttachResult::Error,
@@ -922,6 +925,7 @@ fn try_attach_dmabuf(
     let success = jsurface
         .attach_new_dmabuf(env, handle, image.addr() as jlong, width, height)
         .unwrap();
+    */
 
     if success {
         BufferAttachResult::Success
