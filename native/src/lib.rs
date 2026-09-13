@@ -1,6 +1,5 @@
 use crate::bridge::BridgeState;
 use crate::ddm::WLCDataState;
-use crate::egl::EGLHelper;
 use crate::output::WLCOutput;
 use crate::satellite::SatelliteState;
 use crate::seat::WLCSeatState;
@@ -49,7 +48,6 @@ use std::sync::Arc;
 
 mod bridge;
 mod ddm;
-mod egl;
 mod java_types;
 mod output;
 mod process;
@@ -63,7 +61,6 @@ pub(crate) struct WaylandCraft<'a> {
     pub state: WLCState,
     pub event_loop: EventLoop<'a, WLCState>,
     pub bridge: BridgeState,
-    pub egl: EGLHelper,
     pub xdg: XDGSpecHelper,
 }
 
@@ -98,7 +95,6 @@ pub struct WindowRequests {
 impl WLCState {
     fn new(
         disp: DisplayHandle,
-        egl: &EGLHelper,
         render_node_path: String,
         dmabuf_formats: Vec<Format>,
     ) -> Self {
@@ -108,10 +104,6 @@ impl WLCState {
         let viewporter_state = ViewporterState::new::<WLCState>(&disp);
         let single_pixel_buffer_state =
             SinglePixelBufferState::new::<WLCState>(&disp);
-
-        /* Code path switch Java/Rust impl */
-        //let render_node_path = egl.get_render_node();
-        //let dmabuf_formats = egl.query_dmabuf_formats();
 
         let mut dmabuf_state = DmabufState::new();
         let dmabuf_global = init_dmabuf(
@@ -306,7 +298,6 @@ impl ClientData for WLCClient {
 }
 
 pub(crate) fn wlc_init(
-    egl: EGLHelper,
     render_node_path: String,
     dmabuf_formats: Vec<Format>,
 ) -> Result<WaylandCraft<'static>, Box<dyn std::error::Error>> {
@@ -316,7 +307,6 @@ pub(crate) fn wlc_init(
 
     let mut state = WLCState::new(
         display.handle(),
-        &egl,
         render_node_path,
         dmabuf_formats,
     );
@@ -359,7 +349,6 @@ pub(crate) fn wlc_init(
         state,
         event_loop,
         bridge: BridgeState::new(),
-        egl,
         xdg,
     };
     Ok(instance)

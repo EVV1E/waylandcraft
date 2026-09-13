@@ -12,7 +12,6 @@ import java.util.stream.Stream;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
-import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWNativeEGL;
 import org.lwjgl.system.Platform;
 
@@ -117,7 +116,7 @@ public class WaylandCraftBridge {
 		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
 		DmabufFormat[] formats = EGLHelper.queryDmabufFormats(eglDisplay).toArray(DmabufFormat[]::new);
 		
-		long handle = init(GLFW.Functions.GetProcAddress, eglDisplay, renderNodePath, formats);
+		long handle = init(renderNodePath, formats);
 		WaylandCraftBridge bridge = new WaylandCraftBridge(handle);
 		
 		// Add shutdown thread to clean up resources on normal exit
@@ -705,7 +704,7 @@ public class WaylandCraftBridge {
 	
 	public static record ResizeRequest(int serial, int edges) {}
 	
-	private static native long init(long glfwGetProcAddress, long eglDisplay, String renderNodePath, DmabufFormat[] formats);
+	private static native long init(String renderNodePath, DmabufFormat[] formats);
 	private static native void shutdown(long instance);
 	private static native void dispatchClients(long instance);
 	private static native void flushDisplay(long instance);
