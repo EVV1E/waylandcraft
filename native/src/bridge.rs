@@ -101,6 +101,8 @@ bind_java_type! {
         JDmabufFormat => dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat,
         JDmabufPlane => dev.evvie.waylandcraft.bridge.dmabuf.DmabufPlane,
         JDmabuf => dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf,
+        JDmabufFeedbackData =>
+            dev.evvie.waylandcraft.bridge.dmabuf.DmabufFeedbackData,
     },
 
     methods {
@@ -110,8 +112,7 @@ bind_java_type! {
     native_methods {
         static extern fn init {
             sig = (
-                drm_device: jlong,
-                formats: JDmabufFormat[],
+                dmabuf_feedback: JDmabufFeedbackData,
             ) -> jlong,
             fn = init,
         },
@@ -484,20 +485,27 @@ macro_rules! jptr_to_popup {
 fn init<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
-    drm_device: jlong,
-    formats: JObjectArray<'local, JDmabufFormat<'local>>,
+    dmabuf_feedback: JDmabufFeedbackData<'local>,
 ) -> Result<jlong, BridgeError> {
-    let dmabuf_formats = formats_from_java(env, formats)?;
-
-    let dmabuf_feedback = DmabufFeedbackData {
-        device: drm_device as libc::dev_t,
-        formats: dmabuf_formats,
-    };
+    let dmabuf_feedback = dmabuf_feedback_from_java(env, dmabuf_feedback)?;
     let instance = wlc_init(dmabuf_feedback).map_err(BridgeError::Init)?;
     let instance_box = Box::new(instance);
     let ptr = Box::into_raw(instance_box);
 
     Ok(ptr.addr() as jlong)
+}
+
+fn dmabuf_feedback_from_java<'local>(
+    env: &mut Env<'local>,
+    jfeedback: JDmabufFeedbackData<'local>,
+) -> Result<Option<DmabufFeedbackData>, BridgeError> {
+    if jfeedback.is_null() { return Ok(None) }
+
+    let device = jfeedback.drm_device(env)? as libc::dev_t;
+    let formats = jfeedback.formats(env)?;
+    let formats = JObjectArray::<JDmabufFormat>::cast_local(env, formats)?;
+    let formats = formats_from_java(env, formats)?;
+    Ok(Some(DmabufFeedbackData { device, formats }))
 }
 
 fn drm_device_by_path<'local>(
