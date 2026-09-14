@@ -17,7 +17,9 @@
 		"IGlTextureMixin",
 		"FramerateLimitTrackerMixin",
 		"TitleScreenMixin",
-		"PauseScreenMixin"
+		"PauseScreenMixin",
+		"VulkanGpuTextureMixin",
+		"VulkanGpuTextureViewMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

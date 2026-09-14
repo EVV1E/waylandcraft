@@ -10,6 +10,9 @@ import com.mojang.blaze3d.vulkan.VulkanDevice;
 
 public class VulkanHelper {
 	
+	// See VulkanGpuTextureMixin, VulkanGpuTextureViewMixin and BufferTexture
+	public static final ScopedValue<Integer> VULKAN_GPU_TEXTURE_CREATE_FORMAT_OVERRIDE = ScopedValue.newInstance();
+	
 	public static record DrmNodeId(int major, int minor) {}
 	
 	public static DrmNodeId getRenderNodeId() {

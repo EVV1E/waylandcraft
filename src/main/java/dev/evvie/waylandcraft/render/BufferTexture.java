@@ -41,6 +41,7 @@ import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
 import dev.evvie.waylandcraft.egl.EGL;
 import dev.evvie.waylandcraft.egl.EGLHelper;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
+import dev.evvie.waylandcraft.vulkan.VulkanHelper;
 import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
@@ -161,8 +162,10 @@ public abstract class BufferTexture {
 		public VulkanShmBufferTexture(long ptr, int width, int height, int format, int stride) {
 			super(width, height, format);
 			
-			texture = (VulkanGpuTexture) RenderSystem.getDevice().createTexture("buffertexture-" + this.hashCode(), GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, GpuFormat.RGBA8_UNORM, width, height, 1, 1);
-			textureView = RenderSystem.getDevice().createTextureView(texture);
+			ScopedValue.where(VulkanHelper.VULKAN_GPU_TEXTURE_CREATE_FORMAT_OVERRIDE, VK12.VK_FORMAT_B8G8R8A8_UNORM).run(() -> {
+				texture = (VulkanGpuTexture) RenderSystem.getDevice().createTexture("buffertexture-" + this.hashCode(), GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, GpuFormat.RGBA8_UNORM, width, height, 1, 1);
+				textureView = RenderSystem.getDevice().createTextureView(texture);
+			});
 			
 			writeTextureData(ptr, width, height, stride);
 		}
