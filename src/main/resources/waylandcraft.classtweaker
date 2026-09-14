@@ -2,3 +2,6 @@ classTweaker  v1  official
 
 accessible    class    com/mojang/blaze3d/opengl/GlDevice
 accessible    field    com/mojang/blaze3d/systems/GpuDevice    backend    Lcom/mojang/blaze3d/systems/GpuDeviceBackend;
+accessible    field    com/mojang/blaze3d/systems/CommandEncoder    backend    Lcom/mojang/blaze3d/systems/CommandEncoderBackend;
+accessible    method    com/mojang/blaze3d/vulkan/VulkanCommandEncoder    commandBuffer    ()Lorg/lwjgl/vulkan/VkCommandBuffer;
+accessible    method    com/mojang/blaze3d/vulkan/VulkanCommandEncoder    memoryBarrier    (Lorg/lwjgl/system/MemoryStack;)V

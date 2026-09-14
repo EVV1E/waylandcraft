@@ -17,6 +17,7 @@ import org.lwjgl.system.Platform;
 import com.mojang.blaze3d.opengl.GlDevice;
 import com.mojang.blaze3d.systems.GpuDeviceBackend;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vulkan.VulkanDevice;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
@@ -28,6 +29,8 @@ import dev.evvie.waylandcraft.egl.EGLHelper;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import dev.evvie.waylandcraft.utils.CursorShape;
+import dev.evvie.waylandcraft.vulkan.VulkanHelper;
+import dev.evvie.waylandcraft.vulkan.VulkanHelper.DrmNodeId;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 
@@ -129,6 +132,9 @@ public class WaylandCraftBridge {
 		if(deviceBackend instanceof GlDevice) {
 			return initBackendEGL();
 		}
+		else if(deviceBackend instanceof VulkanDevice) {
+			return initBackendVulkan();
+		}
 		
 		WaylandCraftCommon.LOGGER.error("Unsupported graphics backend!");
 		return null;
@@ -145,6 +151,13 @@ public class WaylandCraftBridge {
 		long device = drmDeviceByPath(renderNodePath);
 		
 		return new DmabufFeedbackData(device, formats);
+	}
+	
+	private static DmabufFeedbackData initBackendVulkan() {
+		DrmNodeId id = VulkanHelper.getRenderNodeId();
+		long device = drmDeviceByMajorMinor(id.major(), id.minor());
+		return null; // Disable DMABUF for now
+//		return new DmabufFeedbackData(device, new DmabufFormat[0]);
 	}
 	
 	private void shutdownHook() {

@@ -7,9 +7,16 @@ import org.joml.Vector4f;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.opengl.GL33;
 import org.lwjgl.system.JNI;
+import org.lwjgl.system.MemoryStack;
+import org.lwjgl.system.MemoryUtil;
+import org.lwjgl.vulkan.VK12;
+import org.lwjgl.vulkan.VkBufferImageCopy;
+import org.lwjgl.vulkan.VkImageSubresourceLayers;
 
 import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.opengl.GlDevice;
 import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.opengl.GlTexture;
@@ -24,6 +31,10 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vulkan.VulkanCommandEncoder;
+import com.mojang.blaze3d.vulkan.VulkanDevice;
+import com.mojang.blaze3d.vulkan.VulkanGpuBuffer;
+import com.mojang.blaze3d.vulkan.VulkanGpuTexture;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
@@ -56,6 +67,9 @@ public abstract class BufferTexture {
 		GpuDeviceBackend deviceBackend = RenderSystem.getDevice().backend;
 		if(deviceBackend instanceof GlDevice) {
 			return new GlShmBufferTexture(ptr, width, height, format, stride);
+		}
+		else if(deviceBackend instanceof VulkanDevice) {
+			return new VulkanShmBufferTexture(ptr, width, height, format, stride);
 		}
 		
 		throw new RuntimeException("Unsupported backed");
@@ -135,6 +149,57 @@ public abstract class BufferTexture {
 			GlStateManager._pixelStore(GL33.GL_UNPACK_ALIGNMENT, 4);
 			
 			GL33.nglTexImage2D(GL33.GL_TEXTURE_2D, 0, GL33.GL_RGBA8, width, height, 0, GL33.GL_BGRA, GL33.GL_UNSIGNED_INT_8_8_8_8_REV, this.ptr);
+		}
+		
+	}
+	
+	private static class VulkanShmBufferTexture extends BufferTexture {
+		
+		private VulkanGpuTexture texture;
+		private GpuTextureView textureView;
+		
+		public VulkanShmBufferTexture(long ptr, int width, int height, int format, int stride) {
+			super(width, height, format);
+			
+			texture = (VulkanGpuTexture) RenderSystem.getDevice().createTexture("buffertexture-" + this.hashCode(), GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, GpuFormat.RGBA8_UNORM, width, height, 1, 1);
+			textureView = RenderSystem.getDevice().createTextureView(texture);
+			
+			writeTextureData(ptr, width, height, stride);
+		}
+		
+		private void writeTextureData(long ptr, int width, int height, int stride) {
+			int uploadSize = stride * height;
+			ByteBuffer buf = MemoryUtil.memByteBuffer(ptr, uploadSize);
+			VulkanCommandEncoder commandEncoder = (VulkanCommandEncoder) RenderSystem.getDevice().createCommandEncoder().backend;
+			
+			GpuBufferSlice stagingBuffer = commandEncoder.transientMemory().uploadStaging(buf, 1L, GpuBuffer.USAGE_COPY_SRC);
+			try(MemoryStack stack = MemoryStack.stackPush()) {
+				VkBufferImageCopy.Buffer region = VkBufferImageCopy.calloc(1, stack);
+				region.bufferOffset(stagingBuffer.offset());
+				region.bufferRowLength(stride / 4);
+				region.bufferImageHeight(height);
+				VkImageSubresourceLayers imageSubresource = region.imageSubresource();
+				imageSubresource.aspectMask(1);
+				imageSubresource.mipLevel(0);
+				imageSubresource.baseArrayLayer(0);
+				imageSubresource.layerCount(1);
+				region.imageOffset().set(0, 0, 0);
+				region.imageExtent().set(width, height, 1);
+				VK12.vkCmdCopyBufferToImage(commandEncoder.commandBuffer(), ((VulkanGpuBuffer) stagingBuffer.buffer()).vkBuffer(), texture.vkImage(), 1, region);
+				commandEncoder.memoryBarrier(stack);
+			}
+		}
+		
+		@Override
+		public GpuTextureView getTextureView() {
+			return textureView;
+		}
+		
+		@Override
+		public void release() {
+			textureView.close();
+			texture.close();
+			textureView = null;
 		}
 		
 	}
