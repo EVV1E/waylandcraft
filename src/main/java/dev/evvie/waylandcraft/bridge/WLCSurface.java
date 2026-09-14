@@ -70,6 +70,10 @@ public class WLCSurface {
 		return handle != 0;
 	}
 	
+	protected void destroy() {
+		if(buffer != null) buffer.release();
+	}
+	
 	// Attach a shared memory buffer
 	// The surface width and height are reset to the given buffer dimensions.
 	protected void attachShmBuffer(long ptr, int width, int height, int format, int stride) {
@@ -132,6 +136,7 @@ public class WLCSurface {
 	}
 	
 	protected void removeBuffer() {
+		if(buffer != null) buffer.release();
 		this.buffer = null;
 		this.width = this.height = 0;
 	}
