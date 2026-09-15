@@ -148,16 +148,17 @@ public class WaylandCraftBridge {
 		
 		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
 		DmabufFormat[] formats = EGLHelper.queryDmabufFormats(eglDisplay).toArray(DmabufFormat[]::new);
-		long device = drmDeviceByPath(renderNodePath);
-		
-		return new DmabufFeedbackData(device, formats);
+		long drmDevice = drmDeviceByPath(renderNodePath);
+		return new DmabufFeedbackData(drmDevice, formats);
 	}
 	
 	private static DmabufFeedbackData initBackendVulkan() {
-		DrmNodeId id = VulkanHelper.getRenderNodeId();
-		long device = drmDeviceByMajorMinor(id.major(), id.minor());
+		VulkanDevice device = VulkanHelper.getVulkanDevice();
+		DrmNodeId id = VulkanHelper.getRenderNodeId(device);
+		long drmDevice = drmDeviceByMajorMinor(id.major(), id.minor());
+		DmabufFormat[] formats = VulkanHelper.queryDmabufFormats(device).toArray(DmabufFormat[]::new);
 		return null; // Disable DMABUF for now
-//		return new DmabufFeedbackData(device, new DmabufFormat[0]);
+//		return new DmabufFeedbackData(drmDevice, formats);
 	}
 	
 	private void shutdownHook() {
