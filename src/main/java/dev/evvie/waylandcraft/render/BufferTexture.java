@@ -77,12 +77,7 @@ public abstract class BufferTexture {
 	}
 	
 	public static BufferTexture createSinglePixelTexture(byte r, byte g, byte b, byte a) {
-		GpuDeviceBackend deviceBackend = RenderSystem.getDevice().backend;
-		if(deviceBackend instanceof GlDevice) {
-			return new GlSinglePixelBufferTexture(r, g, b, a);
-		}
-		
-		throw new RuntimeException("Unsupported backed");
+		return new SinglePixelBufferTexture(r, g, b, a);
 	}
 	
 	public static DmabufTexture createDmabufTexture(long handle, Dmabuf dmabuf) throws DmabufImportFailedException {
@@ -94,18 +89,50 @@ public abstract class BufferTexture {
 		throw new RuntimeException("Unsupported backed");
 	}
 	
+	private static class SinglePixelBufferTexture extends BufferTexture {
+		
+		private GpuTexture texture;
+		private GpuTextureView textureView = null;
+		
+		private SinglePixelBufferTexture(byte r, byte g, byte b, byte a) {
+			super(1, 1, FORMAT_ARGB8888);
+			
+			texture = RenderSystem.getDevice().createTexture("buffertexture-" + this.hashCode(), GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_RENDER_ATTACHMENT, GpuFormat.RGBA8_UNORM, 1, 1, 1, 1);
+			textureView = RenderSystem.getDevice().createTextureView(texture);
+			
+			float c1 = Byte.toUnsignedInt(r) / 255.0f;
+			float c2 = Byte.toUnsignedInt(g) / 255.0f;
+			float c3 = Byte.toUnsignedInt(b) / 255.0f;
+			float c4 = Byte.toUnsignedInt(a) / 255.0f;
+			RenderSystem.getDevice().createCommandEncoder().clearColorTexture(texture, new Vector4f(c1, c2, c3, c4));
+		}
+		
+		@Override
+		public GpuTextureView getTextureView() {
+			return textureView;
+		}
+		
+		@Override
+		public void release() {
+			textureView.close();
+			texture.close();
+			textureView = null;
+		}
+		
+	}
+	
 	private static abstract class GlBasicBufferTexture extends BufferTexture {
 		
 		public final int id;
 		private GlTexture texture;
-		private GpuTextureView textureView = null;
+		private GpuTextureView textureView;
 		
 		private GlBasicBufferTexture(int width, int height, int format) {
 			super(width, height, format);
 			this.id = GlStateManager._genTexture();
 			
 			texture = IGlTextureMixin.createTexture(GpuTexture.USAGE_COPY_DST | GpuTexture.USAGE_TEXTURE_BINDING, "buffertexture-" + this.hashCode(), GpuFormat.RGBA8_UINT, width, height, 1, 1, id, ((GlDevice) RenderSystem.getDevice().backend).frameBufferCache());
-			this.textureView = RenderSystem.getDevice().createTextureView(texture);
+			textureView = RenderSystem.getDevice().createTextureView(texture);
 		}
 		
 		@Override
@@ -203,48 +230,6 @@ public abstract class BufferTexture {
 			textureView.close();
 			texture.close();
 			textureView = null;
-		}
-		
-	}
-	
-	private static class GlSinglePixelBufferTexture extends GlBasicBufferTexture {
-		
-		public final byte r;
-		public final byte g;
-		public final byte b;
-		public final byte a;
-		
-		private GlSinglePixelBufferTexture(byte r, byte g, byte b, byte a) {
-			super(1, 1, BufferTexture.FORMAT_ARGB8888);
-			this.r = r;
-			this.g = g;
-			this.b = b;
-			this.a = a;
-			
-			init();
-		}
-		
-		private void init() {
-			GlStateManager._bindTexture(this.id);
-			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MAX_LEVEL, 0);
-			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MIN_LOD, 0);
-			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MAX_LOD, 0);
-			
-			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MIN_FILTER, GL33.GL_NEAREST);
-			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MAG_FILTER, GL33.GL_NEAREST);
-			
-			GlStateManager._pixelStore(GL33.GL_UNPACK_ROW_LENGTH, 0);
-			GlStateManager._pixelStore(GL33.GL_UNPACK_SKIP_PIXELS, 0);
-			GlStateManager._pixelStore(GL33.GL_UNPACK_SKIP_ROWS, 0);
-			GlStateManager._pixelStore(GL33.GL_UNPACK_ALIGNMENT, 4);
-			
-			ByteBuffer buf = ByteBuffer.allocateDirect(4);
-			buf.put(b);
-			buf.put(g);
-			buf.put(r);
-			buf.put(a);
-			buf.rewind();
-			GL33.glTexImage2D(GL33.GL_TEXTURE_2D, 0, GL33.GL_RGBA8, width, height, 0, GL33.GL_BGRA, GL33.GL_UNSIGNED_INT_8_8_8_8_REV, buf);
 		}
 		
 	}
