@@ -55,7 +55,7 @@ public record DrmVulkanFormat(int fourcc, int vkFormat, boolean hasAlpha) {
 			DRM_FORMAT_XBGR8888,
 			DRM_FORMAT_R8,
 			DRM_FORMAT_RGB888,
-			DRM_FORMAT_BGR888
+			DRM_FORMAT_BGR888,
 	};
 	
 }

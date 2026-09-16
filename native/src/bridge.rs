@@ -11,7 +11,7 @@ use jni::{
     objects::{JClass, JObject, JString},
     sys::{jboolean, jbyte, jdouble, jint, jlong},
 };
-use rustix::{fd::AsRawFd, fs::makedev};
+use rustix::{fd::IntoRawFd, fs::{makedev, fstat}};
 use smithay::{
     backend::{
         allocator::{
@@ -1013,11 +1013,29 @@ fn dmabuf_to_java<'local>(
     let mut strides = dmabuf.strides();
 
     for idx in 0..dmabuf.num_planes() {
-        let handle = handles.next().unwrap().as_raw_fd();
+        let handle = handles.next().unwrap();
         let offset = offsets.next().unwrap();
         let stride = strides.next().unwrap();
-        let plane =
-            JDmabufPlane::new(env, handle, offset as jint, stride as jint)?;
+
+        // Find the size of the plane allocation via fstat
+        let size = fstat(handle)
+            .expect("Failed to fstat dmabuf plane!")
+            .st_size;
+
+        // Clone file descriptor and use IntoRawFd to make a new file
+        // descriptor pointing to the same data while making sure that Rust does
+        // not close the fd beforehand
+        let handle = handle.try_clone_to_owned()
+            .expect("Cloning dmabuf plane fd")
+            .into_raw_fd();
+
+        let plane = JDmabufPlane::new(
+            env,
+            handle,
+            size,
+            offset as jint,
+            stride as jint
+        )?;
         array.set_element(env, idx, plane)?;
     }
 

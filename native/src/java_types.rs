@@ -72,6 +72,7 @@ bind_java_type! {
     constructors {
         fn new(
             fd: jint,
+            size: jlong,
             offset: jint,
             stride: jint
         )

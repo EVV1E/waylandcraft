@@ -160,8 +160,8 @@ public class WaylandCraftBridge {
 		DrmNodeId id = VulkanHelper.getRenderNodeId(device);
 		long drmDevice = drmDeviceByMajorMinor(id.major(), id.minor());
 		DmabufFormat[] formats = VulkanHelper.queryDmabufFormats(device).toArray(DmabufFormat[]::new);
-		return null; // Disable DMABUF for now
-//		return new DmabufFeedbackData(drmDevice, formats);
+//		return null; // Disable DMABUF for now
+		return new DmabufFeedbackData(drmDevice, formats);
 	}
 	
 	private void shutdownHook() {

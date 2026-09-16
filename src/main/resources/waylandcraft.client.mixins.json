@@ -19,7 +19,8 @@
 		"TitleScreenMixin",
 		"PauseScreenMixin",
 		"VulkanGpuTextureMixin",
-		"VulkanGpuTextureViewMixin"
+		"VulkanGpuTextureViewMixin",
+		"VulkanBackendMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

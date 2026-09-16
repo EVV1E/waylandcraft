@@ -85,6 +85,9 @@ public abstract class BufferTexture {
 		if(deviceBackend instanceof GlDevice) {
 			return new GlDmabufTexture(dmabuf);
 		}
+		else if(deviceBackend instanceof VulkanDevice) {
+			return new VulkanDmabufTexture(dmabuf);
+		}
 		
 		throw new RuntimeException("Unsupported backed");
 	}
@@ -339,6 +342,22 @@ public abstract class BufferTexture {
 			
 			GlStateManager._deleteTexture(eglImageTex);
 			internalView = null;
+		}
+		
+	}
+	
+	private static class VulkanDmabufTexture extends DmabufTexture {
+		
+		public VulkanDmabufTexture(Dmabuf buf) throws DmabufImportFailedException {
+			super(buf);
+			
+			VulkanDevice device = VulkanHelper.getVulkanDevice();
+			VulkanHelper.importDmabufPlaneToDeviceMemory(device, buf, 0);
+			throw new DmabufImportFailedException();
+		}
+		
+		@Override
+		public void doFree() {
 		}
 		
 	}

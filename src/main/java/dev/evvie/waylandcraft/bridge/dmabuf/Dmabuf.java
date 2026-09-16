@@ -20,6 +20,7 @@ public record Dmabuf(long handle, int width, int height, int format, long modifi
 			DmabufPlane plane = planes()[i];
 			printFunc.accept(String.format(" PLANE %d", i));
 			printFunc.accept(String.format("  fd: %d", plane.fd()));
+			printFunc.accept(String.format("  size: %d", plane.size()));
 			printFunc.accept(String.format("  offset: %d", plane.offset()));
 			printFunc.accept(String.format("  stride: %d", plane.stride()));
 		}
