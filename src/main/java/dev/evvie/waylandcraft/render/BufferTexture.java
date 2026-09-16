@@ -80,10 +80,10 @@ public abstract class BufferTexture {
 		return new SinglePixelBufferTexture(r, g, b, a);
 	}
 	
-	public static DmabufTexture createDmabufTexture(long handle, Dmabuf dmabuf) throws DmabufImportFailedException {
+	public static DmabufTexture createDmabufTexture(Dmabuf dmabuf) throws DmabufImportFailedException {
 		GpuDeviceBackend deviceBackend = RenderSystem.getDevice().backend;
 		if(deviceBackend instanceof GlDevice) {
-			return new GlDmabufTexture(handle, dmabuf);
+			return new GlDmabufTexture(dmabuf);
 		}
 		
 		throw new RuntimeException("Unsupported backed");
@@ -251,9 +251,9 @@ public abstract class BufferTexture {
 		protected RenderTarget target;
 		protected GpuTextureView internalView = null;
 		
-		private DmabufTexture(long handle, Dmabuf buf) throws DmabufImportFailedException {
+		private DmabufTexture(Dmabuf buf) throws DmabufImportFailedException {
 			super(buf.width(), buf.height(), BufferTexture.FORMAT_ARGB8888);
-			this.handle = handle;
+			this.handle = buf.handle();
 			
 			target = new TextureTarget("dmabuf-target-" + this.hashCode(), width, height, false, GpuFormat.RGBA8_UNORM);
 		}
@@ -298,8 +298,8 @@ public abstract class BufferTexture {
 		private final long eglImage;
 		private int eglImageTex = -1;
 		
-		private GlDmabufTexture(long handle, Dmabuf buf) throws DmabufImportFailedException {
-			super(handle, buf);
+		private GlDmabufTexture(Dmabuf buf) throws DmabufImportFailedException {
+			super(buf);
 			
 			long dpy = EGL.getEGLDisplay();
 			eglImage = EGLHelper.importDmabufToImage(dpy, buf);

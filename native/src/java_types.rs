@@ -40,10 +40,6 @@ bind_java_type! {
             alpha: jbyte
         ),
         pub fn attach_dmabuf(handle: jlong) -> jboolean,
-        pub fn attach_new_dmabuf(
-            dmabuf_handle: jlong,
-            dmabuf: dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf,
-        ) -> jboolean,
         pub fn clear_damage(),
         pub fn add_buffer_damage(x: jint, y: jint, width: jint, height: jint),
         pub fn add_surface_damage(x: jint, y: jint, width: jint, height: jint),
@@ -89,6 +85,7 @@ bind_java_type! {
 
     constructors {
         fn new(
+            handle: jlong,
             width: jint,
             height: jint,
             format: jint,

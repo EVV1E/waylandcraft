@@ -6,9 +6,7 @@ import java.util.List;
 import org.jetbrains.annotations.Nullable;
 
 import dev.evvie.waylandcraft.WaylandCraft;
-import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
 import dev.evvie.waylandcraft.render.BufferTexture;
-import dev.evvie.waylandcraft.render.BufferTexture.DmabufImportFailedException;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import net.minecraft.util.Mth;
 
@@ -77,9 +75,8 @@ public class WLCSurface {
 	// Attach a shared memory buffer
 	// The surface width and height are reset to the given buffer dimensions.
 	protected void attachShmBuffer(long ptr, int width, int height, int format, int stride) {
-		if(this.buffer != null) {
-			this.buffer.release();
-		}
+		removeBuffer();
+		
 		this.buffer = BufferTexture.createShmTexture(ptr, width, height, format, stride);
 		this.width = width;
 		this.height = height;
@@ -88,9 +85,8 @@ public class WLCSurface {
 	// Attach a single pixel buffer
 	// The surface width and height are reset to 1.
 	protected void attachSinglePixelBuffer(byte r, byte g, byte b, byte a) {
-		if(this.buffer != null) {
-			this.buffer.release();
-		}
+		removeBuffer();
+		
 		this.buffer = BufferTexture.createSinglePixelTexture(r, g, b, a);
 		this.width = 1;
 		this.height = 1;
@@ -100,38 +96,16 @@ public class WLCSurface {
 	// The surface width and height are reset to the given buffer dimensions.
 	// Returns false if no DmabufTexture by that handle was found.
 	protected boolean attachDmabuf(long handle) {
-		if(this.buffer != null) {
-			this.buffer.release();
-		}
+		removeBuffer();
 		
-		this.buffer = WaylandCraft.instance.bridge.getDmabuf(handle);
-		if(this.buffer != null) {
-			this.width = buffer.width;
-			this.height = buffer.height;
-			
-			DmabufTexture dmabuf = (DmabufTexture) this.buffer;
-			dmabuf.copyData();
-		}
-		return this.buffer != null;
-	}
-	
-	// Create and attach a new DmabufTexture
-	// MUST only be used when attachDmabuf returns false for this handle!
-	// Returns true if the import succeeded.
-	protected boolean attachNewDmabuf(long handle, Dmabuf dmabuf) {
-		DmabufTexture tex;
-		try {
-			tex = BufferTexture.createDmabufTexture(handle, dmabuf);
-		} catch(DmabufImportFailedException e) {
-			System.err.println("Failed to import dmabuf!");
-			return false;
-		}
-		WaylandCraft.instance.bridge.addDmabuf(tex);
+		DmabufTexture dmabuf = WaylandCraft.instance.bridge.getDmabuf(handle);
+		if(dmabuf == null) return false;
 		
-		if(!attachDmabuf(handle)) {
-			throw new RuntimeException("Failed to attach newly created dmabuf");
-		}
+		this.buffer = dmabuf;
+		this.width = buffer.width;
+		this.height = buffer.height;
 		
+		dmabuf.copyData();
 		return true;
 	}
 	

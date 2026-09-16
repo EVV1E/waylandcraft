@@ -1,5 +1,6 @@
 #![allow(non_snake_case)]
 
+use crate::WLCState;
 use crate::java_types::*;
 use crate::utils::get_time;
 use crate::xdg_spec::RawDesktopEntry;
@@ -107,6 +108,7 @@ bind_java_type! {
 
     methods {
         fn get_or_create_surface(jlong) -> WLCSurface,
+        fn import_dmabuf(JDmabuf) -> jboolean,
     },
 
     native_methods {
@@ -238,6 +240,10 @@ bind_java_type! {
         static extern fn dmabufs {
             sig = (instance: jlong) -> jlong[],
             fn = dmabufs
+        },
+        extern fn check_import_dmabuf {
+            sig = (instance: jlong),
+            fn = check_import_dmabuf,
         },
         extern fn update_surface_tree {
             sig = (instance: jlong, surface: WLCSurface) -> WLCSurface,
@@ -646,8 +652,9 @@ where
         vec.push(Box::new(elem.clone()));
     }
 
-    let ptr: &mut T = vec.iter_mut().find(|r| ***r == *elem).unwrap();
-    ((ptr as *mut T) as usize) as jlong
+    let ptr: &mut Box<T> = vec.iter_mut().find(|r| ***r == *elem).unwrap();
+    let ptr: *mut T = &raw mut **ptr;
+    (ptr as usize) as jlong
 }
 
 // Get an element and return its handle
@@ -658,6 +665,15 @@ where
 {
     let ptr: &T = vec.iter().find(|r| ***r == *elem).unwrap();
     ((ptr as *const T) as usize) as jlong
+}
+
+// Get an element and return its handle
+fn get_handle_safe<T>(vec: &[Box<T>], elem: &T) -> Option<jlong>
+where
+    T: Clone + PartialEq,
+{
+    let ptr: Option<&T> = vec.iter().find(|r| ***r == *elem).map(|v| &**v);
+    ptr.map(|p| ((p as *const T) as usize) as jlong)
 }
 
 // Insert all elements that aren't in the list already
@@ -852,8 +868,10 @@ fn resize_request<'local>(
     Ok(array)
 }
 
+#[derive(PartialEq)]
 enum BufferAttachResult {
     Success,
+    TryAgain,
     Error,
     NotManaged,
 }
@@ -932,31 +950,57 @@ fn try_attach_dmabuf(
     ensure_viewport_valid(surf_data, Size::new(width, height));
 
     let weak = dmabuf.weak();
-    let handle = insert_get_handle(&mut instance.bridge.dmabufs, &weak);
-
-    let already_attached = jsurface.attach_dmabuf(env, handle).unwrap();
-
-    if already_attached {
-        return BufferAttachResult::Success;
-    }
-
-    let jdmabuf = match dmabuf_to_java(env, dmabuf) {
-        Ok(o) => o,
-        Err(_) => return BufferAttachResult::Error,
+    let handle = match get_handle_safe(&mut instance.bridge.dmabufs, &weak) {
+        Some(h) => h,
+        None => {
+            eprintln!("Client attempted to attach unknown dmabuf!");
+            return BufferAttachResult::TryAgain;
+        },
     };
 
-    let success = jsurface.attach_new_dmabuf(env, handle, jdmabuf).unwrap();
-
-    if success {
+    if jsurface.attach_dmabuf(env, handle).unwrap() {
         BufferAttachResult::Success
     } else {
         BufferAttachResult::Error
     }
 }
 
+fn check_import_dmabuf<'local>(
+    env: &mut Env<'local>,
+    this: WaylandCraftBridge<'local>,
+    instance: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "check_import_dmabuf")?;
+    let (dmabuf, notif) = match instance.state.pending_dmabuf_imports.pop() {
+        Some(t) => t,
+        None => { return Ok(()) }
+    };
+
+    let mut ref_box = Box::new(dmabuf.weak());
+    let handle: *mut WeakDmabuf = &raw mut *ref_box;
+    let handle = (handle as usize) as jlong;
+
+    let jdmabuf = dmabuf_to_java(env, &dmabuf, handle)?;
+    let success = this.import_dmabuf(env, jdmabuf)?;
+
+    if !success {
+        notif.failed();
+        return Ok(());
+    }
+
+    match notif.successful::<WLCState>() {
+        Ok(_) => {},
+        Err(_) => { return Ok(()) },
+    };
+
+    instance.bridge.dmabufs.push(ref_box);
+    Ok(())
+}
+
 fn dmabuf_to_java<'local>(
     env: &mut Env<'local>,
     dmabuf: &Dmabuf,
+    dmabuf_handle: jlong,
 ) -> Result<JDmabuf<'local>, BridgeError> {
     let array = JObjectArray::<JDmabufPlane>::new(
         env,
@@ -980,6 +1024,7 @@ fn dmabuf_to_java<'local>(
     let array = JObjectArray::<JObject>::cast_local(env, array)?;
     let jdmabuf = JDmabuf::new(
         env,
+        dmabuf_handle,
         dmabuf.width() as jint,
         dmabuf.height() as jint,
         (dmabuf.format().code as u32) as jint,
@@ -1011,7 +1056,7 @@ fn try_attach_buffer(
     jsurface: &WLCSurface,
     buf: &WlBuffer,
     surf_data: &SurfaceData,
-) -> Result<(), ()> {
+) -> BufferAttachResult {
     type TryAttachFn = fn(
         instance: &mut WaylandCraft,
         env: &mut Env,
@@ -1026,8 +1071,7 @@ fn try_attach_buffer(
         let result = func(instance, env, jsurface, buf, surf_data);
         match result {
             BufferAttachResult::NotManaged => continue,
-            BufferAttachResult::Success => return Ok(()),
-            BufferAttachResult::Error => return Err(()),
+            a => return a,
         }
     }
 
@@ -1062,17 +1106,19 @@ fn update_surface_data<'local>(
 
         if let Some(buf) = maybe_buf {
             let r = try_attach_buffer(instance, env, &jsurface, buf, data);
-            if r.is_err() {
+            if r == BufferAttachResult::Error {
                 eprintln!("Buffer attach failed!");
                 remove_buf = true;
             }
 
             // Done with buffer attachment
             // All buffers are immediately released because at this point they
-            // are all already written to an independent OpenGL texture.
+            // are all already written to an independent GPU texture.
             // (including the dmabufs)
-            buf.release();
-            attr.buffer = None;
+            if r != BufferAttachResult::TryAgain {
+                buf.release();
+                attr.buffer = None;
+            }
         }
 
         if remove_buf {

@@ -28,8 +28,8 @@ use smithay::{
             CompositorClientState, CompositorHandler, CompositorState,
         },
         dmabuf::{
-            DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler, DmabufState,
-            ImportNotifier,
+            self, DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler,
+            DmabufState,
         },
         shell::xdg::{
             PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler,
@@ -78,6 +78,7 @@ pub struct WLCState {
     pub data: WLCDataState,
     pub output: WLCOutput,
     pub satellite: Option<SatelliteState>,
+    pub pending_dmabuf_imports: Vec<(Dmabuf, dmabuf::ImportNotifier)>,
 }
 
 #[derive(Default)]
@@ -138,6 +139,7 @@ impl WLCState {
             data,
             output,
             satellite: None,
+            pending_dmabuf_imports: vec![],
         }
     }
 }
@@ -188,10 +190,10 @@ impl DmabufHandler for WLCState {
     fn dmabuf_imported(
         &mut self,
         _global: &DmabufGlobal,
-        _dmabuf: Dmabuf,
-        notifier: ImportNotifier,
+        dmabuf: Dmabuf,
+        notifier: dmabuf::ImportNotifier,
     ) {
-        let _ = notifier.successful::<WLCState>();
+        self.pending_dmabuf_imports.push((dmabuf, notifier));
     }
 }
 
