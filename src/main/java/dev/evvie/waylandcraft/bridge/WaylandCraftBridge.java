@@ -20,11 +20,14 @@ import com.mojang.blaze3d.systems.RenderSystem;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
+import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
 import dev.evvie.waylandcraft.bridge.dmabuf.DmabufFeedbackData;
 import dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat;
 import dev.evvie.waylandcraft.desktop.RawDesktopEntry;
 import dev.evvie.waylandcraft.egl.EGL;
 import dev.evvie.waylandcraft.egl.EGLHelper;
+import dev.evvie.waylandcraft.render.BufferTexture;
+import dev.evvie.waylandcraft.render.BufferTexture.DmabufImportFailedException;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import dev.evvie.waylandcraft.utils.CursorShape;
@@ -205,10 +208,6 @@ public class WaylandCraftBridge {
 		return null;
 	}
 	
-	protected void addDmabuf(DmabufTexture dmabuf) {
-		dmabufs.add(dmabuf);
-	}
-	
 	private void deleteNonExistingToplevels(long[] remainingHandles) {
 		ArrayList<WLCToplevel> toplevels_new = new ArrayList<WLCToplevel>();
 		for(WLCToplevel toplevel : this.toplevels) {
@@ -235,7 +234,19 @@ public class WaylandCraftBridge {
 		this.popups = popups_new;
 	}
 	
+	protected boolean importDmabuf(Dmabuf dmabuf) {
+		try {
+			DmabufTexture texture = BufferTexture.createDmabufTexture(dmabuf);
+			dmabufs.add(texture);
+			return true;
+		} catch(DmabufImportFailedException e) {
+			return false;
+		}
+	}
+	
 	private void updateDmabufs() {
+		checkImportDmabuf(instance);
+		
 		long[] remainingHandles = dmabufs(instance);
 		ArrayList<DmabufTexture> dmabufs_new = new ArrayList<DmabufTexture>();
 		for(DmabufTexture dmabuf : this.dmabufs) {
@@ -783,6 +794,9 @@ public class WaylandCraftBridge {
 	private static native int[] surfaceXDGGeometry(long surfaceHandle);
 	
 	private static native long[] dmabufs(long instance);
+	
+	// Check if there are new dmabufs waiting to be imported. If yes, importDmabuf() will be called
+	private native void checkImportDmabuf(long instance);
 	
 	// Updates the surface tree given by the root surface
 	// This changes the doubly linked list of the WLCSurfaces.

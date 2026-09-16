@@ -2,7 +2,7 @@ package dev.evvie.waylandcraft.bridge.dmabuf;
 
 import java.util.function.Consumer;
 
-public record Dmabuf(int width, int height, int format, long modifier, DmabufPlane[] planes) {
+public record Dmabuf(long handle, int width, int height, int format, long modifier, DmabufPlane[] planes) {
 	
 	public void debugPrint() {
 		debugPrint(System.out::println);
@@ -10,6 +10,7 @@ public record Dmabuf(int width, int height, int format, long modifier, DmabufPla
 	
 	public void debugPrint(Consumer<String> printFunc) {
 		printFunc.accept("DMABUF");
+		printFunc.accept(String.format(" handle: 0x%016X", handle()));
 		printFunc.accept(String.format(" width: %d", width()));
 		printFunc.accept(String.format(" height: %d", height()));
 		printFunc.accept(String.format(" format: 0x%X" , format()));
