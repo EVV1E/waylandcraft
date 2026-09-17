@@ -61,6 +61,7 @@ pub(crate) struct BridgeState {
     popups: Vec<Box<PopupSurface>>,
     surfaces: Vec<Box<WlSurface>>,
     dmabufs: Vec<Box<WeakDmabuf>>,
+    pending_release: Vec<Box<WlBuffer>>,
 }
 
 impl BridgeState {
@@ -70,6 +71,7 @@ impl BridgeState {
             popups: vec![],
             surfaces: vec![],
             dmabufs: vec![],
+            pending_release: vec![],
         }
     }
 }
@@ -244,6 +246,10 @@ bind_java_type! {
         extern fn check_import_dmabuf {
             sig = (instance: jlong),
             fn = check_import_dmabuf,
+        },
+        static extern fn release_buffer {
+            sig = (instance: jlong, release_handle: jlong),
+            fn = release_buffer,
         },
         extern fn update_surface_tree {
             sig = (instance: jlong, surface: WLCSurface) -> WLCSurface,
@@ -708,6 +714,16 @@ where
     vec.retain(|e| **e != *elem);
 }
 
+fn pop_element<T>(vec: &mut Vec<Box<T>>, handle: jlong) -> Box<T>
+where
+    T: Clone + PartialEq,
+{
+    let ptr: *mut T = (handle as usize) as *mut T;
+    let elem: &mut T = unsafe { &mut *ptr };
+    let idx = vec.iter().position(|b| **b == *elem).unwrap();
+    vec.swap_remove(idx)
+}
+
 fn toplevels<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
@@ -871,6 +887,7 @@ fn resize_request<'local>(
 #[derive(PartialEq)]
 enum BufferAttachResult {
     Success,
+    WaitRelease,
     TryAgain,
     Error,
     NotManaged,
@@ -958,11 +975,26 @@ fn try_attach_dmabuf(
         },
     };
 
-    if jsurface.attach_dmabuf(env, handle).unwrap() {
-        BufferAttachResult::Success
+    let release_handle =
+        insert_get_handle(&mut instance.bridge.pending_release, buf);
+
+    if jsurface.attach_dmabuf(env, handle, release_handle).unwrap() {
+        BufferAttachResult::WaitRelease
     } else {
         BufferAttachResult::Error
     }
+}
+
+fn release_buffer<'local>(
+    _env: &mut Env<'local>,
+    _class: JClass<'local>,
+    instance: jlong,
+    handle: jlong,
+) -> Result<(), BridgeError> {
+    let instance = jptr_to_instance!(instance, "release_buffer")?;
+    let buffer = pop_element(&mut instance.bridge.pending_release, handle);
+    buffer.release();
+    Ok(())
 }
 
 fn check_import_dmabuf<'local>(
@@ -1131,10 +1163,12 @@ fn update_surface_data<'local>(
 
             // Done with buffer attachment
             // All buffers are immediately released because at this point they
-            // are all already written to an independent GPU texture.
-            // (including the dmabufs)
+            // are all already written to an independent GPU texture
+            // (excluding dmabufs)
             if r != BufferAttachResult::TryAgain {
-                buf.release();
+                if r != BufferAttachResult::WaitRelease {
+                    buf.release();
+                }
                 attr.buffer = None;
             }
         }

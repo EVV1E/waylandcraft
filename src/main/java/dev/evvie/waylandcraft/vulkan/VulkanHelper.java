@@ -7,15 +7,20 @@ import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
 import org.lwjgl.vulkan.EXTExternalMemoryDmaBuf;
 import org.lwjgl.vulkan.EXTImageDrmFormatModifier;
+import org.lwjgl.vulkan.EXTQueueFamilyForeign;
 import org.lwjgl.vulkan.KHRExternalMemoryFd;
+import org.lwjgl.vulkan.KHRSynchronization2;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkBindImageMemoryInfo;
+import org.lwjgl.vulkan.VkDependencyInfo;
 import org.lwjgl.vulkan.VkDrmFormatModifierPropertiesEXT;
 import org.lwjgl.vulkan.VkDrmFormatModifierPropertiesListEXT;
 import org.lwjgl.vulkan.VkExternalMemoryImageCreateInfo;
 import org.lwjgl.vulkan.VkFormatProperties2;
 import org.lwjgl.vulkan.VkImageCreateInfo;
 import org.lwjgl.vulkan.VkImageDrmFormatModifierExplicitCreateInfoEXT;
+import org.lwjgl.vulkan.VkImageMemoryBarrier2;
+import org.lwjgl.vulkan.VkImageSubresourceRange;
 import org.lwjgl.vulkan.VkImportMemoryFdInfoKHR;
 import org.lwjgl.vulkan.VkMemoryAllocateInfo;
 import org.lwjgl.vulkan.VkMemoryFdPropertiesKHR;
@@ -30,18 +35,21 @@ import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
 import dev.evvie.waylandcraft.bridge.dmabuf.DmabufFormat;
 import dev.evvie.waylandcraft.bridge.dmabuf.DmabufPlane;
+import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 
 public class VulkanHelper {
 	
 	/* See VulkanGpuTextureMixin, VulkanGpuTextureViewMixin and BufferTexture */
 	public static final ScopedValue<Integer> VULKAN_GPU_TEXTURE_CREATE_FORMAT_OVERRIDE = ScopedValue.newInstance();
 	public static final ScopedValue<Long> VULKAN_GPU_TEXTURE_IMAGE_CREATE_OVERRIDE = ScopedValue.newInstance();
+	public static final ScopedValue<IntIntImmutablePair> VULKAN_GPU_TEXTURE_IMAGE_BARRIER_QUEUE_OVERRIDE = ScopedValue.newInstance();
 	
 	// See VulkanBackendMixin
 	public static final String[] NECESSARY_VULKAN_EXTENSIONS = {
 			KHRExternalMemoryFd.VK_KHR_EXTERNAL_MEMORY_FD_EXTENSION_NAME,
 			EXTExternalMemoryDmaBuf.VK_EXT_EXTERNAL_MEMORY_DMA_BUF_EXTENSION_NAME,
 			EXTImageDrmFormatModifier.VK_EXT_IMAGE_DRM_FORMAT_MODIFIER_EXTENSION_NAME,
+			EXTQueueFamilyForeign.VK_EXT_QUEUE_FAMILY_FOREIGN_EXTENSION_NAME,
 	};
 	
 	public static record DrmNodeId(int major, int minor) {}
@@ -163,6 +171,58 @@ public class VulkanHelper {
 		VK12.vkDestroyImage(device.vkDevice(), importedDmabuf.vkImage, null);
 	}
 	
+	public static void transferQueueFromExternal(VulkanDevice device, ImportedDmabufVulkan dmabuf) {
+		try(MemoryStack stack = MemoryStack.stackPush()) {
+			VkImageMemoryBarrier2.Buffer barrier = VkImageMemoryBarrier2.calloc(1, stack).sType$Default();
+			barrier.srcStageMask(VK12.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			barrier.dstStageMask(VK12.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			barrier.dstAccessMask(KHRSynchronization2.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_SHADER_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_MEMORY_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_MEMORY_WRITE_BIT_KHR);
+			barrier.srcQueueFamilyIndex(EXTQueueFamilyForeign.VK_QUEUE_FAMILY_FOREIGN_EXT);
+			barrier.dstQueueFamilyIndex(device.graphicsQueue().queueFamilyIndex());
+			barrier.oldLayout(VK12.VK_IMAGE_LAYOUT_UNDEFINED);
+			barrier.newLayout(VK12.VK_IMAGE_LAYOUT_GENERAL);
+			barrier.image(dmabuf.vkImage);
+			
+			VkImageSubresourceRange range = barrier.subresourceRange();
+			range.aspectMask(VK12.VK_IMAGE_ASPECT_COLOR_BIT);
+			range.baseMipLevel(0);
+			range.levelCount(1);
+			range.baseArrayLayer(0);
+			range.layerCount(1);
+			
+			VkDependencyInfo dependency = VkDependencyInfo.calloc(stack).sType$Default();
+			dependency.pImageMemoryBarriers(barrier);
+			
+			KHRSynchronization2.vkCmdPipelineBarrier2KHR(device.createCommandEncoder().commandBuffer(), dependency);
+		}
+	}
+	
+	public static void transferQueueToExternal(VulkanDevice device, ImportedDmabufVulkan dmabuf) {
+		try(MemoryStack stack = MemoryStack.stackPush()) {
+			VkImageMemoryBarrier2.Buffer barrier = VkImageMemoryBarrier2.calloc(1, stack).sType$Default();
+			barrier.srcStageMask(VK12.VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			barrier.srcAccessMask(KHRSynchronization2.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_SHADER_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_MEMORY_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_MEMORY_WRITE_BIT_KHR);
+			barrier.dstAccessMask(KHRSynchronization2.VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_SHADER_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_MEMORY_READ_BIT_KHR | KHRSynchronization2.VK_ACCESS_2_MEMORY_WRITE_BIT_KHR);
+			barrier.srcQueueFamilyIndex(device.graphicsQueue().queueFamilyIndex());
+			barrier.dstQueueFamilyIndex(EXTQueueFamilyForeign.VK_QUEUE_FAMILY_FOREIGN_EXT);
+			barrier.oldLayout(VK12.VK_IMAGE_LAYOUT_UNDEFINED);
+			barrier.newLayout(VK12.VK_IMAGE_LAYOUT_UNDEFINED);
+			barrier.image(dmabuf.vkImage);
+			
+			VkImageSubresourceRange range = barrier.subresourceRange();
+			range.aspectMask(VK12.VK_IMAGE_ASPECT_COLOR_BIT);
+			range.baseMipLevel(0);
+			range.levelCount(1);
+			range.baseArrayLayer(0);
+			range.layerCount(1);
+			
+			VkDependencyInfo dependency = VkDependencyInfo.calloc(stack).sType$Default();
+			dependency.pImageMemoryBarriers(barrier);
+			
+			KHRSynchronization2.vkCmdPipelineBarrier2KHR(device.createCommandEncoder().commandBuffer(), dependency);
+		}
+	}
+	
 	public static ImportedDmabufVulkan importDmabuf(VulkanDevice device, Dmabuf dmabuf) {
 		dmabuf.debugPrint();
 		
@@ -209,7 +269,7 @@ public class VulkanHelper {
 			imageCreateInfo.arrayLayers(1);
 			imageCreateInfo.samples(VK12.VK_SAMPLE_COUNT_1_BIT);
 			imageCreateInfo.tiling(EXTImageDrmFormatModifier.VK_IMAGE_TILING_DRM_FORMAT_MODIFIER_EXT);
-			imageCreateInfo.usage(VK12.VK_IMAGE_USAGE_SAMPLED_BIT);
+			imageCreateInfo.usage(VK12.VK_IMAGE_USAGE_SAMPLED_BIT | VK12.VK_IMAGE_USAGE_TRANSFER_SRC_BIT);
 			imageCreateInfo.sharingMode(VK12.VK_SHARING_MODE_EXCLUSIVE);
 			imageCreateInfo.initialLayout(VK12.VK_IMAGE_LAYOUT_UNDEFINED);
 			

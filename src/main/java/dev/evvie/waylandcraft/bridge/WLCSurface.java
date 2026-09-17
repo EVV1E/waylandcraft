@@ -5,6 +5,8 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.render.BufferTexture;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
@@ -95,7 +97,7 @@ public class WLCSurface {
 	// Attach an already known dmabuf
 	// The surface width and height are reset to the given buffer dimensions.
 	// Returns false if no DmabufTexture by that handle was found.
-	protected boolean attachDmabuf(long handle) {
+	protected boolean attachDmabuf(long handle, long releaseHandle) {
 		removeBuffer();
 		
 		DmabufTexture dmabuf = WaylandCraft.instance.bridge.getDmabuf(handle);
@@ -106,6 +108,11 @@ public class WLCSurface {
 		this.height = buffer.height;
 		
 		dmabuf.copyData();
+		
+		RenderSystem.queueFencedTask(() -> {
+			WaylandCraft.instance.bridge.sendBufferRelease(releaseHandle);
+		});
+		
 		return true;
 	}
 	

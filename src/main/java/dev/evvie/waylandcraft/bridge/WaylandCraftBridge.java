@@ -748,6 +748,10 @@ public class WaylandCraftBridge {
 		dndMotion(instance, handle, x, y);
 	}
 	
+	public void sendBufferRelease(long releaseHandle) {
+		releaseBuffer(instance, releaseHandle);
+	}
+	
 	public static record Size(int width, int height) {}
 	
 	public static record ResizeRequest(int serial, int edges) {}
@@ -811,6 +815,8 @@ public class WaylandCraftBridge {
 	
 	// Check if there are new dmabufs waiting to be imported. If yes, importDmabuf() will be called
 	private native void checkImportDmabuf(long instance);
+	
+	private static native void releaseBuffer(long instance, long handle);
 	
 	// Updates the surface tree given by the root surface
 	// This changes the doubly linked list of the WLCSurfaces.

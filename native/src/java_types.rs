@@ -39,7 +39,7 @@ bind_java_type! {
             blue: jbyte,
             alpha: jbyte
         ),
-        pub fn attach_dmabuf(handle: jlong) -> jboolean,
+        pub fn attach_dmabuf(handle: jlong, release_handle: jlong) -> jboolean,
         pub fn clear_damage(),
         pub fn add_buffer_damage(x: jint, y: jint, width: jint, height: jint),
         pub fn add_surface_damage(x: jint, y: jint, width: jint, height: jint),

@@ -8,6 +8,7 @@ import org.lwjgl.util.vma.VmaAllocationCreateInfo;
 import org.lwjgl.util.vma.VmaAllocationInfo;
 import org.lwjgl.vulkan.VK12;
 import org.lwjgl.vulkan.VkImageCreateInfo;
+import org.lwjgl.vulkan.VkImageMemoryBarrier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
@@ -16,6 +17,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.vulkan.VulkanGpuTexture;
 
 import dev.evvie.waylandcraft.vulkan.VulkanHelper;
+import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 
 @Mixin(VulkanGpuTexture.class)
 public class VulkanGpuTextureMixin {
@@ -34,6 +36,16 @@ public class VulkanGpuTextureMixin {
 		imageCreateInfo.format(format);
 		
 		return original.call(allocator, imageCreateInfo, allocCreateInfo, imageHandleOut, allocationOut, allocationInfoOut);
+	}
+	
+	@WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VkImageMemoryBarrier$Buffer;dstQueueFamilyIndex(I)Lorg/lwjgl/vulkan/VkImageMemoryBarrier$Buffer;"))
+	private VkImageMemoryBarrier.Buffer overrideBarrierDstQueueFamily(VkImageMemoryBarrier.Buffer barrier, int originalDst, Operation<VkImageMemoryBarrier.Buffer> original) {
+		return original.call(barrier, VulkanHelper.VULKAN_GPU_TEXTURE_IMAGE_BARRIER_QUEUE_OVERRIDE.orElse(new IntIntImmutablePair(originalDst, originalDst)).rightInt());
+	}
+	
+	@WrapOperation(method = "<init>", at = @At(value = "INVOKE", target = "Lorg/lwjgl/vulkan/VkImageMemoryBarrier$Buffer;srcQueueFamilyIndex(I)Lorg/lwjgl/vulkan/VkImageMemoryBarrier$Buffer;"))
+	private VkImageMemoryBarrier.Buffer overrideBarrierSrcQueueFamily(VkImageMemoryBarrier.Buffer barrier, int originalSrc, Operation<VkImageMemoryBarrier.Buffer> original) {
+		return original.call(barrier, VulkanHelper.VULKAN_GPU_TEXTURE_IMAGE_BARRIER_QUEUE_OVERRIDE.orElse(new IntIntImmutablePair(originalSrc, originalSrc)).leftInt());
 	}
 	
 }
