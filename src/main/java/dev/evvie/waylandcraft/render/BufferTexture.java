@@ -42,6 +42,7 @@ import dev.evvie.waylandcraft.egl.EGL;
 import dev.evvie.waylandcraft.egl.EGLHelper;
 import dev.evvie.waylandcraft.mixin.IGlTextureMixin;
 import dev.evvie.waylandcraft.vulkan.VulkanHelper;
+import dev.evvie.waylandcraft.vulkan.VulkanHelper.ImportedDmabufVulkan;
 import net.minecraft.client.renderer.BindGroupLayouts;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
@@ -346,18 +347,53 @@ public abstract class BufferTexture {
 		
 	}
 	
+	private static class DmabufOverrideVulkanGpuTexture extends VulkanGpuTexture {
+		
+		private ImportedDmabufVulkan importedDmabuf;
+		
+		public DmabufOverrideVulkanGpuTexture(VulkanDevice device, Dmabuf dmabuf, ImportedDmabufVulkan importedDmabuf) {
+			super(device, GpuTexture.USAGE_TEXTURE_BINDING, String.format("dmabuf-0x%016X", dmabuf.handle()), GpuFormat.RGBA8_UNORM, dmabuf.width(), dmabuf.height(), 1, 1);
+			this.importedDmabuf = importedDmabuf;
+		}
+		
+		@Override
+		public void destroy() {
+			// DO NOT CALL VulkanGpuTexture::destroy
+			VulkanDevice device = VulkanHelper.getVulkanDevice();
+			VulkanHelper.destroyImportedDmabuf(device, importedDmabuf);
+		}
+		
+	}
+	
 	private static class VulkanDmabufTexture extends DmabufTexture {
+		
+		private ImportedDmabufVulkan importedDmabuf;
+		private VulkanGpuTexture texture;
 		
 		public VulkanDmabufTexture(Dmabuf buf) throws DmabufImportFailedException {
 			super(buf);
 			
 			VulkanDevice device = VulkanHelper.getVulkanDevice();
-			VulkanHelper.importDmabufPlaneToDeviceMemory(device, buf, 0);
-			throw new DmabufImportFailedException();
+			importedDmabuf = VulkanHelper.importDmabuf(device, buf);
+			if(importedDmabuf == null) {
+				throw new DmabufImportFailedException();
+			}
+			
+			ScopedValue.where(VulkanHelper.VULKAN_GPU_TEXTURE_IMAGE_CREATE_OVERRIDE, importedDmabuf.vkImage()).where(VulkanHelper.VULKAN_GPU_TEXTURE_CREATE_FORMAT_OVERRIDE, importedDmabuf.vkFormat()).run(() -> {
+				this.texture = new DmabufOverrideVulkanGpuTexture(device, buf, importedDmabuf);
+				this.internalView = RenderSystem.getDevice().createTextureView(texture);
+			});
+			
+			copyData();
 		}
 		
 		@Override
 		public void doFree() {
+			if(internalView == null) return;
+			
+			internalView.close();
+			texture.close();
+			internalView = null;
 		}
 		
 	}
