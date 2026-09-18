@@ -505,7 +505,9 @@ fn dmabuf_feedback_from_java<'local>(
     env: &mut Env<'local>,
     jfeedback: JDmabufFeedbackData<'local>,
 ) -> Result<Option<DmabufFeedbackData>, BridgeError> {
-    if jfeedback.is_null() { return Ok(None) }
+    if jfeedback.is_null() {
+        return Ok(None);
+    }
 
     let device = jfeedback.drm_device(env)? as libc::dev_t;
     let formats = jfeedback.formats(env)?;
@@ -957,7 +959,7 @@ fn try_attach_dmabuf(
             // This can happen when a new dmabuf has been created but hasn't
             // finished importing yet
             return BufferAttachResult::TryAgain;
-        },
+        }
     };
 
     if jsurface.attach_dmabuf(env, handle).unwrap() {
@@ -975,7 +977,7 @@ fn check_import_dmabuf<'local>(
     let instance = jptr_to_instance!(instance, "check_import_dmabuf")?;
     let (dmabuf, notif) = match instance.state.pending_dmabuf_imports.pop() {
         Some(t) => t,
-        None => { return Ok(()) }
+        None => return Ok(()),
     };
 
     let mut ref_box = Box::new(dmabuf.weak());
@@ -991,8 +993,8 @@ fn check_import_dmabuf<'local>(
     }
 
     match notif.successful::<WLCState>() {
-        Ok(_) => {},
-        Err(_) => { return Ok(()) },
+        Ok(_) => {}
+        Err(_) => return Ok(()),
     };
 
     instance.bridge.dmabufs.push(ref_box);
