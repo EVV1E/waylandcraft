@@ -953,7 +953,9 @@ fn try_attach_dmabuf(
     let handle = match get_handle_safe(&mut instance.bridge.dmabufs, &weak) {
         Some(h) => h,
         None => {
-            eprintln!("Client attempted to attach unknown dmabuf!");
+            // Client attempted to attach unknown dmabuf
+            // This can happen when a new dmabuf has been created but hasn't
+            // finished importing yet
             return BufferAttachResult::TryAgain;
         },
     };
