@@ -99,7 +99,8 @@ pub struct DmabufFeedbackData {
 
 impl WLCState {
     fn new(
-        disp: DisplayHandle, dmabuf_feedback: Option<DmabufFeedbackData>,
+        disp: DisplayHandle,
+        dmabuf_feedback: Option<DmabufFeedbackData>,
     ) -> Self {
         let compositor_state = CompositorState::new::<WLCState>(&disp);
         let shm_state = ShmState::new::<WLCState>(&disp, vec![]);
@@ -112,7 +113,11 @@ impl WLCState {
         let mut dmabuf_global = MaybeUninit::uninit();
 
         if let Some(feedback) = dmabuf_feedback {
-            dmabuf_global.write(init_dmabuf(&disp, &mut dmabuf_state, feedback));
+            dmabuf_global.write(init_dmabuf(
+                &disp,
+                &mut dmabuf_state,
+                feedback,
+            ));
         }
 
         let seat = WLCSeatState::new();
