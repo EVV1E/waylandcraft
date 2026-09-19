@@ -27,7 +27,9 @@ import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.GpuDeviceBackend;
+import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vulkan.VulkanCommandEncoder;
@@ -254,6 +256,7 @@ public abstract class BufferTexture {
 		public final long handle;
 		protected RenderTarget target;
 		protected GpuTexture internalTexture = null;
+		protected GpuTextureView internalView = null;
 		
 		private DmabufTexture(Dmabuf buf) throws DmabufImportFailedException {
 			super(buf.width(), buf.height(), BufferTexture.FORMAT_ARGB8888);
@@ -274,14 +277,12 @@ public abstract class BufferTexture {
 		public void copyData() {
 			if(internalTexture == null) return;
 			
-			RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(internalTexture, target.getColorTexture(), 0, 0, 0, 0, 0, width, height);
-			
-//			try(RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), Optional.of(new Vector4f(0, 0, 0, 0)))) {
-//				renderPass.setPipeline(DMABUF_BLIT);
-//				RenderSystem.bindDefaultUniforms(renderPass);
-//				renderPass.bindTexture("InSampler", internalView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
-//				renderPass.draw(3, 1, 0, 0);
-//			}
+			try(RenderPass renderPass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(() -> "Dmabuf blit", target.getColorTextureView(), Optional.of(new Vector4f(0, 0, 0, 0)))) {
+				renderPass.setPipeline(DMABUF_BLIT);
+				RenderSystem.bindDefaultUniforms(renderPass);
+				renderPass.bindTexture("InSampler", internalView, RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
+				renderPass.draw(3, 1, 0, 0);
+			}
 		}
 		
 		public void doReleaseTexure() {
@@ -386,7 +387,7 @@ public abstract class BufferTexture {
 					.where(VulkanHelper.VULKAN_GPU_TEXTURE_IMAGE_BARRIER_QUEUE_OVERRIDE, IntIntImmutablePair.of(device.graphicsQueue().queueFamilyIndex(), EXTQueueFamilyForeign.VK_QUEUE_FAMILY_FOREIGN_EXT))
 					.run(() -> {
 				this.internalTexture = new DmabufOverrideVulkanGpuTexture(device, buf, importedDmabuf);
-//				this.internalView = RenderSystem.getDevice().createTextureView(texture);
+				this.internalView = RenderSystem.getDevice().createTextureView(internalTexture);
 			});
 			
 			copyData();
@@ -395,11 +396,11 @@ public abstract class BufferTexture {
 		@Override
 		public void copyData() {
 			VulkanDevice device = VulkanHelper.getVulkanDevice();
-			VulkanHelper.transferQueueFromExternal(device, importedDmabuf);
+//			VulkanHelper.transferQueueFromExternal(device, importedDmabuf);
 			
 			super.copyData();
 			
-			VulkanHelper.transferQueueToExternal(device, importedDmabuf);
+//			VulkanHelper.transferQueueToExternal(device, importedDmabuf);
 		}
 		
 		@Override

@@ -11,7 +11,11 @@ use jni::{
     objects::{JClass, JObject, JString},
     sys::{jboolean, jbyte, jdouble, jint, jlong},
 };
-use rustix::{fd::IntoRawFd, fs::{makedev, fstat}};
+use rustix::{
+    event::{PollFd, PollFlags, Timespec, poll},
+    fd::{IntoRawFd, BorrowedFd},
+    fs::{makedev, fstat}
+};
 use smithay::{
     backend::{
         allocator::{
@@ -977,6 +981,11 @@ fn try_attach_dmabuf(
 
     let release_handle =
         insert_get_handle(&mut instance.bridge.pending_release, buf);
+
+    let fd: BorrowedFd = dmabuf.handles().next().unwrap();
+    let pfd = PollFd::from_borrowed_fd(fd, PollFlags::IN);
+    let ts = Timespec { tv_sec: 0, tv_nsec: 500_000_000 };
+    poll(&mut [pfd], Some(&ts)).expect("poll dmabuf fd");
 
     if jsurface.attach_dmabuf(env, handle, release_handle).unwrap() {
         BufferAttachResult::WaitRelease

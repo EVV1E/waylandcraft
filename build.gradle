@@ -116,7 +116,7 @@ loom {
 			environmentVariable("__GL_THREADED_OPTIMIZATIONS", "0")
 			environmentVariable("RUST_BACKTRACE", "1")
 			programArguments.add("-graphicsBackend=vulkan")
-			programArguments.add("-vulkanValidation")
+			//programArguments.add("-vulkanValidation")
 		}
 	}
 	accessWidenerPath = file("src/main/resources/waylandcraft.classtweaker")
