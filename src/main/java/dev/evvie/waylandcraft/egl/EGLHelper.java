@@ -4,6 +4,7 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.util.ArrayList;
 
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 
@@ -13,11 +14,13 @@ import dev.evvie.waylandcraft.bridge.dmabuf.DmabufPlane;
 
 public class EGLHelper {
 	
-	public static String queryRenderNodePath(long display) {
+	// Get the active DRM render node of the EGLDisplay.
+	// May return null if the EXT_device_drm_render_node egl extension is not supported or the device is not backed by a render node
+	public static @Nullable String queryRenderNodePath(long display) {
 		String renderNodePath;
 		try(MemoryStack stack = MemoryStack.stackPush()) {
 			PointerBuffer deviceRet = stack.callocPointer(1);
-			EGL.eglQueryDisplayAttribEXT(display, EGL.EGL_DEVICE_EXT, deviceRet);
+			if(!EGL.eglQueryDisplayAttribEXT(display, EGL.EGL_DEVICE_EXT, deviceRet)) return null;
 			
 			long device = deviceRet.get(0);
 			renderNodePath = EGL.eglQueryDeviceStringEXT(device, EGL.EGL_DRM_RENDER_NODE_FILE_EXT);

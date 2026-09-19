@@ -144,6 +144,11 @@ public class WaylandCraftBridge {
 		}
 		
 		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
+		if(renderNodePath == null) {
+			WaylandCraftCommon.LOGGER.error("Failed to query for drm render node! This could indicate a software renderer. Disabling dmabuf functionality.");
+			return null;
+		}
+		
 		DmabufFormat[] formats = EGLHelper.queryDmabufFormats(eglDisplay).toArray(DmabufFormat[]::new);
 		long device = drmDeviceByPath(renderNodePath);
 		
