@@ -255,6 +255,10 @@ bind_java_type! {
             sig = (instance: jlong, release_handle: jlong),
             fn = release_buffer,
         },
+        static extern fn poll_dmabuf_fds {
+            sig = (handle: jlong),
+            fn = poll_dmabuf_fds,
+        },
         extern fn update_surface_tree {
             sig = (instance: jlong, surface: WLCSurface) -> WLCSurface,
             fn = update_surface_tree,
@@ -446,6 +450,8 @@ enum BridgeError {
     NullToplevelPtr(&'static str),
     #[error("Null popup surface handle given. Function: {0}")]
     NullPopupPtr(&'static str),
+    #[error("Null dmabuf handle given. Function: {0}")]
+    NullDmabufPtr(&'static str),
     #[error("Error converting OS string, was not UTF8")]
     OsStringToUtf8,
     #[error("Unknown pointer button {0} received")]
@@ -467,6 +473,15 @@ macro_rules! jptr_to_instance {
         match jptr_to_mut::<WaylandCraft>($jptr) {
             None => Err(BridgeError::NullInstancePtr($location)),
             Some(wlc) => Ok(wlc),
+        }
+    };
+}
+
+macro_rules! jptr_to_dmabuf {
+    ($jptr:expr, $location:literal) => {
+        match jptr_to_mut::<Dmabuf>($jptr) {
+            None => Err(BridgeError::NullDmabufPtr($location)),
+            Some(d) => Ok(d),
         }
     };
 }
@@ -982,16 +997,30 @@ fn try_attach_dmabuf(
     let release_handle =
         insert_get_handle(&mut instance.bridge.pending_release, buf);
 
-    let fd: BorrowedFd = dmabuf.handles().next().unwrap();
-    let pfd = PollFd::from_borrowed_fd(fd, PollFlags::IN);
-    let ts = Timespec { tv_sec: 0, tv_nsec: 500_000_000 };
-    poll(&mut [pfd], Some(&ts)).expect("poll dmabuf fd");
-
     if jsurface.attach_dmabuf(env, handle, release_handle).unwrap() {
         BufferAttachResult::WaitRelease
     } else {
         BufferAttachResult::Error
     }
+}
+
+fn poll_dmabuf_fds<'local>(
+    _env: &mut Env<'local>,
+    _class: JClass<'local>,
+    handle: jlong,
+) -> Result<(), BridgeError> {
+    let dmabuf = jptr_to_dmabuf!(handle, "poll_dmabuf_fds")?;
+    let fds: Vec<BorrowedFd> = dmabuf.handles().collect();
+    let pfds: Vec<PollFd> = fds
+        .iter()
+        .map(|fd| PollFd::new(fd, PollFlags::IN))
+        .collect();
+    let ts = Timespec { tv_sec: 0, tv_nsec: 500_000_000 };
+    for pfd in pfds {
+        poll(&mut [pfd], Some(&ts)).expect("poll dmabuf fd");
+    }
+
+    Ok(())
 }
 
 fn release_buffer<'local>(

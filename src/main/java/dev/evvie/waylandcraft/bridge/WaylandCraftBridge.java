@@ -748,6 +748,10 @@ public class WaylandCraftBridge {
 		dndMotion(instance, handle, x, y);
 	}
 	
+	public void waitDmabuf(long dmabuf) {
+		pollDmabufFds(dmabuf);
+	}
+	
 	public void sendBufferRelease(long releaseHandle) {
 		releaseBuffer(instance, releaseHandle);
 	}
@@ -815,6 +819,8 @@ public class WaylandCraftBridge {
 	
 	// Check if there are new dmabufs waiting to be imported. If yes, importDmabuf() will be called
 	private native void checkImportDmabuf(long instance);
+	
+	private static native void pollDmabufFds(long dmabuf);
 	
 	private static native void releaseBuffer(long instance, long handle);
 	

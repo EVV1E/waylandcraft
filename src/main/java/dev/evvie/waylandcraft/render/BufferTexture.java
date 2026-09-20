@@ -37,6 +37,7 @@ import com.mojang.blaze3d.vulkan.VulkanDevice;
 import com.mojang.blaze3d.vulkan.VulkanGpuBuffer;
 import com.mojang.blaze3d.vulkan.VulkanGpuTexture;
 
+import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
 import dev.evvie.waylandcraft.egl.EGL;
@@ -390,17 +391,18 @@ public abstract class BufferTexture {
 				this.internalView = RenderSystem.getDevice().createTextureView(internalTexture);
 			});
 			
-			copyData();
+//			copyData();
 		}
 		
 		@Override
 		public void copyData() {
 			VulkanDevice device = VulkanHelper.getVulkanDevice();
-//			VulkanHelper.transferQueueFromExternal(device, importedDmabuf);
 			
 			super.copyData();
 			
-//			VulkanHelper.transferQueueToExternal(device, importedDmabuf);
+			WaylandCraft.instance.bridge.waitDmabuf(this.handle);
+			VulkanHelper.acquireDmabufTexture(device, importedDmabuf);
+			VulkanHelper.releaseDmabufTexture(device, importedDmabuf);
 		}
 		
 		@Override

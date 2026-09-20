@@ -5,8 +5,6 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.render.BufferTexture;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
@@ -109,9 +107,7 @@ public class WLCSurface {
 		
 		dmabuf.copyData();
 		
-		RenderSystem.queueFencedTask(() -> {
-			WaylandCraft.instance.bridge.sendBufferRelease(releaseHandle);
-		});
+		WaylandCraft.instance.bridge.sendBufferRelease(releaseHandle);
 		
 		return true;
 	}
