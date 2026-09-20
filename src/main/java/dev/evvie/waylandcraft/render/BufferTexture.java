@@ -398,17 +398,23 @@ public abstract class BufferTexture {
 		public void copyData() {
 			VulkanDevice device = VulkanHelper.getVulkanDevice();
 			
+			WaylandCraft.instance.bridge.syncStartDmabufRead(this.handle);
+			
 			super.copyData();
 			
-			WaylandCraft.instance.bridge.waitDmabuf(this.handle);
 			VulkanHelper.acquireDmabufTexture(device, importedDmabuf);
 			VulkanHelper.releaseDmabufTexture(device, importedDmabuf);
+			
+			RenderSystem.queueFencedTask(() -> {
+				WaylandCraft.instance.bridge.syncEndDmabufRead(this.handle);
+			});
 		}
 		
 		@Override
 		public void doFree() {
 			if(internalTexture == null) return;
 			
+			internalView.close();
 			internalTexture.close();
 			internalTexture = null;
 		}

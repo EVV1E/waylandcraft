@@ -11,16 +11,12 @@ use jni::{
     objects::{JClass, JObject, JString},
     sys::{jboolean, jbyte, jdouble, jint, jlong},
 };
-use rustix::{
-    event::{PollFd, PollFlags, Timespec, poll},
-    fd::{IntoRawFd, BorrowedFd},
-    fs::{makedev, fstat}
-};
+use rustix::{fd::IntoRawFd, fs::{makedev, fstat}};
 use smithay::{
     backend::{
         allocator::{
             Buffer, Format, Fourcc, Modifier,
-            dmabuf::{Dmabuf, WeakDmabuf},
+            dmabuf::{Dmabuf, DmabufSyncFlags, WeakDmabuf},
         },
         drm::{CreateDrmNodeError, DrmNode},
     },
@@ -255,9 +251,9 @@ bind_java_type! {
             sig = (instance: jlong, release_handle: jlong),
             fn = release_buffer,
         },
-        static extern fn poll_dmabuf_fds {
-            sig = (handle: jlong),
-            fn = poll_dmabuf_fds,
+        static extern fn sync_dmabuf_planes {
+            sig = (instance: jlong, handle: jlong, end: jboolean),
+            fn = sync_dmabuf_planes,
         },
         extern fn update_surface_tree {
             sig = (instance: jlong, surface: WLCSurface) -> WLCSurface,
@@ -450,8 +446,6 @@ enum BridgeError {
     NullToplevelPtr(&'static str),
     #[error("Null popup surface handle given. Function: {0}")]
     NullPopupPtr(&'static str),
-    #[error("Null dmabuf handle given. Function: {0}")]
-    NullDmabufPtr(&'static str),
     #[error("Error converting OS string, was not UTF8")]
     OsStringToUtf8,
     #[error("Unknown pointer button {0} received")]
@@ -473,15 +467,6 @@ macro_rules! jptr_to_instance {
         match jptr_to_mut::<WaylandCraft>($jptr) {
             None => Err(BridgeError::NullInstancePtr($location)),
             Some(wlc) => Ok(wlc),
-        }
-    };
-}
-
-macro_rules! jptr_to_dmabuf {
-    ($jptr:expr, $location:literal) => {
-        match jptr_to_mut::<Dmabuf>($jptr) {
-            None => Err(BridgeError::NullDmabufPtr($location)),
-            Some(d) => Ok(d),
         }
     };
 }
@@ -743,6 +728,17 @@ where
     vec.swap_remove(idx)
 }
 
+// Get handles of all elements in the list
+fn get_element_by_handle<T>(vec: &mut [Box<T>], ptr: jlong) -> Option<&mut T>
+where
+    T: Clone + PartialEq,
+{
+    vec.iter_mut()
+        .map(|r| (&mut **r) as *mut T)
+        .find(|p| *p == (ptr as usize) as *mut T)
+        .map(|p| unsafe { &mut *p })
+}
+
 fn toplevels<'local>(
     env: &mut Env<'local>,
     _class: JClass<'local>,
@@ -999,25 +995,41 @@ fn try_attach_dmabuf(
 
     if jsurface.attach_dmabuf(env, handle, release_handle).unwrap() {
         BufferAttachResult::WaitRelease
+        //BufferAttachResult::Success
     } else {
         BufferAttachResult::Error
     }
 }
 
-fn poll_dmabuf_fds<'local>(
+fn sync_dmabuf_planes<'local>(
     _env: &mut Env<'local>,
     _class: JClass<'local>,
+    instance: jlong,
     handle: jlong,
+    end: jboolean,
 ) -> Result<(), BridgeError> {
-    let dmabuf = jptr_to_dmabuf!(handle, "poll_dmabuf_fds")?;
-    let fds: Vec<BorrowedFd> = dmabuf.handles().collect();
-    let pfds: Vec<PollFd> = fds
-        .iter()
-        .map(|fd| PollFd::new(fd, PollFlags::IN))
-        .collect();
-    let ts = Timespec { tv_sec: 0, tv_nsec: 500_000_000 };
-    for pfd in pfds {
-        poll(&mut [pfd], Some(&ts)).expect("poll dmabuf fd");
+    let instance = jptr_to_instance!(instance, "sync_dmabuf_planes")?;
+    let dmabuf: Option<Dmabuf> = get_element_by_handle(
+        &mut instance.bridge.dmabufs,
+        handle
+    ).and_then(|d| d.upgrade());
+
+    let dmabuf = match dmabuf {
+        Some(d) => d,
+        None => {
+            eprintln!("DMABUF gone :(");
+            return Ok(());
+        }
+    };
+
+    let mut flags = DmabufSyncFlags::READ;
+    match end {
+        false => flags |= DmabufSyncFlags::START,
+        true => flags |= DmabufSyncFlags::END,
+    }
+
+    for idx in 0..dmabuf.num_planes() {
+        dmabuf.sync_plane(idx, flags).expect("dmabuf plane sync");
     }
 
     Ok(())
