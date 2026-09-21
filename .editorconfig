@@ -1,3 +1,5 @@
+root = true
+
 [src/**]
 indent_style = tab
 
