@@ -174,9 +174,7 @@ public class WaylandCraft implements ClientModInitializer {
 		displays.forEach((d) -> d.render(ctx));
 	}
 	
-    /**
-     * called in the pick() method of MinecraftMixin.java
-     */
+	// called in the pick() method of MinecraftMixin
 	public void updatePointer() {
 		if(bridge == null) return;
 		
@@ -227,6 +225,11 @@ public class WaylandCraft implements ClientModInitializer {
 		for(WLCPopup popup : bridge.getMappedPopups()) {
 			anchorToParent(popup);
 		}
+	}
+	
+	public void onClientTick(Minecraft minecraft) {
+		if(minecraft.player == null) return;
+		checkKeybinds(minecraft);
 		
 		updateDisplayRequests();
 		
@@ -264,11 +267,6 @@ public class WaylandCraft implements ClientModInitializer {
 		keyboardCaptureMode = KeyboardCaptureMode.NONE;
 		bridge.deactivateKeyboard();
 		disablePointerCapture();
-	}
-	
-	public void onClientTick(Minecraft minecraft) {
-		if(minecraft.player == null) return;
-		checkKeybinds(minecraft);
 	}
 		
 	private void checkKeybinds(Minecraft minecraft) {
