@@ -159,6 +159,10 @@ public class RenderUtils {
 		collector.submitCustomGeometry(poseStack, renderType.apply(framebuffer.getTextureLocation()), new FramebufferRenderInstance(origin, spanX, spanY, true));
 	}
 	
+	public static void renderWorldSprite(Identifier texture, PoseStack poseStack, SubmitNodeCollector collector, TextureRegion region, Vec3 origin, Vec3 dirX, Vec3 dirY, double size) {
+		collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(texture), new WorldSpriteDrawEntity(origin, dirX, dirY, size, region, ARGB.white(1.0f), OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT));
+	}
+	
 	public static final record FramebufferRenderInstance(Vec3 origin, Vec3 spanX, Vec3 spanY, boolean reverse) implements CustomGeometryRenderer {
 		
 		@Override
@@ -222,8 +226,8 @@ public class RenderUtils {
 		context.blit(framebuffer.getTextureLocation(), x, y, x + w, y + h, 0.0f, 1.0f, 0.0f, 1.0f);
 	}
 	
-	public static void renderLineStrip(PoseStack poseStack, SubmitNodeCollector collector, Vec3[] points, int color, float width) {
-		collector.submitCustomGeometry(poseStack, RenderTypes.lines(), new LineStripDraw(points, color, width));
+	public static void renderLineStrip(PoseStack poseStack, RenderType renderType, SubmitNodeCollector collector, Vec3[] points, int color, float width) {
+		collector.submitCustomGeometry(poseStack, renderType, new LineStripDraw(points, color, width));
 	}
 	
 	private static final record LineStripDraw(Vec3[] points, int color, float width) implements CustomGeometryRenderer {
@@ -238,6 +242,43 @@ public class RenderUtils {
 				buffer.addVertex(pose, start.toVector3f()).setColor(color).setNormal(pose, normal).setLineWidth(width);
 				buffer.addVertex(pose,   end.toVector3f()).setColor(color).setNormal(pose, normal).setLineWidth(width);
 			}
+		}
+		
+	}
+	
+	// Subregion of a texture with dimensions (texWidth, texHeight)
+	public static final record TextureRegion(int x, int y, int w, int h, int texWidth, int texHeight) {
+	}
+	
+	public static final record WorldSpriteDrawEntity(Vec3 origin, Vec3 dirX, Vec3 dirY, double size, TextureRegion region, int color, int overlayCoords, int light) implements CustomGeometryRenderer {
+		
+		@Override
+		public void render(Pose pose, VertexConsumer buffer) {
+			Vec3 spanX = dirX.scale(size).scale(region.w);
+			Vec3 spanY = dirY.scale(size).scale(region.h);
+			
+			Vec3 tl = origin;
+			Vec3 bl = tl.add(spanY);
+			Vec3 br = bl.add(spanX);
+			Vec3 tr = tl.add(spanX);
+			Vec3 normal = dirY.cross(dirX);
+			
+			Vector4f pos1 = pose.pose().transform(new Vector4f((float) tl.x, (float) tl.y, (float) tl.z, 1.0f));
+			Vector4f pos2 = pose.pose().transform(new Vector4f((float) bl.x, (float) bl.y, (float) bl.z, 1.0f));
+			Vector4f pos3 = pose.pose().transform(new Vector4f((float) br.x, (float) br.y, (float) br.z, 1.0f));
+			Vector4f pos4 = pose.pose().transform(new Vector4f((float) tr.x, (float) tr.y, (float) tr.z, 1.0f));
+			
+			Vector3f norm = pose.transformNormal(normal.toVector3f(), new Vector3f());
+			
+			float u1 = region.x / (float) region.texWidth;
+			float u2 = (region.x + region.w) / (float) region.texWidth;
+			float v1 = region.y / (float) region.texHeight;
+			float v2 = (region.y + region.h) / (float) region.texHeight;
+			
+			buffer.addVertex(pos1.x, pos1.y, pos1.z, color, u1, v1, overlayCoords, light, norm.x, norm.y, norm.z);
+			buffer.addVertex(pos2.x, pos2.y, pos2.z, color, u1, v2, overlayCoords, light, norm.x, norm.y, norm.z);
+			buffer.addVertex(pos3.x, pos3.y, pos3.z, color, u2, v2, overlayCoords, light, norm.x, norm.y, norm.z);
+			buffer.addVertex(pos4.x, pos4.y, pos4.z, color, u2, v1, overlayCoords, light, norm.x, norm.y, norm.z);
 		}
 		
 	}

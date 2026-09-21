@@ -7,17 +7,23 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraft.PointerCapture;
+import dev.evvie.waylandcraft.WaylandCraft.PointerCaptureType;
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.math.WorldPlane;
 import dev.evvie.waylandcraft.render.RenderUtils;
+import dev.evvie.waylandcraft.render.RenderUtils.TextureRegion;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
@@ -26,6 +32,9 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class WindowDisplay extends AbstractWindowDisplay {
+	
+	private static final Identifier CURSOR_LOCATION = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "textures/cursor.png");
+	private static final TextureRegion CURSOR_REGION = new TextureRegion(2, 0, 11, 16, 16, 16);
 	
 	public final WLCAbstractWindow window;
 	public double anchorDistance = 2.0;
@@ -52,6 +61,35 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	@Override
 	public void renderFramebuffer(PoseStack poseStack, SubmitNodeCollector collector, Vec3 origin, Vec3 spanX, Vec3 spanY) {
 		RenderUtils.renderFramebuffer(window.framebuffer, poseStack, collector, true, origin, spanX, spanY);
+	}
+	
+	@Override
+	public void render(LevelRenderContext ctx) {
+		super.render(ctx);
+		
+		PointerCapture pointerCapture = WaylandCraft.instance.pointerCapture;
+		if(pointerCapture != null && pointerCapture.type == PointerCaptureType.MOTION && pointerCapture.display == this) {
+			Vec3 localX = localX();
+			Vec3 localY = localY();
+			
+			Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
+			Vec3 originRel = origin().subtract(cameraPos);
+			
+			PoseStack poseStack = ctx.poseStack();
+			poseStack.pushPose();
+			poseStack.translate(originRel.x, originRel.y, originRel.z);
+			
+			double x = -window.geometry.x() + pointerCapture.surface.xSubpos + pointerCapture.x;
+			double y = -window.geometry.y() + pointerCapture.surface.ySubpos + pointerCapture.y;
+			Vec3 pos = Vec3.ZERO.add(localX.scale(x)).add(localY.scale(y));
+			Vec3 worldRight = right();
+			Vec3 worldDown = down();
+			
+			double depth = 0.02;
+			double size = 0.004;
+			RenderUtils.renderWorldSprite(CURSOR_LOCATION, poseStack, ctx.submitNodeCollector(), CURSOR_REGION, pos.add(normal.scale(depth)), worldRight, worldDown, size);
+			poseStack.popPose();
+		}
 	}
 	
 	@Override

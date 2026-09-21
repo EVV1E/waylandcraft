@@ -440,7 +440,7 @@ public class WaylandCraft implements ClientModInitializer {
 	
 	public void disablePointerCapture() {
 		if(pointerCapture == null) return;
-		bridge.unlockPointer();
+		if(pointerCapture.type == PointerCaptureType.LOCKED) bridge.unlockPointer();
 		pointerCapture = null;
 	}
 	
@@ -448,15 +448,23 @@ public class WaylandCraft implements ClientModInitializer {
 		this.cursorShape = null;
 		
 		if(pointerCapture != null) {
-			if(!pointerCapture.surface.isAlive()) {
+			if(!pointerCapture.surface.isAlive() || !displays.contains(pointerCapture.display)) {
 				pointerCapture = null;
 				return;
 			}
 			
-			this.cursorShape = bridge.getCursorShape();
+			if(pointerCapture.type == PointerCaptureType.LOCKED) this.cursorShape = bridge.getCursorShape();
+			else this.cursorShape = CursorShape.HIDE;
 			
-			if(!bridge.maybeLockPointer(pointerCapture.surface)) {
-				disablePointerCapture();
+			boolean locked = bridge.maybeLockPointer(pointerCapture.surface);
+			boolean detach = settings.getDetachCrosshair();
+			if(pointerCapture.type == PointerCaptureType.LOCKED && !locked) {
+				if(detach) pointerCapture.type = PointerCaptureType.MOTION;
+				else disablePointerCapture();
+			}
+			else if(pointerCapture.type == PointerCaptureType.MOTION && locked) {
+				if(detach) pointerCapture.type = PointerCaptureType.LOCKED;
+				else disablePointerCapture();
 			}
 			
 			return;
@@ -528,14 +536,21 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		
 		if(hoveredDisplay != null && hoveredDisplay.dist >= 0) {
+			WindowDisplay display = hoveredDisplay.target;
 			WLCSurface surface = hoveredDisplay.surface;
 			Vec3 rel = hoveredDisplay.surfaceLocalRelative;
 			
 			this.cursorShape = bridge.getCursorShape();
 			bridge.sendMotionRefocus(surface, rel.x, rel.y);
 			
-			if(keyboardCaptureMode != KeyboardCaptureMode.NONE && bridge.maybeLockPointer(surface)) {
-				pointerCapture = new PointerCapture(surface, rel.x, rel.y);
+			if(keyboardCaptureMode != KeyboardCaptureMode.NONE) {
+				boolean pointerLocked = bridge.maybeLockPointer(surface);
+				if(pointerLocked) {
+					pointerCapture = new PointerCapture(PointerCaptureType.LOCKED, display, surface, rel.x, rel.y);
+				}
+				else if(settings.getDetachCrosshair()) {
+					pointerCapture = new PointerCapture(PointerCaptureType.MOTION, display, surface, rel.x, rel.y);
+				}
 			}
 			
 			// Focus on hover
@@ -613,7 +628,16 @@ public class WaylandCraft implements ClientModInitializer {
 		if(bridge == null) return false;
 		if(pointerCapture == null) return false;
 		
-		bridge.sendRelativeMotion(dx, dy);
+		if(pointerCapture.type == PointerCaptureType.LOCKED) bridge.sendRelativeMotion(dx, dy);
+		else if(pointerCapture.type == PointerCaptureType.MOTION) {
+			pointerCapture.x += dx;
+			pointerCapture.y += dy;
+			
+			pointerCapture.x = Math.clamp(pointerCapture.x, 0, pointerCapture.surface.width());
+			pointerCapture.y = Math.clamp(pointerCapture.y, 0, pointerCapture.surface.height());
+			
+			bridge.sendMotionRefocus(pointerCapture.surface, pointerCapture.x, pointerCapture.y);
+		}
 		return true;
 	}
 	
@@ -720,17 +744,33 @@ public class WaylandCraft implements ClientModInitializer {
 		
 	}
 	
+	/* Type of the pointer capture
+	 * LOCKED is used for wayland pointer locks.
+	 * MOTION is used for detached crosshair movement
+	 */
+	public static enum PointerCaptureType {
+		
+		LOCKED, MOTION;
+		
+	}
+	
 	public static class PointerCapture {
 		
+		public final WindowDisplay display;
 		public final WLCSurface surface;
 		
-		// Pointer capture entry surface-local coordinates
+		// Type of the pointer capture. Can be changed dynamically
+		public PointerCaptureType type;
+		
+		// Current pointer location for MOTION type in surface-local
 		public double x;
 		public double y;
 		
 		public HashSet<Integer> pressedButtons = new HashSet<Integer>();
 		
-		public PointerCapture(WLCSurface surface, double x, double y) {
+		public PointerCapture(PointerCaptureType type, WindowDisplay display, WLCSurface surface, double x, double y) {
+			this.type = type;
+			this.display = display;
 			this.surface = surface;
 			this.x = x;
 			this.y = y;
