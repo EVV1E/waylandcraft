@@ -174,6 +174,37 @@ public class WaylandCraft implements ClientModInitializer {
 		displays.forEach((d) -> d.render(ctx));
 	}
 	
+    /**
+     * called in the pick() method of MinecraftMixin.java
+     */
+	public void updatePointer() {
+		if(bridge == null) return;
+		
+		Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+		processPointerMotion(camera);
+		
+		if(Minecraft.getInstance().player == null || !Minecraft.getInstance().player.isUsingItem()) playerUsingWindowItem = false;
+		if(playerUsingWindowItem) {
+			ItemStack item = Minecraft.getInstance().player.getUseItem();
+			if(item.is(WindowItem.WINDOW)) {
+				WLCToplevel toplevel = getToplevel(item);
+				
+				if(toplevel != null) {
+					WindowDisplay display = getOrCreateDisplay(toplevel);
+					if(!playerWasUsingWindowItem) {
+						display.anchorDistance = 2.0;
+					}
+					
+					display.doGrabMove(camera.position(), new Vec3(camera.forwardVector()), new Vec3(camera.upVector()), camera.yRot());
+					
+					WaylandCraft.instance.bridge.focusSurface(toplevel);
+				}
+			}
+			else playerUsingWindowItem = false;
+		}
+		playerWasUsingWindowItem = playerUsingWindowItem;
+	}
+	
 	public void updateWorld(LevelExtractionContext ctx) {
 		for(WLCPopup popup : bridge.getMappedPopups()) {
 			WLCAbstractWindow root = popup;
@@ -212,30 +243,6 @@ public class WaylandCraft implements ClientModInitializer {
 			
 			bridge.focusSurface(focus);
 		}
-		
-		Camera camera = ctx.camera();
-		processPointerMotion(camera);
-		
-		if(Minecraft.getInstance().player == null || !Minecraft.getInstance().player.isUsingItem()) playerUsingWindowItem = false;
-		if(playerUsingWindowItem) {
-			ItemStack item = Minecraft.getInstance().player.getUseItem();
-			if(item.is(WindowItem.WINDOW)) {
-				WLCToplevel toplevel = getToplevel(item);
-				
-				if(toplevel != null) {
-					WindowDisplay display = getOrCreateDisplay(toplevel);
-					if(!playerWasUsingWindowItem) {
-						display.anchorDistance = 2.0;
-					}
-					
-					display.doGrabMove(camera.position(), new Vec3(camera.forwardVector()), new Vec3(camera.upVector()), camera.yRot());
-					
-					WaylandCraft.instance.bridge.focusSurface(toplevel);
-				}
-			}
-			else playerUsingWindowItem = false;
-		}
-		playerWasUsingWindowItem = playerUsingWindowItem;
 		
 		updateOutputSize(inWMScreen);
 	}
