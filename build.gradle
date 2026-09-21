@@ -112,7 +112,10 @@ jar {
 loom {
 	runs {
 		client {
-			environmentVariable("LD_LIBRARY_PATH", "../native/target/debug/")
+			// need to append, otherwise we get "Driver does not support OpenGL" in Nix containers
+			environmentVariable("LD_LIBRARY_PATH",
+				["../native/target/debug/", System.getenv("LD_LIBRARY_PATH")]
+					.findAll { it }.join(":"))
 			environmentVariable("__GL_THREADED_OPTIMIZATIONS", "0")
 			environmentVariable("RUST_BACKTRACE", "1")
 			programArguments.add("-graphicsBackend=vulkan")
