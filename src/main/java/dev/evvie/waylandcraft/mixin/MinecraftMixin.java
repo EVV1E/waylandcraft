@@ -33,6 +33,9 @@ public class MinecraftMixin {
 		Vec3 pos = Minecraft.getInstance().player.getEyePosition(partialTicks);
 		
 		WaylandCraft.instance.trueGameHitResult = result;
+
+		WaylandCraft.instance.updatePointer();
+
 		if(WaylandCraft.instance.overridePickBlock) {
 			Minecraft.getInstance().hitResult = BlockHitResult.miss(pos, Direction.DOWN, BlockPos.containing(pos));
 			Minecraft.getInstance().crosshairPickEntity = null;
