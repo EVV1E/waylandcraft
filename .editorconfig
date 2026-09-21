@@ -1,0 +1,6 @@
+[src/**]
+indent_style = tab
+
+[native/**]
+indent_style = space
+indent_size = 4
