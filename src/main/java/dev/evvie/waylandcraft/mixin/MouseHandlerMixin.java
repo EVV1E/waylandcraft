@@ -6,7 +6,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+
 import dev.evvie.waylandcraft.WaylandCraft;
+import dev.evvie.waylandcraft.WaylandCraft.PointerCaptureOverlay;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.MouseHandler;
 import net.minecraft.client.input.MouseButtonInfo;
 
@@ -18,9 +23,28 @@ public class MouseHandlerMixin {
 		if(WaylandCraft.instance.onButtonPress(windowHandle, buttonInfo.button(), action, buttonInfo.modifiers())) info.cancel();
 	}
 	
+	@Inject(method = "onButton", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;getOverlay()Lnet/minecraft/client/gui/screens/Overlay;", ordinal = 0))
+	public void onButtonMaybeOverlay(long windowHandle, MouseButtonInfo buttonInfo, int action, CallbackInfo info) {
+		if(Minecraft.getInstance().getOverlay() instanceof PointerCaptureOverlay && WaylandCraft.instance.pointerCapture != null) {
+			WaylandCraft.instance.onButtonPress(windowHandle, buttonInfo.button(), action, buttonInfo.modifiers());
+		}
+	}
+	
 	@Inject(method = "onScroll", at = @At(value = "FIELD", target = "Lnet/minecraft/client/Minecraft;player:Lnet/minecraft/client/player/LocalPlayer;", ordinal = 1), cancellable = true)
 	public void onScroll(long windowHandle, double scrollX, double scrollY, CallbackInfo info) {
 		if(WaylandCraft.instance.onScroll(windowHandle, scrollX, scrollY)) info.cancel();
+	}
+	
+	@Inject(method = "onScroll", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;getOverlay()Lnet/minecraft/client/gui/screens/Overlay;", ordinal = 0))
+	public void onScrollMaybeOverlay(long windowHandle, double scrollX, double scrollY, CallbackInfo info) {
+		if(Minecraft.getInstance().getOverlay() instanceof PointerCaptureOverlay && WaylandCraft.instance.pointerCapture != null) {
+			WaylandCraft.instance.onScroll(windowHandle, scrollX, scrollY);
+		}
+	}
+	
+	@WrapOperation(method = "grabMouse", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/KeyMapping;setAll()V"))
+	private void stopSetAllKeys(Operation<Void> original) {
+		if(!WaylandCraft.PointerCaptureOverlay.STOP_KEYMAPPING_SET_ALL.isBound()) original.call();
 	}
 	
 	@Shadow public double accumulatedDX;
