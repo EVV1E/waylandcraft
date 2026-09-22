@@ -85,7 +85,7 @@ public class WaylandCraftSettingsScreen extends Screen {
 		createIntSettingsWidget(WaylandCraftSettings.PIXELS_PER_BLOCK, Component.literal("Window display pixels per block"));
 		createBooleanSettingsWidget(WaylandCraftSettings.FOCUS_ON_HOVER, Component.literal("Focus windows when hovered"));
 		createTextSettingsWidget(WaylandCraftSettings.TERMINAL_CHOICE, Component.literal("Default terminal"));
-		createBooleanSettingsWidget(WaylandCraftSettings.DETACH_CROSSHAIR, Component.literal("Detach crosshair in capture mode"));
+		createBooleanSettingsWidget(WaylandCraftSettings.DETACH_CURSOR, Component.literal("Detach cursor in capture mode"));
 	}
 	
 }

@@ -21,19 +21,19 @@ public class WaylandCraftSettings {
 	int pixelsPerBlock = 500;
 	boolean focusOnHover = false;
 	String terminalChoice = "";
-	boolean detachCrosshair = false;
+	boolean detachCursor = false;
 	
 	/* This is where the field names go to avoid typos */
 	public static final String PIXELS_PER_BLOCK = "pixelsPerBlock";
 	public static final String FOCUS_ON_HOVER = "focusOnHover";
 	public static final String TERMINAL_CHOICE = "terminalChoice";
-	public static final String DETACH_CROSSHAIR = "detachCrosshair";
+	public static final String DETACH_CURSOR = "detachCursor";
 	
 	public static final String[] SETTINGS = new String[] {
 			PIXELS_PER_BLOCK,
 			FOCUS_ON_HOVER,
 			TERMINAL_CHOICE,
-			DETACH_CROSSHAIR
+			DETACH_CURSOR
 	};
 	
 	/* This is where the getters go */
@@ -50,8 +50,8 @@ public class WaylandCraftSettings {
 		return terminalChoice;
 	}
 	
-	public boolean getDetachCrosshair() {
-		return detachCrosshair;
+	public boolean getDetachCursor() {
+		return detachCursor;
 	}
 	
 	/* Methods to modifiy settings by name */

@@ -469,7 +469,7 @@ public class WaylandCraft implements ClientModInitializer {
 			else this.cursorShape = CursorShape.HIDE;
 			
 			boolean locked = bridge.maybeLockPointer(pointerCapture.surface);
-			boolean detach = settings.getDetachCrosshair();
+			boolean detach = settings.getDetachCursor();
 			if(pointerCapture.type == PointerCaptureType.LOCKED && !locked) {
 				PointerCapture old = pointerCapture;
 				disablePointerCapture();
@@ -566,7 +566,7 @@ public class WaylandCraft implements ClientModInitializer {
 				if(pointerLocked) {
 					pointerCapture = new PointerCapture(PointerCaptureType.LOCKED, display, surface);
 				}
-				else if(settings.getDetachCrosshair()) {
+				else if(settings.getDetachCursor()) {
 					pointerCapture = new PointerCapture(PointerCaptureType.MOTION, display, surface);
 				}
 			}
