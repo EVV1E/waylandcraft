@@ -10,14 +10,17 @@ import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
+import dev.evvie.waylandcraft.grabs.MoveGrab;
 import dev.evvie.waylandcraft.math.WorldPlane;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
@@ -52,6 +55,30 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	@Override
 	public void renderFramebuffer(PoseStack poseStack, SubmitNodeCollector collector, Vec3 origin, Vec3 spanX, Vec3 spanY) {
 		RenderUtils.renderFramebuffer(window.framebuffer, poseStack, collector, true, origin, spanX, spanY);
+	}
+	
+	@Override
+	public void render(LevelRenderContext ctx) {
+		super.render(ctx);
+		
+		Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
+		PoseStack poseStack = ctx.poseStack();
+		poseStack.pushPose();
+		poseStack.translate(cameraPos.scale(-1));
+		if(WaylandCraft.instance.pointerGrabs.activeExclusiveGrab() instanceof MoveGrab grab && grab.window == this && grab.snapActive) {
+			Vec3 points[];
+			points = new Vec3[] {
+					grab.initialPivot.add(right().scale(10)),
+					grab.initialPivot.add(right().scale(-10)),
+			};
+			RenderUtils.renderLineStrip(ctx.poseStack(), ctx.submitNodeCollector(), points, ARGB.color(255, 0, 0), 2.0f);
+			points = new Vec3[] {
+					grab.initialPivot.add(down().scale(10)),
+					grab.initialPivot.add(down().scale(-10)),
+			};
+			RenderUtils.renderLineStrip(ctx.poseStack(), ctx.submitNodeCollector(), points, ARGB.color(255, 0, 0), 2.0f);
+		}
+		poseStack.popPose();
 	}
 	
 	@Override
