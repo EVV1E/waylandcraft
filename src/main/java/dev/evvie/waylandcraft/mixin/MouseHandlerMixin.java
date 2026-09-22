@@ -35,6 +35,13 @@ public class MouseHandlerMixin {
 		if(WaylandCraft.instance.onScroll(windowHandle, scrollX, scrollY)) info.cancel();
 	}
 	
+	@Inject(method = "onScroll", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;getOverlay()Lnet/minecraft/client/gui/screens/Overlay;", ordinal = 0))
+	public void onScrollMaybeOverlay(long windowHandle, double scrollX, double scrollY, CallbackInfo info) {
+		if(Minecraft.getInstance().getOverlay() instanceof PointerCaptureOverlay && WaylandCraft.instance.pointerCapture != null) {
+			WaylandCraft.instance.onScroll(windowHandle, scrollX, scrollY);
+		}
+	}
+	
 	@WrapOperation(method = "grabMouse", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/KeyMapping;setAll()V"))
 	private void stopSetAllKeys(Operation<Void> original) {
 		if(!WaylandCraft.PointerCaptureOverlay.STOP_KEYMAPPING_SET_ALL.isBound()) original.call();
