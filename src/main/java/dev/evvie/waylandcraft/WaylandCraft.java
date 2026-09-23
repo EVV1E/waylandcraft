@@ -1,6 +1,8 @@
 package dev.evvie.waylandcraft;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Stream;
@@ -446,7 +448,7 @@ public class WaylandCraft implements ClientModInitializer {
 	public void disablePointerCapture() {
 		destroyPointerOverlay();
 		if(pointerCapture == null) return;
-		if(pointerCapture.type == PointerCaptureType.LOCKED) bridge.unlockPointer();
+		if(pointerCapture instanceof LockedPointerCapture) bridge.unlockPointer();
 		pointerCapture = null;
 	}
 	
@@ -461,28 +463,28 @@ public class WaylandCraft implements ClientModInitializer {
 		this.cursorShape = null;
 		
 		if(pointerCapture != null) {
-			if(!pointerCapture.surface.isAlive() || !displays.contains(pointerCapture.display)) {
+			if(!pointerCapture.isValid()) {
 				disablePointerCapture();
 				return;
 			}
 			
-			if(pointerCapture.type == PointerCaptureType.LOCKED) this.cursorShape = bridge.getCursorShape();
+			if(pointerCapture instanceof LockedPointerCapture) this.cursorShape = bridge.getCursorShape();
 			else this.cursorShape = CursorShape.HIDE;
 			
-			boolean locked = bridge.maybeLockPointer(pointerCapture.surface);
+			boolean locked = pointerCapture.surface != null && bridge.maybeLockPointer(pointerCapture.surface);
 			boolean detach = settings.getDetachCursor();
-			if(pointerCapture.type == PointerCaptureType.LOCKED && !locked) {
+			if(pointerCapture instanceof LockedPointerCapture && !locked) {
 				PointerCapture old = pointerCapture;
 				disablePointerCapture();
 				if(detach) {
-					pointerCapture = new PointerCapture(old, PointerCaptureType.MOTION);
+					pointerCapture = new MotionPointerCapture(old.display, old.pressedButtons);
 				}
 			}
-			else if(pointerCapture.type == PointerCaptureType.MOTION && locked) {
+			else if(pointerCapture instanceof MotionPointerCapture && locked) {
 				PointerCapture old = pointerCapture;
 				disablePointerCapture();
 				if(detach) {
-					pointerCapture = new PointerCapture(old, PointerCaptureType.LOCKED);
+					pointerCapture = new LockedPointerCapture(old.display, old.surface, old.pressedButtons);
 				}
 			}
 			
@@ -565,10 +567,10 @@ public class WaylandCraft implements ClientModInitializer {
 			if(keyboardCaptureMode != KeyboardCaptureMode.NONE) {
 				boolean pointerLocked = bridge.maybeLockPointer(surface);
 				if(pointerLocked) {
-					pointerCapture = new PointerCapture(PointerCaptureType.LOCKED, display, surface);
+					pointerCapture = new LockedPointerCapture(display, surface);
 				}
 				else if(settings.getDetachCursor()) {
-					pointerCapture = new PointerCapture(PointerCaptureType.MOTION, display, surface);
+					pointerCapture = new MotionPointerCapture(display);
 				}
 			}
 			
@@ -646,11 +648,7 @@ public class WaylandCraft implements ClientModInitializer {
 	public boolean onMouseTurn(double dx, double dy) {
 		if(bridge == null) return false;
 		if(pointerCapture == null) return false;
-		
-		if(pointerCapture.type == PointerCaptureType.LOCKED) bridge.sendRelativeMotion(dx, dy);
-		else if(pointerCapture.type == PointerCaptureType.MOTION) {
-			// Nothing here. Look at PointerCaptureOverlay
-		}
+		if(pointerCapture instanceof LockedPointerCapture) bridge.sendRelativeMotion(dx, dy);
 		return true;
 	}
 	
@@ -757,35 +755,52 @@ public class WaylandCraft implements ClientModInitializer {
 		
 	}
 	
-	/* Type of the pointer capture
-	 * LOCKED is used for wayland pointer locks.
-	 * MOTION is used for detached crosshair movement
-	 */
-	public static enum PointerCaptureType {
+	public abstract class PointerCapture {
 		
-		LOCKED, MOTION;
+		public final WindowDisplay display;
+		public final HashSet<Integer> pressedButtons;
+		
+		public WLCSurface surface;
+		
+		public PointerCapture(WindowDisplay display, WLCSurface surface, Collection<Integer> pressedButtons) {
+			this.display = display;
+			this.surface = surface;
+			this.pressedButtons = new HashSet<Integer>(pressedButtons);
+		}
+		
+		public boolean isValid() {
+			return displays.contains(display);
+		}
 		
 	}
 	
-	public class PointerCapture {
+	public class LockedPointerCapture extends PointerCapture {
 		
-		public final WindowDisplay display;
-		public final WLCSurface surface;
-		private final PointerCaptureType type;
-		
-		public HashSet<Integer> pressedButtons = new HashSet<Integer>();
-		
-		public PointerCapture(PointerCaptureType type, WindowDisplay display, WLCSurface surface) {
-			this.type = type;
-			this.display = display;
-			this.surface = surface;
-			
-			if(type == PointerCaptureType.MOTION && Minecraft.getInstance().getOverlay() == null) Minecraft.getInstance().setOverlay(new PointerCaptureOverlay());
+		public LockedPointerCapture(WindowDisplay display, WLCSurface surface, Collection<Integer> pressedButtons) {
+			super(display, surface, pressedButtons);
 		}
 		
-		public PointerCapture(PointerCapture old, PointerCaptureType type) {
-			this(type, old.display, old.surface);
-			this.pressedButtons = old.pressedButtons;
+		public LockedPointerCapture(WindowDisplay display, WLCSurface surface) {
+			this(display, surface, Collections.emptyList());
+		}
+		
+		@Override
+		public boolean isValid() {
+			return super.isValid() && surface.isAlive();
+		}
+		
+	}
+	
+	public class MotionPointerCapture extends PointerCapture {
+		
+		public MotionPointerCapture(WindowDisplay display, Collection<Integer> pressedButtons) {
+			super(display, null, pressedButtons);
+			
+			if(Minecraft.getInstance().getOverlay() == null) Minecraft.getInstance().setOverlay(new PointerCaptureOverlay());
+		}
+		
+		public MotionPointerCapture(WindowDisplay display) {
+			this(display, Collections.emptyList());
 		}
 		
 	}
@@ -806,7 +821,7 @@ public class WaylandCraft implements ClientModInitializer {
 		
 		@Override
 		public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-			if(pointerCapture == null || pointerCapture.type != PointerCaptureType.MOTION) return;
+			if(!(pointerCapture instanceof MotionPointerCapture motionCapture)) return;
 			
 			Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
 			Camera.NearPlane plane = camera.getNearPlane(Minecraft.getInstance().options.fov().get().intValue());
@@ -820,9 +835,13 @@ public class WaylandCraft implements ClientModInitializer {
 			Vec3 look = plane.getPointOnPlane((float) rx, (float) ry).normalize();
 			
 			DisplayHitResult result = pointerCapture.display.intersect(pos, look);
-			if(result.isMiss()) bridge.sendMotionOutside();
+			if(result.isMiss()) {
+				bridge.sendMotionOutside();
+				motionCapture.surface = null;
+			}
 			else {
 				bridge.sendMotionRefocus(result.surface, result.surfaceLocalRelative.x, result.surfaceLocalRelative.y);
+				motionCapture.surface = result.surface;
 			}
 		}
 		
