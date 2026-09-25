@@ -28,9 +28,11 @@ import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.network.WaylandCraftNetworking;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.StreamAudioPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.StreamEndPayload;
+import dev.evvie.waylandcraft.sharing.SharingNetworking.StreamPosePayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.StreamVideoPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.WatchPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.WindowKey;
+import dev.evvie.waylandcraft.sharing.SharingNetworking.WindowPose;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -44,10 +46,12 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-/* Viewer side of window sharing: other players' shared windows shown in item frames.
+/* Viewer side of window sharing: other players' shared windows, shown in item frames or
+ * as free-floating displays where their owner placed them.
  *
  * Video is demand-driven. Every few ticks the viewer checks which frames with other
  * players' windows are in view (frustum) and in line of sight (no blocks in between),
@@ -84,6 +88,9 @@ public class SharingViewer {
 
 		RemoteAudioPlayer audio = null;
 		@Nullable Vec3 audioPosition = null;
+
+		// Set while the owner shows the window as a free-floating display
+		@Nullable WindowPose pose = null;
 
 		RemoteWindow(WindowKey key) {
 			this.key = key;
@@ -122,6 +129,18 @@ public class SharingViewer {
 		Map<WindowKey, Vec3> audioPositions = new HashMap<>();
 		Vec3 eye = minecraft.gameRenderer.getMainCamera().getPosition();
 
+		// Free-floating displays of other players' shared windows
+		for(RemoteWindow window : windows.values()) {
+			WindowPose pose = window.pose;
+			if(pose == null) continue;
+			audioPositions.putIfAbsent(window.key, pose.pivot());
+
+			if(pose.pivot().distanceTo(eye) > WATCH_RANGE) continue;
+			if(frustum != null && !frustum.isVisible(bounds(pose))) continue;
+			if(!inLineOfSight(eye, pose.pivot().add(pose.normal().scale(0.05)))) continue;
+			watched.add(window.key);
+		}
+
 		for(Entity entity : minecraft.level.entitiesForRendering()) {
 			if(!(entity instanceof ItemFrame frame)) continue;
 			WindowKey key = keyOf(frame.getItem());
@@ -133,7 +152,8 @@ public class SharingViewer {
 
 			if(center.distanceTo(eye) > WATCH_RANGE) continue;
 			if(frustum != null && !frustum.isVisible(frame.getBoundingBox().inflate(0.5))) continue;
-			if(!inLineOfSight(eye, frame)) continue;
+			Vec3 facing = Vec3.atLowerCornerOf(frame.getDirection().getNormal());
+			if(!inLineOfSight(eye, center.add(facing.scale(0.1)))) continue;
 			watched.add(key);
 		}
 
@@ -149,14 +169,21 @@ public class SharingViewer {
 		}
 	}
 
-	// A frame is visible if nothing blocks the ray to a point just in front of it
-	private static boolean inLineOfSight(Vec3 eye, ItemFrame frame) {
-		Vec3 facing = Vec3.atLowerCornerOf(frame.getDirection().getNormal());
-		Vec3 target = frame.getBoundingBox().getCenter().add(facing.scale(0.1));
-
+	// Visible if nothing blocks the ray to a point just in front of the window
+	private static boolean inLineOfSight(Vec3 eye, Vec3 target) {
 		Minecraft minecraft = Minecraft.getInstance();
 		HitResult hit = minecraft.level.clip(new ClipContext(eye, target, ClipContext.Block.VISUAL, ClipContext.Fluid.NONE, minecraft.player));
 		return hit.getType() == HitResult.Type.MISS;
+	}
+
+	private static AABB bounds(WindowPose pose) {
+		Vec3 halfX = pose.right().scale(pose.width() / 2);
+		Vec3 halfY = pose.down().scale(pose.height() / 2);
+		return new AABB(pose.pivot().subtract(halfX).subtract(halfY), pose.pivot().add(halfX).add(halfY)).inflate(0.1);
+	}
+
+	public void onStreamPose(StreamPosePayload payload) {
+		windows.computeIfAbsent(payload.key(), RemoteWindow::new).pose = payload.pose();
 	}
 
 	/* Video */
@@ -255,6 +282,47 @@ public class SharingViewer {
 		return true;
 	}
 
+	// Draws other players' free-floating shared windows. poseStack is camera-relative.
+	public void renderFloating(PoseStack poseStack, MultiBufferSource buffers, Vec3 cameraPos) {
+		for(RemoteWindow window : windows.values()) {
+			WindowPose pose = window.pose;
+			if(pose == null || window.texture == null) continue;
+
+			Vec3 spanX = pose.right().scale(pose.width());
+			Vec3 spanY = pose.down().scale(pose.height());
+			Vec3 origin = pose.pivot().subtract(spanX.scale(0.5)).subtract(spanY.scale(0.5)).subtract(cameraPos);
+
+			// Window on the front, black silhouette on the back, like local displays under shader packs
+			VertexConsumer buffer = buffers.getBuffer(RenderType.entityCutout(window.location));
+			addWorldQuad(poseStack.last(), buffer, origin, spanX, spanY, FastColor.ARGB32.colorFromFloat(1.0f, 1.0f, 1.0f, 1.0f), false);
+			addWorldQuad(poseStack.last(), buffer, origin, spanX, spanY, FastColor.ARGB32.colorFromFloat(1.0f, 0.0f, 0.0f, 0.0f), true);
+		}
+	}
+
+	private static void addWorldQuad(Pose pose, VertexConsumer buffer, Vec3 origin, Vec3 spanX, Vec3 spanY, int color, boolean reverse) {
+		Vector3f tl = pose.pose().transformPosition(origin.toVector3f());
+		Vector3f bl = pose.pose().transformPosition(origin.add(spanY).toVector3f());
+		Vector3f br = pose.pose().transformPosition(origin.add(spanY).add(spanX).toVector3f());
+		Vector3f tr = pose.pose().transformPosition(origin.add(spanX).toVector3f());
+		Vector3f normal = pose.transformNormal(spanY.cross(spanX).normalize().toVector3f(), new Vector3f());
+		int overlay = OverlayTexture.NO_OVERLAY;
+		int light = LightTexture.FULL_BRIGHT;
+
+		// Same winding as RenderUtils' front and back faces
+		if(!reverse) {
+			buffer.addVertex(tl.x, tl.y, tl.z, color, 0.0f, 0.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(bl.x, bl.y, bl.z, color, 0.0f, 1.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(br.x, br.y, br.z, color, 1.0f, 1.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(tr.x, tr.y, tr.z, color, 1.0f, 0.0f, overlay, light, normal.x, normal.y, normal.z);
+		}
+		else {
+			buffer.addVertex(tr.x, tr.y, tr.z, color, 1.0f, 0.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(br.x, br.y, br.z, color, 1.0f, 1.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(bl.x, bl.y, bl.z, color, 0.0f, 1.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(tl.x, tl.y, tl.z, color, 0.0f, 0.0f, overlay, light, normal.x, normal.y, normal.z);
+		}
+	}
+
 	private static void addQuad(Pose pose, VertexConsumer buffer, float w, float h) {
 		int color = FastColor.ARGB32.colorFromFloat(1.0f, 1.0f, 1.0f, 1.0f);
 		int overlay = OverlayTexture.NO_OVERLAY;
@@ -282,7 +350,7 @@ public class SharingViewer {
 			window.audio = new RemoteAudioPlayer();
 			if(window.audioPosition != null) window.audio.setPosition(window.audioPosition);
 		}
-		window.audio.queue(payload.pcm());
+		window.audio.queue(payload.opus());
 	}
 
 	/* Lifecycle */

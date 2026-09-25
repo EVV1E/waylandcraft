@@ -17,6 +17,8 @@ repositories {
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
 
+	mavenCentral()
+
 	exclusiveContent {
 		forRepository {
 			maven {
@@ -49,6 +51,13 @@ sourceSets {
 dependencies {
 	// To change the versions see the gradle.properties file
 	compileOnly "maven.modrinth:iris:${project.iris_version}"
+	// Pure-Java Opus for window sharing audio, bundled so every client can decode it
+	jarJar(implementation("io.github.jaredmdobson:concentus")) {
+		version {
+			strictly "[${project.concentus_version},)"
+			prefer project.concentus_version
+		}
+	}
 }
 
 def modProperties = [
@@ -170,4 +179,10 @@ publishing {
 		// The repositories here will be used for publishing your artifact, not for
 		// retrieving dependencies.
 	}
+}
+
+// Non-mod libraries must be put on the dev run classpath explicitly
+// (this configuration exists once the neoForge block above is evaluated)
+dependencies {
+	additionalRuntimeClasspath "io.github.jaredmdobson:concentus:${project.concentus_version}"
 }

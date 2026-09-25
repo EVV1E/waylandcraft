@@ -31,6 +31,9 @@ public class WindowFramebuffer implements FramebufferRenderable {
 	private int xoff;
 	private int yoff;
 	
+	// Incremented whenever the rendered content may have changed (damage or resize)
+	private long contentVersion = 0;
+	
 	public WindowFramebuffer(WLCSurface surfaceTree) {
 		this.surfaceTree = surfaceTree;
 	}
@@ -66,7 +69,10 @@ public class WindowFramebuffer implements FramebufferRenderable {
 			return;
 		}
 		
-		if(width != prevWidth || height != prevHeight) destroy();
+		if(width != prevWidth || height != prevHeight) {
+			destroy();
+			contentVersion++;
+		}
 		
 		if(tempTarget == null) {
 			tempTarget = new TextureTarget(width, height, false, Minecraft.ON_OSX);
@@ -85,6 +91,12 @@ public class WindowFramebuffer implements FramebufferRenderable {
 	
 	public void render() {
 		updateTarget();
+		for(WLCSurface surface = surfaceTree; surface != null; surface = surface.getNextChild()) {
+			if(!surface.getDamage().isEmpty()) {
+				contentVersion++;
+				break;
+			}
+		}
 		if(target == null || tempTarget == null) return;
 		
 		Matrix4f transform = new Matrix4f()
@@ -188,6 +200,10 @@ public class WindowFramebuffer implements FramebufferRenderable {
 	
 	public ResourceLocation getTextureLocation() {
 		return location;
+	}
+	
+	public long getContentVersion() {
+		return contentVersion;
 	}
 	
 	public boolean isValid() {

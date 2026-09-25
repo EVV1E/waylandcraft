@@ -205,12 +205,14 @@ public class WaylandCraft {
 	private void onRenderLevelStage(RenderLevelStageEvent event) {
 		if(event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
 		sharingViewer.setFrustum(event.getFrustum());
-		if(bridge == null) return;
-		
-		updateWorld();
 		
 		Vec3 cameraPos = event.getCamera().getPosition();
-		displays.forEach((d) -> d.render(event.getPoseStack(), worldBuffers, cameraPos));
+		sharingViewer.renderFloating(event.getPoseStack(), worldBuffers, cameraPos);
+		
+		if(bridge != null) {
+			updateWorld();
+			displays.forEach((d) -> d.render(event.getPoseStack(), worldBuffers, cameraPos));
+		}
 		worldBuffers.endBatch();
 	}
 	
