@@ -58,6 +58,13 @@ dependencies {
 			prefer project.concentus_version
 		}
 	}
+	// Pure-Java H.264 for window sharing video, bundled for the same reason
+	jarJar(implementation("org.jcodec:jcodec")) {
+		version {
+			strictly "[${project.jcodec_version},)"
+			prefer project.jcodec_version
+		}
+	}
 }
 
 def modProperties = [
@@ -185,4 +192,5 @@ publishing {
 // (this configuration exists once the neoForge block above is evaluated)
 dependencies {
 	additionalRuntimeClasspath "io.github.jaredmdobson:concentus:${project.concentus_version}"
+	additionalRuntimeClasspath "org.jcodec:jcodec:${project.jcodec_version}"
 }

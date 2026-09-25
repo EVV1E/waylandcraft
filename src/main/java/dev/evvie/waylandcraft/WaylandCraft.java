@@ -150,6 +150,13 @@ public class WaylandCraft {
 		
 		settingsManager = new WaylandCraftSettingsManager(this);
 		
+		// Watching windows other players share is pure Java, so it works on every platform
+		NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.class, this::onRenderLevelStage);
+		NeoForge.EVENT_BUS.addListener(RenderItemInFrameEvent.class, this::onRenderItemInFrame);
+		NeoForge.EVENT_BUS.addListener(RenderFrameEvent.Pre.class, (event) -> sharingViewer.presentFrames());
+		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, (event) -> sharingViewer.tick());
+		NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, (event) -> sharingViewer.reset());
+		
 		if(Platform.get() != Platform.LINUX) {
 			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");
 			WaylandCraft.fallbackMode = true;
@@ -157,14 +164,9 @@ public class WaylandCraft {
 		}
 		
 		NeoForge.EVENT_BUS.addListener(RenderFrameEvent.Pre.class, (event) -> update());
-		NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.class, this::onRenderLevelStage);
 		NeoForge.EVENT_BUS.addListener(RenderHandEvent.class, this::onRenderHand);
-		NeoForge.EVENT_BUS.addListener(RenderItemInFrameEvent.class, this::onRenderItemInFrame);
 		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, (event) -> onClientTick(Minecraft.getInstance()));
-		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, (event) -> {
-			sharingOwner.tick();
-			sharingViewer.tick();
-		});
+		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, (event) -> sharingOwner.tick());
 		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Pre.class, (event) -> itemManager.onStartTick(Minecraft.getInstance()));
 		NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, (event) -> onClientJoin(Minecraft.getInstance()));
 		NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, (event) -> onClientDisconnect());
@@ -371,7 +373,6 @@ public class WaylandCraft {
 		displays.clear();
 		itemManager.reset();
 		sharingOwner.reset();
-		sharingViewer.reset();
 	}
 	
 	@Nullable

@@ -10,8 +10,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.function.Consumer;
 import java.util.function.IntSupplier;
+import java.util.function.ObjLongConsumer;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -33,23 +33,23 @@ import io.github.jaredmdobson.concentus.OpusException;
  */
 public class AudioCapture {
 
-	// One Opus frame of 16-bit mono PCM
-	private static final int FRAME_BYTES = SharingNetworking.AUDIO_FRAME_SAMPLES * 2;
-	private static final int BITRATE = 64000;
+	// One Opus frame of interleaved 16-bit stereo PCM
+	private static final int FRAME_BYTES = SharingNetworking.AUDIO_FRAME_SAMPLES * SharingNetworking.AUDIO_CHANNELS * 2;
+	private static final int BITRATE = 96000;
 
 	private static final long LOOKUP_INTERVAL_MILLIS = 2000;
 
 	// Re-evaluated on every stream lookup: resolving an X11 window's pid can succeed later
 	private final IntSupplier pid;
-	// Receives one Opus packet per 20 ms
-	private final Consumer<byte[]> sink;
+	// Receives one Opus packet per 20 ms, with the capture time of its first sample
+	private final ObjLongConsumer<byte[]> sink;
 
 	private volatile @Nullable Process recorder = null;
 	private volatile boolean stopped = false;
 	private boolean lookupRunning = false;
 	private long lastLookup = 0;
 
-	public AudioCapture(IntSupplier pid, Consumer<byte[]> sink) {
+	public AudioCapture(IntSupplier pid, ObjLongConsumer<byte[]> sink) {
 		this.pid = pid;
 		this.sink = sink;
 	}
@@ -95,7 +95,7 @@ public class AudioCapture {
 			// Never fall back to another node (e.g. the microphone) if the stream goes away
 			"-P", "{ node.dont-fallback = true, node.dont-reconnect = true, node.description = \"WaylandCraft window sharing\" }",
 			"--rate", String.valueOf(SharingNetworking.AUDIO_SAMPLE_RATE),
-			"--channels", "1",
+			"--channels", String.valueOf(SharingNetworking.AUDIO_CHANNELS),
 			"--format", "s16",
 			"--latency", "50ms",
 			"-");
@@ -118,7 +118,7 @@ public class AudioCapture {
 	private void readLoop(Process process) {
 		OpusEncoder encoder;
 		try {
-			encoder = new OpusEncoder(SharingNetworking.AUDIO_SAMPLE_RATE, 1, OpusApplication.OPUS_APPLICATION_AUDIO);
+			encoder = new OpusEncoder(SharingNetworking.AUDIO_SAMPLE_RATE, SharingNetworking.AUDIO_CHANNELS, OpusApplication.OPUS_APPLICATION_AUDIO);
 			encoder.setBitrate(BITRATE);
 		} catch(OpusException e) {
 			WaylandCraftCommon.LOGGER.error("Failed to create Opus encoder for window audio sharing", e);
@@ -128,12 +128,13 @@ public class AudioCapture {
 
 		try(InputStream in = process.getInputStream()) {
 			byte[] frame = new byte[FRAME_BYTES];
-			short[] samples = new short[SharingNetworking.AUDIO_FRAME_SAMPLES];
+			short[] samples = new short[SharingNetworking.AUDIO_FRAME_SAMPLES * SharingNetworking.AUDIO_CHANNELS];
 			byte[] packet = new byte[SharingNetworking.MAX_AUDIO_BYTES];
 			while(in.readNBytes(frame, 0, frame.length) == frame.length) {
+				long timestamp = System.currentTimeMillis() - SharingNetworking.AUDIO_FRAME_MILLIS;
 				ByteBuffer.wrap(frame).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().get(samples);
-				int length = encoder.encode(samples, 0, samples.length, packet, 0, packet.length);
-				sink.accept(Arrays.copyOf(packet, length));
+				int length = encoder.encode(samples, 0, SharingNetworking.AUDIO_FRAME_SAMPLES, packet, 0, packet.length);
+				sink.accept(Arrays.copyOf(packet, length), timestamp);
 			}
 		} catch(IOException | OpusException e) {
 			// Recorder was stopped

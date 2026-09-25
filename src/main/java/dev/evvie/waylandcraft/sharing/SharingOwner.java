@@ -12,11 +12,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.MemoryCacheImageOutputStream;
 
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
@@ -34,6 +30,8 @@ import dev.evvie.waylandcraft.render.WindowShaders;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.AudioChunkPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.DemandPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.DisplayPosePayload;
+import dev.evvie.waylandcraft.sharing.SharingNetworking.FrameInfo;
+import dev.evvie.waylandcraft.sharing.SharingNetworking.KeyFrameRequestPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.ShareStatePayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.VideoChunkPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.WindowPose;
@@ -47,16 +45,17 @@ import net.minecraft.world.phys.Vec3;
  * is near it.
  *
  * Video is tuned for both moving content (videos, games) and text (terminals):
- * while the window keeps changing, frames are sent as JPEG at a moderate size and up
- * to MOTION_FPS; once it has been still for STILL_DELAY_MILLIS, one lossless PNG at
- * a higher resolution follows, so text becomes crisp. Nothing is captured while the
- * window content doesn't change.
+ * while the window keeps changing, frames are sent as H.264 (see H264Codec) at a
+ * moderate size and up to MOTION_FPS; once it has been still for STILL_DELAY_MILLIS,
+ * one lossless PNG at a higher resolution follows, so text becomes crisp. Nothing is
+ * captured while the window content doesn't change.
  */
 public class SharingOwner {
 
 	private static final int MOTION_FPS = 15;
 	private static final int MOTION_MAX_DIMENSION = 854;
-	private static final float MOTION_JPEG_QUALITY = 0.7f;
+	// A key frame every this many motion frames bounds how long a viewer who missed frames waits
+	private static final int KEY_FRAME_INTERVAL = 30;
 
 	private static final long STILL_DELAY_MILLIS = 600;
 	private static final int STILL_MAX_DIMENSION = 1600;
@@ -87,6 +86,13 @@ public class SharingOwner {
 		boolean stillSent = false;
 		int frameId = 0;
 		boolean encoding = false;
+
+		// H.264 state. The encoder itself is only touched on the encoder thread.
+		H264Codec.Encoder encoder = null;
+		boolean forceKeyFrame = true;
+		int framesSinceKey = 0;
+		int encodedWidth = 0;
+		int encodedHeight = 0;
 
 		AudioCapture audio = null;
 
@@ -132,13 +138,21 @@ public class SharingOwner {
 	public void onDemand(DemandPayload payload) {
 		SharedWindow window = shared.get(payload.handle());
 		if(window == null) return;
-		if(payload.video() && !window.videoDemand) {
-			// New viewers need a full frame
-			window.sentVersion = -1;
-			window.stillSent = false;
-		}
+		if(payload.video() && !window.videoDemand) requestKeyFrame(window);
 		window.videoDemand = payload.video();
 		window.audioDemand = payload.audio();
+	}
+
+	public void onKeyFrameRequest(KeyFrameRequestPayload payload) {
+		SharedWindow window = shared.get(payload.handle());
+		if(window != null) requestKeyFrame(window);
+	}
+
+	// New viewers need a frame they can decode on their own, even if the window is idle
+	private void requestKeyFrame(SharedWindow window) {
+		window.forceKeyFrame = true;
+		window.sentVersion = -1;
+		window.stillSent = false;
 	}
 
 	public void reset() {
@@ -172,8 +186,8 @@ public class SharingOwner {
 		if(window.audio == null) {
 			long handle = window.toplevel.getHandle();
 			String x11Display = wlc.x11Display;
-			window.audio = new AudioCapture(() -> AudioCapture.resolveX11Pid(window.clientPid, x11Display, window.toplevel.title), (opus) ->
-				Minecraft.getInstance().execute(() -> WaylandCraftNetworking.sendToServer(new AudioChunkPayload(handle, opus))));
+			window.audio = new AudioCapture(() -> AudioCapture.resolveX11Pid(window.clientPid, x11Display, window.toplevel.title), (opus, timestamp) ->
+				Minecraft.getInstance().execute(() -> WaylandCraftNetworking.sendToServer(new AudioChunkPayload(handle, timestamp, opus))));
 		}
 		window.audio.update();
 	}
@@ -236,11 +250,11 @@ public class SharingOwner {
 	}
 
 	private void capture(SharedWindow window, WindowFramebuffer framebuffer, boolean still) {
-		// Downscale on the GPU, then read back the small image
+		// Downscale on the GPU, then read back the small image. Even sizes for 4:2:0 chroma.
 		int maxDimension = still ? STILL_MAX_DIMENSION : MOTION_MAX_DIMENSION;
 		float scale = Math.min(1.0f, (float) maxDimension / Math.max(framebuffer.getWidth(), framebuffer.getHeight()));
-		int width = Math.max(1, Math.round(framebuffer.getWidth() * scale));
-		int height = Math.max(1, Math.round(framebuffer.getHeight() * scale));
+		int width = Math.max(2, Math.round(framebuffer.getWidth() * scale) & ~1);
+		int height = Math.max(2, Math.round(framebuffer.getHeight() * scale) & ~1);
 
 		if(captureTarget == null) {
 			captureTarget = new TextureTarget(width, height, false, Minecraft.ON_OSX);
@@ -257,16 +271,42 @@ public class SharingOwner {
 		GL11.glPixelStorei(GL11.GL_PACK_ALIGNMENT, 1);
 		GL11.glReadPixels(0, 0, width, height, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
 		WindowShaders.endTargets();
+		long timestamp = System.currentTimeMillis();
+
+		byte kind;
+		if(still) {
+			kind = SharingNetworking.FRAME_STILL;
+		}
+		else {
+			boolean resized = width != window.encodedWidth || height != window.encodedHeight;
+			boolean key = window.forceKeyFrame || resized || window.framesSinceKey >= KEY_FRAME_INTERVAL;
+			kind = key ? SharingNetworking.FRAME_KEY : SharingNetworking.FRAME_DELTA;
+			window.forceKeyFrame = false;
+			window.framesSinceKey = key ? 0 : window.framesSinceKey + 1;
+			window.encodedWidth = width;
+			window.encodedHeight = height;
+		}
 
 		window.encoding = true;
 		long handle = window.toplevel.getHandle();
 		int frameId = ++window.frameId;
 		encoder.execute(() -> {
 			try {
-				byte[] encoded = encode(pixels, width, height, still);
+				byte[] encoded;
+				if(still) {
+					encoded = encodePng(pixels, width, height);
+				}
+				else {
+					if(window.encoder == null || !window.encoder.matches(width, height)) window.encoder = new H264Codec.Encoder(width, height);
+					encoded = window.encoder.encode(pixels, kind == SharingNetworking.FRAME_KEY);
+				}
 				Minecraft.getInstance().execute(() -> {
 					window.encoding = false;
-					if(shared.containsKey(handle)) sendFrame(handle, frameId, encoded);
+					if(!shared.containsKey(handle)) return;
+					if(!sendFrame(handle, frameId, kind, width, height, timestamp, encoded) && kind != SharingNetworking.FRAME_STILL) {
+						// A dropped H.264 frame breaks the chain for everyone
+						window.forceKeyFrame = true;
+					}
 				});
 			} catch(IOException e) {
 				WaylandCraftCommon.LOGGER.error("Failed to encode shared window frame", e);
@@ -278,7 +318,7 @@ public class SharingOwner {
 	}
 
 	// glReadPixels returns the target's row 0 first, which holds the window's top row
-	private static byte[] encode(ByteBuffer pixels, int width, int height, boolean lossless) throws IOException {
+	private static byte[] encodePng(ByteBuffer pixels, int width, int height) throws IOException {
 		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 		int[] row = new int[width];
 		for(int y = 0; y < height; y++) {
@@ -293,33 +333,22 @@ public class SharingOwner {
 		}
 
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
-		if(lossless) {
-			ImageIO.write(image, "png", out);
-			return out.toByteArray();
-		}
-
-		ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
-		ImageWriteParam param = writer.getDefaultWriteParam();
-		param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-		param.setCompressionQuality(MOTION_JPEG_QUALITY);
-		try(MemoryCacheImageOutputStream stream = new MemoryCacheImageOutputStream(out)) {
-			writer.setOutput(stream);
-			writer.write(null, new IIOImage(image, null, null), param);
-		} finally {
-			writer.dispose();
-		}
+		ImageIO.write(image, "png", out);
 		return out.toByteArray();
 	}
 
-	private static void sendFrame(long handle, int frameId, byte[] encoded) {
+	// Returns false if the frame was too large to send
+	private static boolean sendFrame(long handle, int frameId, byte kind, int width, int height, long timestamp, byte[] encoded) {
 		int chunkSize = SharingNetworking.MAX_CHUNK_BYTES;
-		int count = (encoded.length + chunkSize - 1) / chunkSize;
-		if(count > SharingNetworking.MAX_CHUNKS_PER_FRAME) return; // Frame too large, skip it
+		int count = Math.max(1, (encoded.length + chunkSize - 1) / chunkSize);
+		if(count > SharingNetworking.MAX_CHUNKS_PER_FRAME) return false;
 
 		for(int i = 0; i < count; i++) {
 			byte[] data = Arrays.copyOfRange(encoded, i * chunkSize, Math.min(encoded.length, (i + 1) * chunkSize));
-			WaylandCraftNetworking.sendToServer(new VideoChunkPayload(handle, frameId, i, count, data));
+			FrameInfo info = new FrameInfo(frameId, kind, width, height, timestamp, i, count);
+			WaylandCraftNetworking.sendToServer(new VideoChunkPayload(handle, info, data));
 		}
+		return true;
 	}
 
 	private void stop(long handle) {

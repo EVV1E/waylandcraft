@@ -13,6 +13,8 @@ import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.AudioChunkPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.DemandPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.DisplayPosePayload;
+import dev.evvie.waylandcraft.sharing.SharingNetworking.FrameInfo;
+import dev.evvie.waylandcraft.sharing.SharingNetworking.KeyFrameRequestPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.ShareStatePayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.StreamAudioPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.StreamEndPayload;
@@ -79,14 +81,25 @@ public class SharingServer {
 		long lastRefill = System.nanoTime();
 		// Last frame admitted per window; later chunks of other frames are dropped
 		final Map<WindowKey, Integer> admittedFrame = new HashMap<>();
+		// Windows whose H.264 chain this viewer can't decode until the next key frame
+		final Set<WindowKey> waitingForKey = new HashSet<>();
 
-		boolean admit(WindowKey key, int frame, int frameBytes) {
+		// Decided on a frame's first chunk, so viewers get whole frames or nothing
+		boolean admit(WindowKey key, FrameInfo info, int frameBytes) {
+			if(info.kind() == SharingNetworking.FRAME_DELTA && waitingForKey.contains(key)) return false;
+
 			long now = System.nanoTime();
 			bytes = Math.min(VIDEO_BURST_BYTES, bytes + (now - lastRefill) / 1e9 * VIDEO_BYTES_PER_SECOND);
 			lastRefill = now;
-			if(bytes < frameBytes) return false;
+			if(bytes < frameBytes) {
+				// Skipping a key or delta frame breaks the chain; stills are independent
+				if(info.kind() != SharingNetworking.FRAME_STILL) waitingForKey.add(key);
+				return false;
+			}
+
 			bytes -= frameBytes;
-			admittedFrame.put(key, frame);
+			admittedFrame.put(key, info.frame());
+			if(info.kind() == SharingNetworking.FRAME_KEY) waitingForKey.remove(key);
 			return true;
 		}
 	}
@@ -137,21 +150,19 @@ public class SharingServer {
 
 	public void onVideoChunk(ServerPlayer owner, VideoChunkPayload payload) {
 		WindowKey key = new WindowKey(owner.getUUID(), payload.handle());
-		if(!shared.contains(key)) return;
-		if(payload.count() < 1 || payload.count() > SharingNetworking.MAX_CHUNKS_PER_FRAME) return;
-		if(payload.index() < 0 || payload.index() >= payload.count()) return;
+		FrameInfo info = payload.info();
+		if(!shared.contains(key) || !info.valid()) return;
 
-		StreamVideoPayload relay = new StreamVideoPayload(key, payload.frame(), payload.index(), payload.count(), payload.data());
+		StreamVideoPayload relay = new StreamVideoPayload(key, info, payload.data());
 		for(UUID viewerId : watchers.getOrDefault(key, Set.of())) {
 			ServerPlayer viewer = server.getPlayerList().getPlayer(viewerId);
 			if(viewer == null) continue;
 
-			// The first chunk decides whether this viewer gets the whole frame
 			Budget budget = budgets.computeIfAbsent(viewerId, (id) -> new Budget());
-			if(payload.index() == 0) {
-				if(!budget.admit(key, payload.frame(), payload.data().length * payload.count())) continue;
+			if(info.index() == 0) {
+				if(!budget.admit(key, info, payload.data().length * info.count())) continue;
 			}
-			else if(!Integer.valueOf(payload.frame()).equals(budget.admittedFrame.get(key))) {
+			else if(!Integer.valueOf(info.frame()).equals(budget.admittedFrame.get(key))) {
 				continue;
 			}
 			send(viewer, relay);
@@ -162,7 +173,7 @@ public class SharingServer {
 		WindowKey key = new WindowKey(owner.getUUID(), payload.handle());
 		if(!shared.contains(key)) return;
 
-		StreamAudioPayload relay = new StreamAudioPayload(key, payload.opus());
+		StreamAudioPayload relay = new StreamAudioPayload(key, payload.timestamp(), payload.opus());
 		for(ServerPlayer listener : audioListeners(key)) {
 			send(listener, relay);
 		}
@@ -222,6 +233,7 @@ public class SharingServer {
 	private void refresh() {
 		if(server == null) return;
 
+		Map<WindowKey, Set<UUID>> previous = new HashMap<>(watchers);
 		watchers.clear();
 		for(Map.Entry<UUID, Set<WindowKey>> entry : requested.entrySet()) {
 			ServerPlayer viewer = server.getPlayerList().getPlayer(entry.getKey());
@@ -231,6 +243,19 @@ public class SharingServer {
 				if(!shared.contains(key) || key.owner().equals(viewer.getUUID())) continue;
 				if(canSee(viewer, key)) watchers.computeIfAbsent(key, (k) -> new HashSet<>()).add(viewer.getUUID());
 			}
+		}
+
+		// New watchers can only decode from a key frame: hold their deltas and ask the owner for one
+		for(Map.Entry<WindowKey, Set<UUID>> entry : watchers.entrySet()) {
+			boolean joined = false;
+			for(UUID viewer : entry.getValue()) {
+				if(previous.getOrDefault(entry.getKey(), Set.of()).contains(viewer)) continue;
+				budgets.computeIfAbsent(viewer, (id) -> new Budget()).waitingForKey.add(entry.getKey());
+				joined = true;
+			}
+
+			ServerPlayer owner = joined ? server.getPlayerList().getPlayer(entry.getKey().owner()) : null;
+			if(owner != null) send(owner, new KeyFrameRequestPayload(entry.getKey().handle()));
 		}
 
 		for(WindowKey key : shared) {
