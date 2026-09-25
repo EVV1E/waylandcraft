@@ -2,7 +2,6 @@ package dev.evvie.waylandcraft.sharing;
 
 import java.nio.ByteBuffer;
 
-import org.jcodec.codecs.h264.H264Decoder;
 import org.jcodec.codecs.h264.H264Encoder;
 import org.jcodec.codecs.h264.encode.RateControl;
 import org.jcodec.codecs.h264.io.model.SliceType;
@@ -12,12 +11,10 @@ import org.jcodec.common.model.ColorSpace;
 import org.jcodec.common.model.Picture;
 import org.jcodec.common.model.Size;
 
-import com.mojang.blaze3d.platform.NativeImage;
-
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 
-/* H.264 for shared window video. Viewers decode with JCodec (pure Java, so every client
- * can decode). Owners encode with x264 from the native library when it's available
+/* H.264 encoding for shared window video. Viewers decode with JCodec in VideoDecoder
+ * (pure Java, so every client can decode). Owners encode with x264 from the native library when it's available
  * (NativeH264Encoder, much smaller frames), and with JCodec otherwise.
  *
  * JCodec, measured on 848x480 content: encoding takes 15-25 ms and decoding about 13 ms per frame.
@@ -26,7 +23,8 @@ import dev.evvie.waylandcraft.WaylandCraftCommon;
  * instead of 42 KB.
  *
  * Colors use full-range BT.601 (JCodec's YUV420J). JCodec stores samples as signed bytes
- * (value - 128).
+ * (value - 128). This class must stay free of client-only classes: the server's test
+ * pattern source uses it too.
  */
 public class H264Codec {
 
@@ -115,35 +113,6 @@ public class H264Codec {
 
 	}
 
-	public static class Decoder {
-
-		private final H264Decoder decoder = new H264Decoder();
-		private byte[][] buffer = null;
-		private int bufferWidth = 0;
-		private int bufferHeight = 0;
-
-		// Returns null if the frame couldn't be decoded. width/height are the frame's
-		// size, sent alongside it, so the decode buffer can be sized up front.
-		public NativeImage decode(byte[] data, int width, int height) {
-			if(buffer == null || bufferWidth != width || bufferHeight != height) {
-				// Room for macroblock padding
-				buffer = Picture.create(width + 16, height + 16, ColorSpace.YUV420J).getData();
-				bufferWidth = width;
-				bufferHeight = height;
-			}
-
-			Picture picture;
-			try {
-				picture = decoder.decodeFrame(ByteBuffer.wrap(data), buffer);
-			} catch(RuntimeException e) {
-				return null;
-			}
-			if(picture == null) return null;
-			return yuvToImage(picture);
-		}
-
-	}
-
 	private static void rgbaToYuv(ByteBuffer rgba, Picture picture) {
 		int w = picture.getWidth();
 		int h = picture.getHeight();
@@ -179,34 +148,5 @@ public class H264Codec {
 			}
 		}
 	}
-
-	private static NativeImage yuvToImage(Picture picture) {
-		int w = picture.getCroppedWidth();
-		int h = picture.getCroppedHeight();
-		int stride = picture.getWidth();
-		int chromaStride = stride / 2;
-		byte[] yPlane = picture.getPlaneData(0);
-		byte[] uPlane = picture.getPlaneData(1);
-		byte[] vPlane = picture.getPlaneData(2);
-
-		NativeImage image = new NativeImage(NativeImage.Format.RGBA, w, h, false);
-		for(int y = 0; y < h; y++) {
-			for(int x = 0; x < w; x++) {
-				int luma = yPlane[y * stride + x] + 128;
-				int u = uPlane[(y / 2) * chromaStride + x / 2];
-				int v = vPlane[(y / 2) * chromaStride + x / 2];
-				int r = clamp(luma + ((359 * v) >> 8));
-				int g = clamp(luma - ((88 * u + 183 * v) >> 8));
-				int b = clamp(luma + ((454 * u) >> 8));
-				// NativeImage pixels are ABGR
-				image.setPixelRGBA(x, y, 0xff000000 | b << 16 | g << 8 | r);
-			}
-		}
-		return image;
-	}
-
-	private static int clamp(int value) {
-		return value < 0 ? 0 : (value > 255 ? 255 : value);
-	}
-
+	
 }

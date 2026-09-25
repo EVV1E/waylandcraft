@@ -102,7 +102,7 @@ public class SharingViewer {
 
 		// H.264 decoding, only touched on the decoder thread. Deltas need an unbroken
 		// chain back to a key frame; until one arrives they are skipped.
-		final H264Codec.Decoder h264 = new H264Codec.Decoder();
+		final VideoDecoder h264 = new VideoDecoder();
 		volatile boolean needKeyFrame = true;
 
 		// Decoded frames with their capture timestamps, shown in step with the audio

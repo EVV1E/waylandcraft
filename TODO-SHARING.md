@@ -179,7 +179,36 @@ per window:
 3. **Viewers:** look at it. Audio plays within 24 blocks.
 4. **To stop:** press **N** on the focused window again, close the window, or log out.
 
-Testing on one machine:
+### Test pattern: checking it alone in singleplayer
+
+`/waylandcraft testpattern` (operators; in singleplayer, cheats must be on) starts a
+server-generated fake shared window. It doesn't need a second player or a real window.
+- **Where it shows:** floating 2.5 blocks in front of you. You also get a "Test Pattern N"
+  window item that shows the same stream in an item frame.
+- **How it behaves:** like a real owner. It generates video only while you can see it
+  and audio only while you're within 24 blocks, and it answers key frame requests.
+- **Video:** SMPTE-style color bars, a gray ramp, and a black box sweeping across. H.264
+  through JCodec, at 10 fps, 320×240.
+- **Audio:** an 880 Hz beep for 150 ms every second. It alternates left channel (even
+  seconds) and right channel (odd seconds), as stereo Opus.
+- **What to check:**
+  - **Sync:** the white border flashes exactly when you hear a beep.
+  - **Stereo:** facing the window, beeps alternate between its left and right edge.
+  - **Smart streaming:** turn away or put a block in between. The picture freezes (no
+    video is sent), but the beeps continue.
+  - **Late join:** look back. The picture resumes within a moment, from a requested key
+    frame.
+- **To stop:** `/waylandcraft testpattern stop` removes all test patterns.
+
+Verified outside the game: the real `TestPatternSource` was driven for 2 s against a stub
+server, and its output decoded with the real `VideoDecoder` and Opus. All 17 frames
+decoded, the border flash matched the beep timing in 17/17 frames, all seven bar colors
+came out right within quantization, the beeps landed on the expected channel (about 5%
+crosstalk), and the gaps were silent.
+
+The test pattern exercises everything except capturing a real window on the owner's side.
+
+Testing with a real window on one machine:
 1. `./gradlew runServer`. Accept the EULA in `run-server/eula.txt` first.
 2. `./gradlew runClient`
 3. `./gradlew runClient2`, which joins as `Viewer`.

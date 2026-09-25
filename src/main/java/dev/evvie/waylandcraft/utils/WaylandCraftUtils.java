@@ -5,6 +5,7 @@ import java.util.UUID;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
+import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.item.WindowHandle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.server.MinecraftServer;
@@ -60,6 +61,7 @@ public class WaylandCraftUtils {
 	
 	public static boolean isHandleValid(ServerLevel level, WindowHandle handle) {
 		if(handle == null) return false;
+		if(WaylandCraftCommon.instance.sharingServer.isTestPattern(handle)) return true;
 		
 		ServerPlayer player = getPlayer(level, handle.player());
 		if(player == null) return false;

@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.jetbrains.annotations.Nullable;
+
 import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.AudioChunkPayload;
@@ -70,6 +72,10 @@ public class SharingServer {
 	private final Map<WindowKey, Demand> lastDemand = new HashMap<>();
 	private final Map<UUID, Budget> budgets = new HashMap<>();
 
+	// Server-side fake shared windows for testing (/waylandcraft testpattern)
+	private final Map<WindowKey, TestPatternSource> testPatterns = new HashMap<>();
+	private long nextTestHandle = 1;
+
 	private MinecraftServer server;
 	private int tickCounter = 0;
 
@@ -123,18 +129,23 @@ public class SharingServer {
 		WindowKey key = new WindowKey(owner.getUUID(), payload.handle());
 		if(!shared.contains(key)) return;
 
-		Placement previous = floating.get(key);
 		WindowPose pose = payload.pose();
 
 		// Floating displays can only be placed near their owner
 		if(pose != null && pose.pivot().distanceTo(owner.getEyePosition()) > WATCH_RANGE) pose = null;
 
-		if(pose == null) floating.remove(key);
-		else floating.put(key, new Placement(owner.serverLevel(), pose.pivot(), pose));
+		setFloating(key, owner.serverLevel(), pose);
+	}
 
-		// Tell nearby players where the window is, or that it no longer floats
-		ServerLevel level = pose != null ? owner.serverLevel() : (previous != null ? previous.level() : owner.serverLevel());
-		Vec3 center = pose != null ? pose.pivot() : (previous != null ? previous.pos() : owner.position());
+	// Places (or with a null pose, removes) a shared window's floating display and tells nearby players
+	void setFloating(WindowKey key, ServerLevel ownerLevel, @Nullable WindowPose pose) {
+		Placement previous = floating.get(key);
+		if(pose == null) floating.remove(key);
+		else floating.put(key, new Placement(ownerLevel, pose.pivot(), pose));
+
+		ServerLevel level = pose != null ? ownerLevel : (previous != null ? previous.level() : ownerLevel);
+		Vec3 center = pose != null ? pose.pivot() : (previous != null ? previous.pos() : Vec3.ZERO);
+		if(pose == null && previous == null) return;
 		StreamPosePayload relay = new StreamPosePayload(key, pose);
 		for(ServerPlayer player : level.players()) {
 			if(player.getUUID().equals(key.owner())) continue;
@@ -149,18 +160,20 @@ public class SharingServer {
 	}
 
 	public void onVideoChunk(ServerPlayer owner, VideoChunkPayload payload) {
-		WindowKey key = new WindowKey(owner.getUUID(), payload.handle());
-		FrameInfo info = payload.info();
+		relayVideo(new WindowKey(owner.getUUID(), payload.handle()), payload.info(), payload.data());
+	}
+
+	void relayVideo(WindowKey key, FrameInfo info, byte[] data) {
 		if(!shared.contains(key) || !info.valid()) return;
 
-		StreamVideoPayload relay = new StreamVideoPayload(key, info, payload.data());
+		StreamVideoPayload relay = new StreamVideoPayload(key, info, data);
 		for(UUID viewerId : watchers.getOrDefault(key, Set.of())) {
 			ServerPlayer viewer = server.getPlayerList().getPlayer(viewerId);
 			if(viewer == null) continue;
 
 			Budget budget = budgets.computeIfAbsent(viewerId, (id) -> new Budget());
 			if(info.index() == 0) {
-				if(!budget.admit(key, info, payload.data().length * info.count())) continue;
+				if(!budget.admit(key, info, data.length * info.count())) continue;
 			}
 			else if(!Integer.valueOf(info.frame()).equals(budget.admittedFrame.get(key))) {
 				continue;
@@ -170,10 +183,13 @@ public class SharingServer {
 	}
 
 	public void onAudioChunk(ServerPlayer owner, AudioChunkPayload payload) {
-		WindowKey key = new WindowKey(owner.getUUID(), payload.handle());
+		relayAudio(new WindowKey(owner.getUUID(), payload.handle()), payload.timestamp(), payload.opus());
+	}
+
+	void relayAudio(WindowKey key, long timestamp, byte[] opus) {
 		if(!shared.contains(key)) return;
 
-		StreamAudioPayload relay = new StreamAudioPayload(key, payload.timestamp(), payload.opus());
+		StreamAudioPayload relay = new StreamAudioPayload(key, timestamp, opus);
 		for(ServerPlayer listener : audioListeners(key)) {
 			send(listener, relay);
 		}
@@ -193,10 +209,19 @@ public class SharingServer {
 	public void tick(ServerLevel level) {
 		server = level.getServer();
 		if(level != server.overworld()) return;
+
+		for(TestPatternSource source : testPatterns.values()) source.tick(this);
+
 		if(++tickCounter % SCAN_INTERVAL != 0) return;
+
+		// Test patterns resend their placement, like owners do, for players who came into range
+		if(tickCounter % 40 == 0) {
+			for(TestPatternSource source : testPatterns.values()) setFloating(source.key, source.level, source.pose);
+		}
 
 		// Drop shares whose window closed on the owner's side
 		for(WindowKey key : new ArrayList<>(shared)) {
+			if(testPatterns.containsKey(key)) continue;
 			ServerPlayer owner = server.getPlayerList().getPlayer(key.owner());
 			if(owner == null || !((IMyServerPlayer) owner).getAliveWindows().contains(key.handle())) endStream(key);
 		}
@@ -254,6 +279,9 @@ public class SharingServer {
 				joined = true;
 			}
 
+			TestPatternSource testPattern = testPatterns.get(entry.getKey());
+			if(joined && testPattern != null) testPattern.requestKeyFrame();
+
 			ServerPlayer owner = joined ? server.getPlayerList().getPlayer(entry.getKey().owner()) : null;
 			if(owner != null) send(owner, new KeyFrameRequestPayload(entry.getKey().handle()));
 		}
@@ -292,6 +320,50 @@ public class SharingServer {
 			}
 		}
 		return listeners;
+	}
+
+	boolean hasVideoDemand(WindowKey key) {
+		return watchers.containsKey(key);
+	}
+
+	boolean hasAudioDemand(WindowKey key) {
+		return !audioListeners(key).isEmpty();
+	}
+
+	/* Starts a test pattern window floating in front of the player. Returns its window
+	 * handle (owned by TestPatternSource.OWNER), so the player can also get an item for it.
+	 */
+	public long startTestPattern(ServerPlayer player) {
+		server = player.server;
+		long handle = nextTestHandle++;
+
+		// Face the player, upright, about 2.5 blocks in front of their eyes
+		Vec3 look = player.getLookAngle();
+		Vec3 horizontal = new Vec3(look.x, 0, look.z);
+		horizontal = horizontal.lengthSqr() < 1e-4 ? new Vec3(0, 0, 1) : horizontal.normalize();
+		WindowPose pose = new WindowPose(player.getEyePosition().add(horizontal.scale(2.5)), horizontal.reverse(), new Vec3(0, -1, 0), 1.6f, 1.2f);
+
+		TestPatternSource source = new TestPatternSource(handle, player.serverLevel(), pose);
+		testPatterns.put(source.key, source);
+		shared.add(source.key);
+		setFloating(source.key, source.level, pose);
+		scanFrames();
+		refresh();
+		return handle;
+	}
+
+	public int stopTestPatterns() {
+		int count = testPatterns.size();
+		for(WindowKey key : new ArrayList<>(testPatterns.keySet())) {
+			setFloating(key, testPatterns.get(key).level, null);
+			testPatterns.remove(key);
+			endStream(key);
+		}
+		return count;
+	}
+
+	public boolean isTestPattern(WindowHandle handle) {
+		return handle != null && testPatterns.containsKey(new WindowKey(handle.player(), handle.handle()));
 	}
 
 	// Players without the mod (or with an older version) don't have the channel
