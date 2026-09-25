@@ -4,22 +4,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.lwjgl.system.MemoryUtil;
 
 import com.mojang.blaze3d.platform.NativeImage;
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.TextureFormat;
 
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
-import dev.evvie.waylandcraft.mixin.NativeImageMixin;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public class DesktopIcon {
 	
@@ -27,13 +24,13 @@ public class DesktopIcon {
 	
 	private WaylandCraft wlc;
 	
-	private IconImage image = null;
-	private IconTexture texture = null;
-	private final Identifier identifier;
+	private NativeImage image = null;
+	private DynamicTexture texture = null;
+	private final ResourceLocation identifier;
 	
 	public DesktopIcon(String appId, String path) {
 		this.path = path;
-		this.identifier = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "icon_" + DigestUtils.sha1Hex(appId));
+		this.identifier = ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "icon_" + DigestUtils.sha1Hex(appId));
 		this.wlc = WaylandCraft.instance;
 	}
 	
@@ -51,7 +48,7 @@ public class DesktopIcon {
 		if(getExtension(file).equals("png")) {
 			try {
 				FileInputStream stream = new FileInputStream(file);
-				this.image = IconImage.standard(NativeImage.read(stream));
+				this.image = NativeImage.read(stream);
 			} catch(IOException e) {
 				e.printStackTrace();
 			}
@@ -64,7 +61,16 @@ public class DesktopIcon {
 			long addr = MemoryUtil.memAddress(buf);
 			
 			if(wlc.bridge.renderSVG(file, width, height, addr)) {
-				this.image = IconImage.direct(NativeImageMixin.createImage(NativeImage.Format.RGBA, width, height, false, addr), buf);
+				// Copy the RGBA bytes into an image that owns its memory.
+				// setPixelRGBA takes the pixel as a little-endian RGBA int.
+				buf.order(ByteOrder.LITTLE_ENDIAN);
+				NativeImage svgImage = new NativeImage(NativeImage.Format.RGBA, width, height, false);
+				for(int y = 0; y < height; y++) {
+					for(int x = 0; x < width; x++) {
+						svgImage.setPixelRGBA(x, y, buf.getInt((y * width + x) * 4));
+					}
+				}
+				this.image = svgImage;
 			}
 		}
 	}
@@ -78,14 +84,14 @@ public class DesktopIcon {
 		}
 		if(image == null) return;
 		
-		texture = new IconTexture(image);
-		texture.upload();
+		// DynamicTexture uploads the image and takes ownership of it
+		texture = new DynamicTexture(image);
 		
 		TextureManager textureManager = Minecraft.getInstance().getTextureManager();
 		textureManager.register(identifier, texture);
 	}
 	
-	public Identifier getTextureLocation() {
+	public ResourceLocation getTextureLocation() {
 		this.upload();
 		if(texture == null) return null;
 		return identifier;
@@ -97,55 +103,6 @@ public class DesktopIcon {
 		if(idx < 0 || idx >= path.length() - 1) return "";
 		
 		return path.substring(idx + 1);
-	}
-	
-	private static class IconImage {
-		
-		public NativeImage nativeImage;
-		public boolean close;
-		
-		// This field holds the NativeImage backing data allocated during image preload (if any).
-		// This has to be a field here because otherwise Java would garbage collect the ByteBuffer
-		// before the data is uploaded to OpenGL causing a use-after-free bug.
-		@SuppressWarnings("unused")
-		private ByteBuffer backing;
-		
-		private IconImage(NativeImage nativeImage, ByteBuffer backing, boolean close) {
-			this.nativeImage = nativeImage;
-			this.backing = backing;
-			this.close = close;
-		}
-		
-		public static IconImage standard(NativeImage image) {
-			return new IconImage(image, null, true);
-		}
-		
-		public static IconImage direct(NativeImage image, ByteBuffer backing) {
-			return new IconImage(image, backing, false);
-		}
-		
-	}
-	
-	private static class IconTexture extends AbstractTexture {
-		
-		public final IconImage image;
-		
-		public IconTexture(IconImage image) {
-			this.image = image;
-		}
-		
-		public void upload() {
-			NativeImage nativeImage = image.nativeImage;
-			
-			this.texture = RenderSystem.getDevice().createTexture("icon texture", GpuTexture.USAGE_TEXTURE_BINDING | GpuTexture.USAGE_COPY_DST, TextureFormat.RGBA8, nativeImage.getWidth(), nativeImage.getHeight(), 1, 1);
-			RenderSystem.getDevice().createCommandEncoder().writeToTexture(this.texture, nativeImage);
-			this.textureView = RenderSystem.getDevice().createTextureView(this.texture);
-			
-			if(image.close) nativeImage.close();
-			
-			image.backing = null; // Allow java to garbage collect the data now
-		}
-		
 	}
 	
 }

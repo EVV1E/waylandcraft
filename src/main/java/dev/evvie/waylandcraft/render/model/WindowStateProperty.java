@@ -9,7 +9,7 @@ import dev.evvie.waylandcraft.desktop.DesktopEntry;
 import dev.evvie.waylandcraft.render.model.WindowStateProperty.WindowState;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.properties.select.SelectItemModelProperty;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
@@ -28,7 +28,7 @@ public record WindowStateProperty() implements SelectItemModelProperty<WindowSta
 		DesktopEntry entry = WaylandCraft.instance.xdgManager.forAppId(toplevel.appID);
 		if(entry == null) return WindowState.NONE;
 		
-		Identifier icon = entry.getIcon();
+		ResourceLocation icon = entry.getIcon();
 		if(icon == null) return WindowState.NONE;
 		
 		return WindowState.ICON;

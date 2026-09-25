@@ -74,10 +74,6 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		
 		if(target == null) {
 			target = new TextureTarget(width, height, false, Minecraft.ON_OSX);
-			// Sampled by world and GUI rendering: linear minification, nearest magnification
-			GlStateManager._bindTexture(target.getColorTextureId());
-			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MIN_FILTER, GL33.GL_LINEAR);
-			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MAG_FILTER, GL33.GL_NEAREST);
 		}
 		
 		if(texture == null) registerTexture();
@@ -208,6 +204,15 @@ public class WindowFramebuffer implements FramebufferRenderable {
 		
 		@Override
 		public void load(ResourceManager manager) {
+		}
+		
+		// Render types request their own filtering; window framebuffers are always sampled
+		// with linear minification and nearest magnification instead
+		@Override
+		public void setFilter(boolean blur, boolean mipmap) {
+			GlStateManager._bindTexture(this.id);
+			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MIN_FILTER, GL33.GL_LINEAR);
+			GlStateManager._texParameter(GL33.GL_TEXTURE_2D, GL33.GL_TEXTURE_MAG_FILTER, GL33.GL_NEAREST);
 		}
 		
 		@Override

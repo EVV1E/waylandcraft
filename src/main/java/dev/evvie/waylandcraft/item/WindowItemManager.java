@@ -7,14 +7,13 @@ import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.desktop.DesktopEntry;
 import dev.evvie.waylandcraft.network.ServerboundAliveWindowsPayload;
 import dev.evvie.waylandcraft.network.ServerboundGiveItemsPayload;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import dev.evvie.waylandcraft.network.WaylandCraftNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
-public class WindowItemManager implements WindowItemInteractionProvider, ClientTickEvents.StartTick {
+public class WindowItemManager implements WindowItemInteractionProvider {
 	
 	private static Component UNKNOWN_WINDOW_TEXT = Component.literal("Unknown Window");
 	
@@ -22,7 +21,7 @@ public class WindowItemManager implements WindowItemInteractionProvider, ClientT
 	private long[] syncedToplevels = new long[0];
 	
 	public void giveItem(WLCToplevel toplevel) {
-		ClientPlayNetworking.send(new ServerboundGiveItemsPayload(new long[] {toplevel.getHandle()}, false));
+		WaylandCraftNetworking.sendToServer(new ServerboundGiveItemsPayload(new long[] {toplevel.getHandle()}, false));
 	}
 	
 	public void giveItemsIfMissing(WLCToplevel... toplevels) {
@@ -32,10 +31,9 @@ public class WindowItemManager implements WindowItemInteractionProvider, ClientT
 		for(int i = 0; i < toplevels.length; i++) handles[i] = toplevels[i].getHandle();
 		
 		syncToplevels();
-		ClientPlayNetworking.send(new ServerboundGiveItemsPayload(handles, true));
+		WaylandCraftNetworking.sendToServer(new ServerboundGiveItemsPayload(handles, true));
 	}
 	
-	@Override
 	public void onStartTick(Minecraft client) {
 		if(client.level == null) return;
 		if(WaylandCraft.instance.bridge == null) return;
@@ -47,7 +45,7 @@ public class WindowItemManager implements WindowItemInteractionProvider, ClientT
 		long[] handles = Arrays.stream(WaylandCraft.instance.bridge.getToplevels()).mapToLong((t) -> t.getHandle()).toArray();
 		if(Arrays.equals(handles, syncedToplevels)) return;
 		
-		ClientPlayNetworking.send(new ServerboundAliveWindowsPayload(handles));
+		WaylandCraftNetworking.sendToServer(new ServerboundAliveWindowsPayload(handles));
 		syncedToplevels = handles;
 	}
 	

@@ -4,20 +4,18 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import dev.evvie.waylandcraft.WaylandCraft;
+import net.minecraft.Util;
+import net.minecraft.client.gui.navigation.CommonInputs;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.input.CharacterEvent;
-import net.minecraft.client.input.KeyEvent;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraft.util.ARGB;
+import net.minecraft.util.FastColor;
 
 public class SettingsWidget extends AbstractWidget {
 	
@@ -53,7 +51,7 @@ public class SettingsWidget extends AbstractWidget {
 	}
 	
 	@Override
-	protected void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+	protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float a) {
 		Font font = Minecraft.getInstance().font;
 		
 		int x = getX();
@@ -63,10 +61,10 @@ public class SettingsWidget extends AbstractWidget {
 		int totalElementWidth = ELEMENT_WIDTH;
 		int textPad = (height - font.lineHeight) / 2;
 		
-		graphics.fill(x, y, x + width, y + height, ARGB.black(0.25f));
+		graphics.fill(x, y, x + width, y + height, FastColor.ARGB32.colorFromFloat(0.25f, 0.0f, 0.0f, 0.0f));
 		
 		graphics.enableScissor(x, y, x + width - totalElementWidth - textPad, y + height);
-		graphics.text(font, message, x + textPad, y + textPad, ARGB.white(1.0f), active);
+		graphics.drawString(font, getMessage(), x + textPad, y + textPad, FastColor.ARGB32.colorFromFloat(1.0f, 1.0f, 1.0f, 1.0f), active);
 		graphics.disableScissor();
 		
 		int elemPad = 5;
@@ -85,32 +83,40 @@ public class SettingsWidget extends AbstractWidget {
 		control.saveValue();
 	}
 	
+	// 1.21.1 has no double-click flag on mouse events, so detect it here
+	private static final long DOUBLE_CLICK_MILLIS = 250;
+	private long lastClickTime = 0;
+	
 	@Override
-	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
 		if(!this.isActive()) return false;
-		if(!isMouseOver(event.x(), event.y())) return false;
+		if(!isMouseOver(mouseX, mouseY)) return false;
 		
-		if(!doubleClick) control.onClick((int) event.x(), (int) event.y(), event.buttonInfo());
+		long now = Util.getMillis();
+		boolean doubleClick = now - lastClickTime < DOUBLE_CLICK_MILLIS;
+		lastClickTime = now;
+		
+		if(!doubleClick) control.onClick((int) mouseX, (int) mouseY, button);
 		else control.onDoubleClick();
 		return true;
 	}
 	
 	@Override
-	public boolean keyPressed(KeyEvent event) {
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
 		if(!this.isActive()) return false;
-		return control.onKeyPressed(event);
+		return control.onKeyPressed(keyCode, scanCode, modifiers);
 	}
 	
 	@Override
-	public boolean keyReleased(KeyEvent event) {
+	public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
 		if(!this.isActive()) return false;
-		return control.onKeyReleased(event);
+		return control.onKeyReleased(keyCode, scanCode, modifiers);
 	}
 	
 	@Override
-	public boolean charTyped(CharacterEvent event) {
+	public boolean charTyped(char codePoint, int modifiers) {
 		if(!this.isActive()) return false;
-		return control.onCharTyped(event);
+		return control.onCharTyped(codePoint, modifiers);
 	}
 	
 	@Override
@@ -118,6 +124,12 @@ public class SettingsWidget extends AbstractWidget {
 	}
 	
 	public abstract static class ControlElement {
+		
+		// Focus outline: light gray when focused, dark gray otherwise
+		protected static int grayOutline(boolean focused) {
+			float v = focused ? 1.0f : 0.5f;
+			return FastColor.ARGB32.colorFromFloat(1.0f, v, v, v);
+		}
 		
 		public final String settingName;
 		protected WaylandCraft wlc;
@@ -168,9 +180,9 @@ public class SettingsWidget extends AbstractWidget {
 			return x <= testX && testX <= x + width && y <= testY && testY <= y + height;
 		}
 		
-		public abstract void extractControlElement(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a);
+		public abstract void extractControlElement(GuiGraphics graphics, int mouseX, int mouseY, float a);
 		public abstract void saveValue();
-		public void onClick(int mouseX, int mouseY, MouseButtonInfo buttonInfo) {}
+		public void onClick(int mouseX, int mouseY, int button) {}
 		public void onDoubleClick() {}
 		public void onDrag() {}
 		
@@ -178,15 +190,15 @@ public class SettingsWidget extends AbstractWidget {
 			Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
 		}
 		
-		public boolean onKeyPressed(KeyEvent event) {
+		public boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
 			return false;
 		}
 		
-		public boolean onKeyReleased(KeyEvent event) {
+		public boolean onKeyReleased(int keyCode, int scanCode, int modifiers) {
 			return false;
 		}
 		
-		public boolean onCharTyped(CharacterEvent event) {
+		public boolean onCharTyped(char codePoint, int modifiers) {
 			return false;
 		}
 		
@@ -217,7 +229,7 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		@Override
-		public void extractControlElement(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+		public void extractControlElement(GuiGraphics graphics, int mouseX, int mouseY, float a) {
 			int x = getX();
 			int y = getY();
 			int width = getWidth();
@@ -226,19 +238,19 @@ public class SettingsWidget extends AbstractWidget {
 			Font font = Minecraft.getInstance().font;
 			Component text = getValue() ? Component.literal("ON") : Component.literal("OFF");
 			
-			graphics.fill(x, y, x + width, y + height, ARGB.black(0.6f));
-			graphics.outline(x, y, width, height, ARGB.gray(isFocused() ? 1.0f : 0.5f));
-			graphics.text(font, text, x + width / 2 - font.width(text) / 2, y + height / 2 - font.lineHeight / 2, ARGB.white(1.0f));
+			graphics.fill(x, y, x + width, y + height, FastColor.ARGB32.colorFromFloat(0.6f, 0.0f, 0.0f, 0.0f));
+			graphics.renderOutline(x, y, width, height, grayOutline(isFocused()));
+			graphics.drawString(font, text, x + width / 2 - font.width(text) / 2, y + height / 2 - font.lineHeight / 2, FastColor.ARGB32.colorFromFloat(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 		
 		@Override
-		public void onClick(int mouseX, int mouseY, MouseButtonInfo buttonInfo) {
+		public void onClick(int mouseX, int mouseY, int button) {
 			if(isInside(mouseX, mouseY)) toggle();
 		}
 		
 		@Override
-		public boolean onKeyPressed(KeyEvent event) {
-			if(event.isSelection()) {
+		public boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
+			if(CommonInputs.selected(keyCode)) {
 				toggle();
 				return true;
 			}
@@ -264,7 +276,7 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		@Override
-		public void extractControlElement(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+		public void extractControlElement(GuiGraphics graphics, int mouseX, int mouseY, float a) {
 			int x = getX();
 			int y = getY();
 			int width = getWidth();
@@ -278,15 +290,15 @@ public class SettingsWidget extends AbstractWidget {
 			
 			Component text = Component.literal(str);
 			
-			graphics.fill(x, y, x + width, y + height, ARGB.black(0.6f));
-			graphics.outline(x, y, width, height, ARGB.gray(isFocused() ? 1.0f : 0.5f));
+			graphics.fill(x, y, x + width, y + height, FastColor.ARGB32.colorFromFloat(0.6f, 0.0f, 0.0f, 0.0f));
+			graphics.renderOutline(x, y, width, height, grayOutline(isFocused()));
 			
 			int textWidth = font.width(text);
 			int textHeight = font.lineHeight;
 			int textX = x + width / 2 - textWidth / 2;
 			int textY = y + height / 2 - textHeight / 2;
 			
-			graphics.text(font, text, textX, textY, ARGB.white(1.0f));
+			graphics.drawString(font, text, textX, textY, FastColor.ARGB32.colorFromFloat(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 		
 		private void stopEntry() {
@@ -319,9 +331,9 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		@Override
-		public boolean onKeyPressed(KeyEvent event) {
-			boolean isEnter = event.key() == GLFW.GLFW_KEY_ENTER;
-			boolean isBackspace = event.key() == GLFW.GLFW_KEY_BACKSPACE;
+		public boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
+			boolean isEnter = keyCode == GLFW.GLFW_KEY_ENTER;
+			boolean isBackspace = keyCode == GLFW.GLFW_KEY_BACKSPACE;
 			
 			if(isEnter && entry != null) {
 				stopEntry();
@@ -336,7 +348,9 @@ public class SettingsWidget extends AbstractWidget {
 				return true;
 			}
 			
-			int digit = event.getDigit();
+			int digit = -1;
+			if(keyCode >= GLFW.GLFW_KEY_0 && keyCode <= GLFW.GLFW_KEY_9) digit = keyCode - GLFW.GLFW_KEY_0;
+			else if(keyCode >= GLFW.GLFW_KEY_KP_0 && keyCode <= GLFW.GLFW_KEY_KP_9) digit = keyCode - GLFW.GLFW_KEY_KP_0;
 			if(digit != -1) {
 				if(entry != null) entry += digit;
 				else entry = "" + digit;
@@ -370,8 +384,8 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		@Override
-		public void extractControlElement(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-			editBox.extractRenderState(graphics, mouseX, mouseY, a);
+		public void extractControlElement(GuiGraphics graphics, int mouseX, int mouseY, float a) {
+			editBox.render(graphics, mouseX, mouseY, a);
 		}
 		
 		@Override
@@ -380,9 +394,9 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		@Override
-		public void onClick(int mouseX, int mouseY, MouseButtonInfo buttonInfo) {
-			super.onClick(mouseX, mouseY, buttonInfo);
-			editBox.onClick(new MouseButtonEvent(mouseX, mouseY, buttonInfo), false);
+		public void onClick(int mouseX, int mouseY, int button) {
+			super.onClick(mouseX, mouseY, button);
+			editBox.onClick(mouseX, mouseY);
 		}
 		
 		@Override
@@ -397,23 +411,23 @@ public class SettingsWidget extends AbstractWidget {
 		}
 		
 		@Override
-		public boolean onKeyPressed(KeyEvent event) {
-			if(event.key() == GLFW.GLFW_KEY_ENTER) {
+		public boolean onKeyPressed(int keyCode, int scanCode, int modifiers) {
+			if(keyCode == GLFW.GLFW_KEY_ENTER) {
 				saveValue();
 				return true;
 			}
 			
-			return editBox.keyPressed(event);
+			return editBox.keyPressed(keyCode, scanCode, modifiers);
 		}
 		
 		@Override
-		public boolean onKeyReleased(KeyEvent event) {
-			return editBox.keyReleased(event);
+		public boolean onKeyReleased(int keyCode, int scanCode, int modifiers) {
+			return editBox.keyReleased(keyCode, scanCode, modifiers);
 		}
 		
 		@Override
-		public boolean onCharTyped(CharacterEvent event) {
-			return editBox.charTyped(event);
+		public boolean onCharTyped(char codePoint, int modifiers) {
+			return editBox.charTyped(codePoint, modifiers);
 		}
 		
 	}

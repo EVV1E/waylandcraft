@@ -1,0 +1,11 @@
+{
+	"vertex": "waylandcraft:rendertype_window",
+	"fragment": "waylandcraft:rendertype_window_translucent_background",
+	"samplers": [
+		{ "name": "Sampler0" }
+	],
+	"uniforms": [
+		{ "name": "ModelViewMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] },
+		{ "name": "ProjMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] }
+	]
+}

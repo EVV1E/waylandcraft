@@ -14,13 +14,12 @@ import dev.evvie.waylandcraft.grabs.MoveGrab;
 import dev.evvie.waylandcraft.math.WorldPlane;
 import dev.evvie.waylandcraft.render.RenderUtils;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Direction.Axis;
-import net.minecraft.util.ARGB;
+import net.minecraft.util.FastColor;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ClipContext;
@@ -53,30 +52,28 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	}
 	
 	@Override
-	public void renderFramebuffer(PoseStack poseStack, SubmitNodeCollector collector, Vec3 origin, Vec3 spanX, Vec3 spanY) {
-		RenderUtils.renderFramebuffer(window.framebuffer, poseStack, collector, true, origin, spanX, spanY);
+	public void renderFramebuffer(PoseStack poseStack, MultiBufferSource buffers, Vec3 origin, Vec3 spanX, Vec3 spanY) {
+		RenderUtils.renderFramebuffer(window.framebuffer, poseStack, buffers, true, origin, spanX, spanY);
 	}
 	
 	@Override
-	public void render(LevelRenderContext ctx) {
-		super.render(ctx);
+	public void render(PoseStack poseStack, MultiBufferSource buffers, Vec3 cameraPos) {
+		super.render(poseStack, buffers, cameraPos);
 		
-		Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
-		PoseStack poseStack = ctx.poseStack();
 		poseStack.pushPose();
-		poseStack.translate(cameraPos.scale(-1));
+		poseStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
 		if(WaylandCraft.instance.pointerGrabs.activeExclusiveGrab() instanceof MoveGrab grab && grab.window == this && grab.snapActive) {
 			Vec3 points[];
 			points = new Vec3[] {
 					grab.initialPivot.add(right().scale(10)),
 					grab.initialPivot.add(right().scale(-10)),
 			};
-			RenderUtils.renderLineStrip(ctx.poseStack(), ctx.submitNodeCollector(), points, ARGB.color(255, 0, 0), 2.0f);
+			RenderUtils.renderLineStrip(poseStack, buffers, points, FastColor.ARGB32.color(255, 255, 0, 0));
 			points = new Vec3[] {
 					grab.initialPivot.add(down().scale(10)),
 					grab.initialPivot.add(down().scale(-10)),
 			};
-			RenderUtils.renderLineStrip(ctx.poseStack(), ctx.submitNodeCollector(), points, ARGB.color(255, 0, 0), 2.0f);
+			RenderUtils.renderLineStrip(poseStack, buffers, points, FastColor.ARGB32.color(255, 255, 0, 0));
 		}
 		poseStack.popPose();
 	}
@@ -134,7 +131,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	}
 	
 	public void anchorToCamera(Camera camera) {
-		anchorToPosView(camera.position(), new Vec3(camera.forwardVector()), new Vec3(camera.upVector()));
+		anchorToPosView(camera.getPosition(), new Vec3(camera.getLookVector()), new Vec3(camera.getUpVector()));
 	}
 	
 	public void anchorToEntity(Entity entity) {
@@ -144,8 +141,8 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	public void doGrabMove(Vec3 pos, Vec3 view, Vec3 up, float yRot) {
 		this.anchorToPosView(pos, view, up);
 		
-		boolean modDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_ALT);
-		boolean ctrlDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL);
+		boolean modDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_ALT);
+		boolean ctrlDown = InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL);
 		if(modDown) {
 			this.tryAttachWalls(pos, view, yRot, ctrlDown);
 		}
@@ -161,9 +158,9 @@ public class WindowDisplay extends AbstractWindowDisplay {
 		Direction blockNormal = hitResult.getDirection();
 		Direction viewDirection = Direction.fromYRot(yRot);
 		
-		this.pivot = hitResult.getLocation().add(blockNormal.getUnitVec3().scale(0.03));
+		this.pivot = hitResult.getLocation().add(Vec3.atLowerCornerOf(blockNormal.getNormal()).scale(0.03));
 		
-		Vec3 normal = blockNormal.getUnitVec3();
+		Vec3 normal = Vec3.atLowerCornerOf(blockNormal.getNormal());
 		Vec3 down;
 		
 		if(snap) {
@@ -188,7 +185,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 			else if(blockNormal.equals(Direction.DOWN)) {
 				downDirection = viewDirection;
 			}
-			down = downDirection.getUnitVec3();
+			down = Vec3.atLowerCornerOf(downDirection.getNormal());
 		}
 		else {
 			if(blockNormal.getAxis() == Axis.Y) {

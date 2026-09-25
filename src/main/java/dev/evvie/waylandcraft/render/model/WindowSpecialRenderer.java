@@ -17,14 +17,14 @@ import dev.evvie.waylandcraft.desktop.DesktopEntry;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.ARGB;
 import net.minecraft.world.item.ItemStack;
 
-public class WindowSpecialRenderer implements SpecialModelRenderer<Identifier> {
+public class WindowSpecialRenderer implements SpecialModelRenderer<ResourceLocation> {
 	
 	@Override
-	public void submit(Identifier icon, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int light, int overlayCoords, boolean foil, int outlineColor) {
+	public void submit(ResourceLocation icon, PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int light, int overlayCoords, boolean foil, int outlineColor) {
 		poseStack.pushPose();
 		poseStack.translate(0, 0, 0.5);
 		submitNodeCollector.submitCustomGeometry(poseStack, RenderTypes.itemTranslucent(icon), new IconRenderer(light, overlayCoords));
@@ -32,14 +32,14 @@ public class WindowSpecialRenderer implements SpecialModelRenderer<Identifier> {
 	}
 	
 	@Override
-	public Identifier extractArgument(ItemStack item) {
+	public ResourceLocation extractArgument(ItemStack item) {
 		WLCToplevel toplevel = WaylandCraft.getToplevel(item);
 		if(toplevel == null) return null;
 		
 		DesktopEntry entry = WaylandCraft.instance.xdgManager.forAppId(toplevel.appID);
 		if(entry == null) return null;
 		
-		Identifier icon = entry.getIcon();
+		ResourceLocation icon = entry.getIcon();
 		return icon;
 	}
 	
@@ -84,17 +84,17 @@ public class WindowSpecialRenderer implements SpecialModelRenderer<Identifier> {
 		
 	}
 	
-	public static record Unbaked() implements SpecialModelRenderer.Unbaked<Identifier> {
+	public static record Unbaked() implements SpecialModelRenderer.Unbaked<ResourceLocation> {
 		
 		public static final MapCodec<Unbaked> MAP_CODEC = MapCodec.unit(new Unbaked());
 		
 		@Override
-		public MapCodec<? extends SpecialModelRenderer.Unbaked<Identifier>> type() {
+		public MapCodec<? extends SpecialModelRenderer.Unbaked<ResourceLocation>> type() {
 			return MAP_CODEC;
 		}
 		
 		@Override
-		public SpecialModelRenderer<Identifier> bake(BakingContext bakingContext) {
+		public SpecialModelRenderer<ResourceLocation> bake(BakingContext bakingContext) {
 			return new WindowSpecialRenderer();
 		}
 		

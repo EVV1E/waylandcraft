@@ -4,8 +4,7 @@ import java.util.ArrayList;
 
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.settings.WaylandCraftSettings;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.ScrollableLayout;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.LayoutSettings;
@@ -16,7 +15,7 @@ import net.minecraft.network.chat.Component;
 public class WaylandCraftSettingsScreen extends Screen {
 	
 	private WaylandCraft wlc;
-	private ScrollableLayout layout;
+	private LinearLayout layout;
 	
 	private ArrayList<SettingsWidget> settingsWidgets = new ArrayList<>();
 	
@@ -40,7 +39,8 @@ public class WaylandCraftSettingsScreen extends Screen {
 			content.addChild(widget);
 		}
 		
-		layout = new ScrollableLayout(minecraft, content, height - 75);
+		// 1.21.1 has no ScrollableLayout; the few settings fit on screen without scrolling
+		layout = content;
 		layout.setPosition(width / 2 - SettingsWidget.WIDTH / 2 - 25 / 2, 50);
 		layout.arrangeElements();
 		layout.visitWidgets((w) -> addRenderableWidget(w));
@@ -54,8 +54,8 @@ public class WaylandCraftSettingsScreen extends Screen {
 	}
 	
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-		super.extractRenderState(graphics, mouseX, mouseY, a);
+	public void render(GuiGraphics graphics, int mouseX, int mouseY, float a) {
+		super.render(graphics, mouseX, mouseY, a);
 	}
 	
 	@Override

@@ -22,7 +22,7 @@ public record WindowHandle(UUID player, long handle) {
 	}
 	
 	public static UUID getPlayerUUID(Player player) {
-		return player.getGameProfile().id();
+		return player.getGameProfile().getId();
 	}
 	
 	public boolean matchesPlayer(Player player) {

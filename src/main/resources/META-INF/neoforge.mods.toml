@@ -26,3 +26,6 @@ side = "BOTH"
 
 [[mixins]]
 config = "waylandcraft.client.mixins.json"
+
+[[mixins]]
+config = "waylandcraft.mixins.json"

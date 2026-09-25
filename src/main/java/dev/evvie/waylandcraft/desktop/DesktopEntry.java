@@ -3,7 +3,7 @@ package dev.evvie.waylandcraft.desktop;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public class DesktopEntry {
 	
@@ -32,7 +32,7 @@ public class DesktopEntry {
 		if(iconPath != null) this.icon = new DesktopIcon(appId, iconPath);
 	}
 	
-	public Identifier getIcon() {
+	public ResourceLocation getIcon() {
 		if(icon == null) return null;
 		return icon.getTextureLocation();
 	}

@@ -326,3 +326,65 @@ Open issues:
   `DisplayWindow` creates the window. Decide before release.
 - Xwayland shows `null` here only because `xwayland-satellite` isn't
   installed on this machine. That is upstream behavior, not a port issue.
+
+## Step 5 status (2026-09-25): core client ported, item visuals still to do
+
+Everything compiles except the files `build.gradle` still excludes. Smoke
+test with `./gradlew runClient`: all mixins apply, the compositor and
+xwayland-satellite start, desktop entries and icons load, and in a
+singleplayer world a `foot` window renders as an in-world display. The
+HUD app list, window items in the hotbar and cursor-shaped crosshairs
+also work. Steps 5 and 6 were done together, because the client depends
+on items and networking.
+
+Structure:
+
+- `WaylandCraftCommon` is the common `@Mod`. It registers items, data
+  components and payloads, and runs the server level tick.
+  `WaylandCraft` is the client `@Mod(dist = CLIENT)`. The temporary
+  `neoforge/` package from step 4 is gone.
+- Fabric events map to NeoForge events as follows. The bridge `update()`
+  runs on `RenderFrameEvent.Pre`, replacing the `MinecraftMixin` runTick
+  hook. World displays render at `RenderLevelStageEvent` `AFTER_ENTITIES`
+  through a dedicated `BufferSource`. Other mappings: `ClientTickEvent`,
+  `ClientPlayerNetworkEvent`, `ItemTooltipEvent`, `RegisterKeyMappingsEvent`,
+  `RegisterGuiLayersEvent` (HUD) and `RegisterShadersEvent`.
+- Items and components use `DeferredRegister`. Payloads are registered
+  with `optional()` and are only sent when the server has the channel
+  (`WaylandCraftNetworking.sendToServer`).
+- The world window render types are built from `RenderType.CompositeState`
+  with four `ShaderInstance` variants
+  (`shaders/core/rendertype_window_*`). They share
+  `shaders/include/rendertype_window.glsl`, which replaces the 26.1
+  shader defines.
+- The GUI moved back from `extractRenderState`/input-event records to
+  1.21.1's `render(GuiGraphics…)` and raw-int input methods.
+  `SettingsWidget` detects double clicks itself. `PopupScreen` became
+  `AlertScreen`, and `ScrollableLayout` became a plain `LinearLayout`.
+- Mixins: `KeyboardHandler`/`MouseHandler` injection points were remapped
+  (`onButton` became `onPress`, and the ordinals changed). The pick hook
+  moved to `GameRendererMixin` (`GameRenderer.pick`). `GuiMixin` targets
+  `renderCrosshair`.
+- Deleted, with no 1.21.1 target: `FramerateLimitTrackerMixin` (1.21.1
+  has no inactivity FPS throttle) and `NativeImageMixin` (SVG icons are
+  now copied into a `NativeImage` that owns its memory).
+- Java 21: `ScopedValue` became a render-thread flag, and `_` lambda
+  parameters were renamed.
+
+Still to do:
+
+- **Item visuals** (excluded in `build.gradle`): the window in hand, in
+  item frames, and the item model states (the broken icon and the app-icon
+  special renderer). For now the item shows the plain window icon.
+- **Behavior regressions to check in play:**
+  - Players move slowly while holding a window item in use, because 26.1's
+    `USE_EFFECTS` has no 1.21.1 equivalent.
+  - The world grab-snap guide lines use the fixed-width `RenderType.lines()`.
+  - Iris is not handled (step 7).
+- **Translucent-window hotfix:** `WindowTranslucencyHotfix` is excluded.
+  1.21.1's `blitToScreen` doesn't write alpha, so it may be unnecessary.
+  Verify with a translucent client window.
+- **Not yet exercised by hand:** the window manager screen (B), the app
+  launcher (V), the settings screen, keyboard capture (G / ALT-Q),
+  pointer capture, move/resize/drag-and-drop grabs, and multiplayer with
+  and without the mod on the server.

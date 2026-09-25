@@ -15,7 +15,7 @@ import net.minecraft.client.gui.components.SpriteIconButton;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 @Mixin(TitleScreen.class)
 public class TitleScreenMixin extends Screen {
@@ -27,8 +27,8 @@ public class TitleScreenMixin extends Screen {
 	@Inject(method = "init", at = @At("TAIL"))
 	public void addWaylandCraftButton(CallbackInfo info, @Local(ordinal = 3) int topPos) {
 		SpriteIconButton button = SpriteIconButton
-				.builder(Component.literal("waylandcraft"), (_) -> {Minecraft.getInstance().setScreen(new WaylandCraftSettingsScreen(WaylandCraft.instance));}, true)
-				.sprite(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "logo"), 16, 16)
+				.builder(Component.literal("waylandcraft"), (b) -> {Minecraft.getInstance().setScreen(new WaylandCraftSettingsScreen(WaylandCraft.instance));}, true)
+				.sprite(ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "logo"), 16, 16)
 				.width(20)
 				.build();
 		button.setPosition(width / 2 - 124, topPos - 36);

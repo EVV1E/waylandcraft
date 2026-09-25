@@ -7,18 +7,16 @@ import java.util.stream.StreamSupport;
 import dev.evvie.waylandcraft.network.ServerboundGiveItemsPayload;
 import dev.evvie.waylandcraft.utils.IMyServerPlayer;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public class ServerItemManager implements ServerTickEvents.StartLevelTick {
+public class ServerItemManager {
 	
-	@Override
 	public void onStartTick(ServerLevel level) {
 		for(ServerPlayer player : level.players()) {
 			Inventory inv = player.getInventory();
@@ -48,13 +46,14 @@ public class ServerItemManager implements ServerTickEvents.StartLevelTick {
 			.filter((e) -> !WaylandCraftUtils.isHandleValid(level, e.getItem().get(WindowItem.WINDOW_HANDLE)))
 			.filter((e) -> e.getAge() > 10)
 			.forEach((e) -> {
-				level.sendParticles(ParticleTypes.FLAME, false, false, e.getX(), e.getY(), e.getZ(), 10, 0.15, 0.2, 0.15, 0.1);
+				level.sendParticles(ParticleTypes.FLAME, e.getX(), e.getY(), e.getZ(), 10, 0.15, 0.2, 0.15, 0.1);
 				e.discard();
 			});
 	}
 	
-	public void handleGiveItemsPayload(ServerboundGiveItemsPayload payload, ServerPlayNetworking.Context ctx) {
-		IMyServerPlayer plr = (IMyServerPlayer) ctx.player();
+	public void handleGiveItemsPayload(ServerboundGiveItemsPayload payload, IPayloadContext ctx) {
+		ServerPlayer player = (ServerPlayer) ctx.player();
+		IMyServerPlayer plr = (IMyServerPlayer) player;
 		if(plr.getItemGiveCooldown() > 0) return;
 		plr.setItemGiveCooldown(10);
 		
@@ -64,8 +63,8 @@ public class ServerItemManager implements ServerTickEvents.StartLevelTick {
 			handles.add(handle);
 		}
 		
-		if(payload.missingOnly()) giveItemsIfMissing(ctx.player(), handles);
-		else giveItems(ctx.player(), handles);
+		if(payload.missingOnly()) giveItemsIfMissing(player, handles);
+		else giveItems(player, handles);
 	}
 	
 	public void giveItems(ServerPlayer player, List<Long> handles) {
@@ -104,7 +103,7 @@ public class ServerItemManager implements ServerTickEvents.StartLevelTick {
 	}
 	
 	public static ItemStack createItem(ServerPlayer player, long handle) {
-		ItemStack stack = new ItemStack(WindowItem.WINDOW, 1);
+		ItemStack stack = new ItemStack(WindowItem.WINDOW.get(), 1);
 		stack.set(WindowItem.WINDOW_HANDLE, WindowHandle.forPlayer(player, handle));
 		return stack;
 	}

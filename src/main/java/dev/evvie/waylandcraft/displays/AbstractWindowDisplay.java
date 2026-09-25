@@ -5,8 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.evvie.waylandcraft.math.WorldPlane;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.phys.Vec3;
 
 public abstract class AbstractWindowDisplay {
@@ -34,7 +33,7 @@ public abstract class AbstractWindowDisplay {
 	public abstract boolean isValid();
 	public abstract void updateGeometry();
 	
-	public abstract void renderFramebuffer(PoseStack poseStack, SubmitNodeCollector collector, Vec3 origin, Vec3 spanX, Vec3 spanY);
+	public abstract void renderFramebuffer(PoseStack poseStack, MultiBufferSource buffers, Vec3 origin, Vec3 spanX, Vec3 spanY);
 	public abstract @Nullable FramebufferRenderable getFramebuffer();
 	
 	public void rotate(Vec3 normal, Vec3 down) {
@@ -83,7 +82,8 @@ public abstract class AbstractWindowDisplay {
 		pivot = pos.add(localX().scale(width/2)).add(localY().scale(height/2));
 	}
 	
-	public void render(LevelRenderContext ctx) {
+	// poseStack is in camera-relative world space
+	public void render(PoseStack poseStack, MultiBufferSource buffers, Vec3 cameraPos) {
 		FramebufferRenderable framebuffer = getFramebuffer();
 		if(framebuffer == null) return;
 		
@@ -97,15 +97,13 @@ public abstract class AbstractWindowDisplay {
 		Vec3 localX = localX();
 		Vec3 localY = localY();
 		
-		Vec3 cameraPos = ctx.levelState().cameraRenderState.pos;
 		Vec3 originRel = origin().subtract(cameraPos);
 		
 		Vec3 bufOffset = localX.scale(-xoff - geometryX).add(localY.scale(-yoff - geometryY));
 		
-		PoseStack poseStack = ctx.poseStack();
 		poseStack.pushPose();
 		poseStack.translate(originRel.x, originRel.y, originRel.z);
-		renderFramebuffer(poseStack, ctx.submitNodeCollector(), bufOffset, localX.scale(bufWidth), localY.scale(bufHeight));
+		renderFramebuffer(poseStack, buffers, bufOffset, localX.scale(bufWidth), localY.scale(bufHeight));
 		poseStack.popPose();
 	}
 	

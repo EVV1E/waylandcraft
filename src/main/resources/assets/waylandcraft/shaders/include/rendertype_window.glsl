@@ -1,4 +1,5 @@
-#version 330
+// Shared body of the rendertype_window_* fragment shaders, which set the
+// ALPHA_CUTOUT / RGSS / NO_COLOR defines before importing this file.
 
 uniform sampler2D Sampler0;
 

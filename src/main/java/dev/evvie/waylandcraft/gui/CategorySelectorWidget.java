@@ -3,16 +3,15 @@ package dev.evvie.waylandcraft.gui;
 import java.util.List;
 import java.util.function.Consumer;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ComponentPath;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.navigation.FocusNavigationEvent;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public class CategorySelectorWidget extends AbstractWidget {
 	
@@ -50,9 +49,9 @@ public class CategorySelectorWidget extends AbstractWidget {
 	}
 	
 	private static final WidgetSprites BUTTON_SPRITES = new WidgetSprites(
-			Identifier.withDefaultNamespace("widget/button"),
-			Identifier.withDefaultNamespace("widget/button_disabled"),
-			Identifier.withDefaultNamespace("widget/button_highlighted")
+			ResourceLocation.withDefaultNamespace("widget/button"),
+			ResourceLocation.withDefaultNamespace("widget/button_disabled"),
+			ResourceLocation.withDefaultNamespace("widget/button_highlighted")
 	);
 	
 	private int elementsPerColumn() {
@@ -68,27 +67,27 @@ public class CategorySelectorWidget extends AbstractWidget {
 	}
 	
 	@Override
-	protected void extractWidgetRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
+	protected void renderWidget(GuiGraphics context, int mouseX, int mouseY, float partialTicks) {
 		for(int i = 0; i < entries.size(); i++) {
 			int bx = idxPosX(i);
 			int by = idxPosY(i);
 			
-			context.blitSprite(RenderPipelines.GUI_TEXTURED, BUTTON_SPRITES.get(active, i == selected), bx, by, elementSize, elementSize);
-			context.blitSprite(RenderPipelines.GUI_TEXTURED, entries.get(i).icon, bx + (elementSize - 15) / 2, by + (elementSize - 15) / 2, 15, 15);
+			context.blitSprite(BUTTON_SPRITES.get(active, i == selected), bx, by, elementSize, elementSize);
+			context.blitSprite(entries.get(i).icon, bx + (elementSize - 15) / 2, by + (elementSize - 15) / 2, 15, 15);
 			
 			if(mouseX > bx && mouseY > by && mouseX < bx + elementSize && mouseY < by + elementSize) {
-				context.setTooltipForNextFrame(entries.get(i).title, mouseX, mouseY);
+				if(Minecraft.getInstance().screen != null) Minecraft.getInstance().screen.setTooltipForNextRenderPass(entries.get(i).title);
 			}
 		}
 	}
 	
 	@Override
-	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
 		for(int i = 0; i < entries.size(); i++) {
 			int bx = idxPosX(i);
 			int by = idxPosY(i);
 			
-			if(event.x() > bx && event.y() > by && event.x() < bx + elementSize && event.y() < by + elementSize) {
+			if(mouseX > bx && mouseY > by && mouseX < bx + elementSize && mouseY < by + elementSize) {
 				select(i);
 				return true;
 			}
@@ -101,6 +100,6 @@ public class CategorySelectorWidget extends AbstractWidget {
 	protected void updateWidgetNarration(NarrationElementOutput narrationElementOutput) {
 	}
 	
-	public static record Entry(Component title, Identifier icon) {}
+	public static record Entry(Component title, ResourceLocation icon) {}
 	
 }

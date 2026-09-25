@@ -5,17 +5,16 @@ import java.util.ArrayList;
 
 import org.jetbrains.annotations.Nullable;
 
+import dev.evvie.waylandcraft.render.RenderUtils;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public abstract class SelectorWidget<T> extends AbstractWidget {
 	
@@ -80,7 +79,7 @@ public abstract class SelectorWidget<T> extends AbstractWidget {
 	}
 	
 	public abstract Component titleForElement(T element);
-	public abstract @Nullable Identifier iconForElement(T element);
+	public abstract @Nullable ResourceLocation iconForElement(T element);
 	public abstract boolean elementDimColor(T element);
 	
 	public T selection() {
@@ -100,7 +99,7 @@ public abstract class SelectorWidget<T> extends AbstractWidget {
 	}
 	
 	@Override
-	protected void extractWidgetRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float partialTicks) {
+	protected void renderWidget(GuiGraphics context, int mouseX, int mouseY, float partialTicks) {
 		for(int i = 0; i < buttons.size(); i++) {
 			SelectorButton<T> b = buttons.get(i);
 			
@@ -118,16 +117,16 @@ public abstract class SelectorWidget<T> extends AbstractWidget {
 				b.icon = null;
 			}
 			
-			b.extractRenderState(context, mouseX, mouseY, partialTicks);
+			b.render(context, mouseX, mouseY, partialTicks);
 		}
 	}
 	
 	@Override
-	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
 		if(!(this.active && this.visible)) return false;
 		
 		for(SelectorButton<T> b : buttons) {
-			if(b.mouseClicked(event, doubleClick)) return true;
+			if(b.mouseClicked(mouseX, mouseY, button)) return true;
 		}
 		
 		return false;
@@ -142,7 +141,7 @@ public abstract class SelectorWidget<T> extends AbstractWidget {
 		public T element = null;
 		public boolean selected = false;
 		public boolean dimColor = false;
-		public Identifier icon = null;
+		public ResourceLocation icon = null;
 		
 		@SuppressWarnings("unchecked")
 		public SelectorButton(SelectorWidget<T> widget, int x, int y, int width, int height) {
@@ -150,13 +149,13 @@ public abstract class SelectorWidget<T> extends AbstractWidget {
 		}
 		
 		private static final WidgetSprites SPRITES = new WidgetSprites(
-				Identifier.withDefaultNamespace("widget/button"),
-				Identifier.withDefaultNamespace("widget/button_disabled"),
-				Identifier.withDefaultNamespace("widget/button_highlighted")
+				ResourceLocation.withDefaultNamespace("widget/button"),
+				ResourceLocation.withDefaultNamespace("widget/button_disabled"),
+				ResourceLocation.withDefaultNamespace("widget/button_highlighted")
 		);
 		
 		@Override
-		protected void extractContents(GuiGraphicsExtractor context, int i, int j, float f) {
+		protected void renderWidget(GuiGraphics context, int i, int j, float f) {
 			int x = getX();
 			int y = getY();
 			int width = getWidth();
@@ -165,18 +164,18 @@ public abstract class SelectorWidget<T> extends AbstractWidget {
 			Color color = dimColor ? Color.lightGray : Color.white;
 			Font font = Minecraft.getInstance().font;
 			
-			context.blitSprite(RenderPipelines.GUI_TEXTURED, SPRITES.get(active, selected), x, y, width, height);
+			context.blitSprite(SPRITES.get(active, selected), x, y, width, height);
 			context.enableScissor(x + 2, y, x + width - 2, y + height);
 			
 			int xoff = x + 2;
 			int iconSize = height - 4;
 			
 			if(icon != null) {
-				context.blit(icon, xoff, y + 2, xoff + iconSize, y + 2 + iconSize, 0.0f, 1.0f, 0.0f, 1.0f);
+				RenderUtils.blitFull(context, icon, xoff, y + 2, xoff + iconSize, y + 2 + iconSize);
 				xoff += iconSize + 2;
 			}
 			
-			context.text(font, getMessage(), xoff, y + height / 2 - font.lineHeight / 2, color.getRGB());
+			context.drawString(font, getMessage(), xoff, y + height / 2 - font.lineHeight / 2, color.getRGB());
 			context.disableScissor();
 		}
 		

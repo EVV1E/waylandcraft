@@ -3,7 +3,14 @@
 	"package": "dev.evvie.waylandcraft.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"WindowMixin"
+		"WindowMixin",
+		"MouseHandlerMixin",
+		"IMouseHandlerMixin",
+		"KeyboardHandlerMixin",
+		"GameRendererMixin",
+		"GuiMixin",
+		"TitleScreenMixin",
+		"PauseScreenMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

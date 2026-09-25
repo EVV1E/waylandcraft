@@ -13,15 +13,15 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public class WindowTranslucencyHotfix {
 	
 	private static final RenderPipeline TRANSLUCENCY_HOTFIX_PIPELINE = RenderPipelines.register(
 			RenderPipeline.builder()
-			.withLocation(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/translucency_hotfix"))
+			.withLocation(ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pipeline/translucency_hotfix"))
 			.withVertexShader("core/screenquad")
-			.withFragmentShader(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "core/singlecolor"))
+			.withFragmentShader(ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "core/singlecolor"))
 			.withColorTargetState(new ColorTargetState(Optional.empty(), ColorTargetState.WRITE_ALPHA))
 			.withVertexFormat(DefaultVertexFormat.EMPTY, VertexFormat.Mode.TRIANGLES)
 			.withShaderDefine("RED", 1.0f)

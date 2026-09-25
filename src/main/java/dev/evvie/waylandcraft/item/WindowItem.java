@@ -1,36 +1,44 @@
 package dev.evvie.waylandcraft.item;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
-import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.UseEffects;
 import net.minecraft.world.level.Level;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class WindowItem extends Item {
 	
-	public static Item WINDOW;
-	public static ResourceKey<Item> WINDOW_RESOURCE_KEY = ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window"));
-	public static DataComponentType<WindowHandle> WINDOW_HANDLE;
+	private static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(WaylandCraftCommon.MOD_ID);
+	private static final DeferredRegister.DataComponents DATA_COMPONENTS = DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, WaylandCraftCommon.MOD_ID);
 	
-	public static void register() {
-		WINDOW = Registry.register(BuiltInRegistries.ITEM, WINDOW_RESOURCE_KEY, new WindowItem());
-		WINDOW_HANDLE = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "window_handle"), DataComponentType.<WindowHandle>builder().persistent(WindowHandle.CODEC).build());
+	public static final DeferredItem<WindowItem> WINDOW = ITEMS.registerItem("window", WindowItem::new);
+	public static final DeferredHolder<DataComponentType<?>, DataComponentType<WindowHandle>> WINDOW_HANDLE = DATA_COMPONENTS.registerComponentType("window_handle", (builder) -> builder.persistent(WindowHandle.CODEC));
+	
+	public static void register(IEventBus modBus) {
+		ITEMS.register(modBus);
+		DATA_COMPONENTS.register(modBus);
 	}
 	
-	public WindowItem() {
-		super(new Properties().setId(WINDOW_RESOURCE_KEY).component(DataComponents.USE_EFFECTS, new UseEffects(true, false, 1.0f)));
+	// NeoForge port: 26.1's USE_EFFECTS component (no slowdown while using the item)
+	// has no 1.21.1 equivalent, so players move slowly while placing a window.
+	public WindowItem(Properties properties) {
+		super(properties);
+	}
+	
+	// Keep the item "in use" until released, like a bow; onUseTick drives window placement
+	@Override
+	public int getUseDuration(ItemStack itemStack, LivingEntity entity) {
+		return 72000;
 	}
 	
 	@Override
@@ -42,14 +50,14 @@ public class WindowItem extends Item {
 	}
 	
 	@Override
-	public InteractionResult use(Level level, Player player, InteractionHand interactionHand) {
+	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand interactionHand) {
 		ItemStack item = player.getItemInHand(interactionHand);
 		WindowItemInteractionProvider provider = WaylandCraftCommon.instance.windowItemInteractionProvider;
 		
-		if(provider != null && !provider.isValid(item)) return InteractionResult.PASS;
+		if(provider != null && !provider.isValid(item)) return InteractionResultHolder.pass(item);
 		
 		player.startUsingItem(interactionHand);
-		return InteractionResult.CONSUME;
+		return InteractionResultHolder.consume(item);
 	}
 	
 	@Override

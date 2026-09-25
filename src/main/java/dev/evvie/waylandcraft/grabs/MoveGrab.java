@@ -50,7 +50,7 @@ public class MoveGrab extends PointerGrab {
 		Vec3 worldDiff = initialWorld.subtract(intersect.world());
 		
 		Vec3 diff = intersect.local().subtract(initialLocal);
-		snapActive = InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL);
+		snapActive = InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), GLFW.GLFW_KEY_LEFT_CONTROL);
 		if(snapActive) {
 			double minDist = 0.25;
 			if(max3(Math.abs(worldDiff.x), Math.abs(worldDiff.y), Math.abs(worldDiff.z)) < minDist) {

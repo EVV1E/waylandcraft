@@ -30,28 +30,29 @@ repositories {
 	}
 }
 
-// NeoForge 1.21.1 port in progress: only sources already ported to NeoForge/1.21.1
-// are compiled. Widen these includes as each package is ported (see
-// TODO-PORT-NEOFORGE-1.21.1.md). Fabric-only resources are excluded for the same reason.
+// NeoForge 1.21.1 port in progress: sources not yet ported to NeoForge/1.21.1
+// are excluded from compilation (see TODO-PORT-NEOFORGE-1.21.1.md). Remove
+// entries as they are ported. Fabric-only resources are excluded for the same reason.
 sourceSets {
 	main {
 		java {
-			include 'dev/evvie/waylandcraft/neoforge/**'
-			include 'dev/evvie/waylandcraft/WaylandCraftCommon.java'
-			include 'dev/evvie/waylandcraft/bridge/**'
-			include 'dev/evvie/waylandcraft/egl/**'
-			include 'dev/evvie/waylandcraft/desktop/RawDesktopEntry.java'
-			include 'dev/evvie/waylandcraft/displays/FramebufferRenderable.java'
-			include 'dev/evvie/waylandcraft/render/BufferTexture.java'
-			include 'dev/evvie/waylandcraft/render/WindowFramebuffer.java'
-			include 'dev/evvie/waylandcraft/render/WindowShaders.java'
-			include 'dev/evvie/waylandcraft/utils/CursorShape.java'
-			include 'dev/evvie/waylandcraft/mixin/WindowMixin.java'
+			// Window items rendered in hand, in item frames and as item models (render-state API)
+			exclude 'dev/evvie/waylandcraft/render/WindowInHandRenderer.java'
+			exclude 'dev/evvie/waylandcraft/render/WindowInItemFrameRenderer.java'
+			exclude 'dev/evvie/waylandcraft/render/IMyItemFrameRenderState.java'
+			exclude 'dev/evvie/waylandcraft/render/model/**'
+			exclude 'dev/evvie/waylandcraft/mixin/ItemFrameRendererMixin.java'
+			exclude 'dev/evvie/waylandcraft/mixin/ItemFrameRenderStateMixin.java'
+			exclude 'dev/evvie/waylandcraft/mixin/ItemInHandRendererMixin.java'
+			exclude 'dev/evvie/waylandcraft/mixin/IItemInHandRendererMixin.java'
+			// Iris compatibility (port step 7)
+			exclude 'dev/evvie/waylandcraft/compat/**'
+			// Needs checking against 1.21.1's alpha handling before porting
+			exclude 'dev/evvie/waylandcraft/render/WindowTranslucencyHotfix.java'
 		}
 		resources {
 			exclude 'fabric.mod.json'
 			exclude 'waylandcraft.classtweaker'
-			exclude 'waylandcraft.mixins.json'
 		}
 	}
 }
