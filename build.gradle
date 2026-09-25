@@ -134,6 +134,12 @@ neoForge {
 			environment("__GL_THREADED_OPTIMIZATIONS", "0")
 			environment("RUST_BACKTRACE", "1")
 		}
+		// Second client for testing window sharing between two players (e.g. against runServer)
+		client2 {
+			client()
+			gameDirectory = project.file('run-client2')
+			programArguments.addAll('--username', 'Viewer')
+		}
 		server {
 			server()
 			gameDirectory = project.file('run-server')

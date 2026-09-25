@@ -163,6 +163,11 @@ bind_java_type! {
             name = "toplevelAppID",
             fn = toplevel_app_id,
         },
+        static extern fn toplevel_pid {
+            sig = (instance: jlong, toplevel_handle: jlong) -> jint,
+            name = "toplevelPID",
+            fn = toplevel_pid,
+        },
         static extern fn toplevel_resize {
             sig = (
                 toplevel_handle: jlong,
@@ -1769,6 +1774,27 @@ fn toplevel_title<'local>(
     } else {
         Ok(JString::null())
     }
+}
+
+// Process id of the Wayland client owning the toplevel, or -1 if unknown.
+// For X11 windows this is xwayland-satellite's pid, not the X11 client's.
+fn toplevel_pid<'local>(
+    _env: &mut Env<'local>,
+    _class: JClass<'local>,
+    instance: jlong,
+    toplevel_handle: jlong,
+) -> Result<jint, BridgeError> {
+    let instance = jptr_to_instance!(instance, "toplevelPID")?;
+    let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelPID")?;
+
+    let pid = toplevel
+        .wl_surface()
+        .client()
+        .and_then(|client| client.get_credentials(&instance.state.display_handle).ok())
+        .map(|credentials| credentials.pid)
+        .unwrap_or(-1);
+
+    Ok(pid)
 }
 
 fn toplevel_app_id<'local>(

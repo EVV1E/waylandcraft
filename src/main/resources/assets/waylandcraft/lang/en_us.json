@@ -2,5 +2,6 @@
 	"key.category.waylandcraft.keys": "Waylandcraft",
 	"waylandcraft.key.appLauncher": "App Launcher",
 	"waylandcraft.key.windowManager": "Window Manager",
-	"waylandcraft.key.captureKeyboard": "Capture Keyboard"
+	"waylandcraft.key.captureKeyboard": "Capture Keyboard",
+	"waylandcraft.key.toggleSharing": "Toggle Window Sharing"
 }

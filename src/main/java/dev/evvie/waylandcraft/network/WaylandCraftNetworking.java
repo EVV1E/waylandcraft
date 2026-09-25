@@ -3,6 +3,7 @@ package dev.evvie.waylandcraft.network;
 import java.util.ArrayList;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
+import dev.evvie.waylandcraft.sharing.SharingNetworking;
 import dev.evvie.waylandcraft.utils.IMyServerPlayer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -33,6 +34,8 @@ public class WaylandCraftNetworking {
 		});
 		
 		registrar.playToServer(ServerboundGiveItemsPayload.TYPE, ServerboundGiveItemsPayload.CODEC, WaylandCraftCommon.instance.serverItemManager::handleGiveItemsPayload);
+		
+		SharingNetworking.register(registrar, WaylandCraftCommon.instance.sharingServer);
 	}
 	
 	// Client side: sends the payload if the server has the mod installed

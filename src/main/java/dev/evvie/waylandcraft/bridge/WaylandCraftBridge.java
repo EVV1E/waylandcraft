@@ -606,6 +606,11 @@ public class WaylandCraftBridge {
 	}
 	
 	// Find the most recently focused toplevel that exists
+	// Process id of the client owning the toplevel, or -1 if unknown
+	public int getToplevelPID(WLCToplevel toplevel) {
+		return toplevelPID(instance, toplevel.getHandle());
+	}
+	
 	public WLCToplevel getMostRecentFocus() {
 		updateFocusOrder();
 		return focusOrder.peekLast();
@@ -750,6 +755,7 @@ public class WaylandCraftBridge {
 	private static native long toplevelSurface(long instance, long topLevelHandle);
 	private static native String toplevelTitle(long topLevelHandle);
 	private static native String toplevelAppID(long topLevelHandle);
+	private static native int toplevelPID(long instance, long topLevelHandle);
 	// Resize toplevel
 	private static native void toplevelResize(long topLevelHandle, int width, int height, boolean interactive);
 	// Resize toplevel override, keep maximized and fullscreen state, stop interactive resize

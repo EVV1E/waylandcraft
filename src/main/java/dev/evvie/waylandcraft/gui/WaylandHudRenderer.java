@@ -32,6 +32,7 @@ public class WaylandHudRenderer {
 	private static final ResourceLocation APP_LIST = ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "app-list");
 	private static final ResourceLocation PINNED_TOPLEVEL = ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "pinned-toplevel");
 	private static final ResourceLocation DND_ICON = ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "dnd-icon");
+	private static final ResourceLocation SHARING = ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "sharing");
 	
 	public WaylandHudRenderer(WaylandCraft wlc) {
 		this.wlc = wlc;
@@ -42,6 +43,7 @@ public class WaylandHudRenderer {
 		event.registerAbove(TIME_DATE, APP_LIST, this::renderAppList);
 		event.registerAbove(APP_LIST, PINNED_TOPLEVEL, this::renderPinnedToplevel);
 		event.registerAbove(PINNED_TOPLEVEL, DND_ICON, this::renderDNDIcon);
+		event.registerAbove(DND_ICON, SHARING, this::renderSharing);
 	}
 	
 	private void renderAppList(GuiGraphics context, DeltaTracker deltaTracker) {
@@ -135,6 +137,16 @@ public class WaylandHudRenderer {
 			RenderUtils.renderFramebuffer2D(context, buf, x, y, w, h);
 			stack.popPose();
 		}
+	}
+	
+	// Always-visible indicator while any window is shared with other players
+	private void renderSharing(GuiGraphics context, DeltaTracker deltaTracker) {
+		int count = wlc.sharingOwner.sharedCount();
+		if(count == 0) return;
+		
+		Font font = Minecraft.getInstance().font;
+		String text = "\u25CF Sharing " + count + (count == 1 ? " window" : " windows");
+		context.drawString(font, text, context.guiWidth() - font.width(text) - 2, 4 + font.lineHeight, 0xFFFF5555, true);
 	}
 	
 	private void renderTimeDate(GuiGraphics context, DeltaTracker deltaTracker) {

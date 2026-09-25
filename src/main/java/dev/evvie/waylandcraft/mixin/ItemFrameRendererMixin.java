@@ -14,7 +14,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.item.ItemStack;
 
-// Frames holding a live window use the flat map frame model, like frames holding a map.
+// Frames holding a live or shared window use the flat map frame model, like frames holding a map.
 // The window itself is drawn from RenderItemInFrameEvent (see WaylandCraft).
 @Mixin(ItemFrameRenderer.class)
 public class ItemFrameRendererMixin {
@@ -24,7 +24,8 @@ public class ItemFrameRendererMixin {
 	
 	@Inject(method = "getFrameModelResourceLoc", at = @At("HEAD"), cancellable = true)
 	public void useMapFrameForWindows(ItemFrame itemFrame, ItemStack itemStack, CallbackInfoReturnable<ModelResourceLocation> info) {
-		if(WaylandCraft.getToplevel(itemStack) == null) return;
+		boolean window = WaylandCraft.getToplevel(itemStack) != null || WaylandCraft.instance.sharingViewer.hasFrame(itemStack);
+		if(!window) return;
 		
 		boolean glow = itemFrame.getType() == EntityType.GLOW_ITEM_FRAME;
 		info.setReturnValue(glow ? GLOW_MAP_FRAME_LOCATION : MAP_FRAME_LOCATION);

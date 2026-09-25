@@ -44,6 +44,8 @@ import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
 import dev.evvie.waylandcraft.render.model.WindowItemModel;
 import dev.evvie.waylandcraft.render.WindowShaders;
 import dev.evvie.waylandcraft.settings.WaylandCraftSettings;
+import dev.evvie.waylandcraft.sharing.SharingOwner;
+import dev.evvie.waylandcraft.sharing.SharingViewer;
 import dev.evvie.waylandcraft.settings.WaylandCraftSettingsManager;
 import dev.evvie.waylandcraft.utils.CursorShape;
 import net.minecraft.ChatFormatting;
@@ -104,6 +106,10 @@ public class WaylandCraft {
 	public KeyMapping keyOpenScreen = new KeyMapping("waylandcraft.key.windowManager", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_B, KEYBIND_CATEGORY);
 	public KeyMapping keyOpenAppLauncher = new KeyMapping("waylandcraft.key.appLauncher", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_V, KEYBIND_CATEGORY);
 	public KeyMapping keyCaptureKeyboard = new KeyMapping("waylandcraft.key.captureKeyboard", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, KEYBIND_CATEGORY);
+	public KeyMapping keyToggleSharing = new KeyMapping("waylandcraft.key.toggleSharing", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_N, KEYBIND_CATEGORY);
+	
+	public SharingOwner sharingOwner = new SharingOwner(this);
+	public SharingViewer sharingViewer = new SharingViewer();
 	
 	// Window displays are drawn in their own batch so vanilla's buffered render types keep their order
 	private final MultiBufferSource.BufferSource worldBuffers = MultiBufferSource.immediate(new ByteBufferBuilder(1536));
@@ -136,6 +142,7 @@ public class WaylandCraft {
 			event.register(keyOpenScreen);
 			event.register(keyOpenAppLauncher);
 			event.register(keyCaptureKeyboard);
+			event.register(keyToggleSharing);
 		});
 		modBus.addListener(RegisterShadersEvent.class, WindowShaders::register);
 		modBus.addListener(RegisterShadersEvent.class, RenderUtils::registerShaders);
@@ -154,6 +161,10 @@ public class WaylandCraft {
 		NeoForge.EVENT_BUS.addListener(RenderHandEvent.class, this::onRenderHand);
 		NeoForge.EVENT_BUS.addListener(RenderItemInFrameEvent.class, this::onRenderItemInFrame);
 		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, (event) -> onClientTick(Minecraft.getInstance()));
+		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, (event) -> {
+			sharingOwner.tick();
+			sharingViewer.tick();
+		});
 		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Pre.class, (event) -> itemManager.onStartTick(Minecraft.getInstance()));
 		NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, (event) -> onClientJoin(Minecraft.getInstance()));
 		NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, (event) -> onClientDisconnect());
@@ -182,6 +193,7 @@ public class WaylandCraft {
 			WaylandCraftCommon.LOGGER.info("Xwayland started on " + x11Display);
 		}
 		bridge.update();
+		sharingOwner.captureFrames();
 	}
 	
 	private void registerSettingsResponders() {
@@ -192,6 +204,7 @@ public class WaylandCraft {
 	
 	private void onRenderLevelStage(RenderLevelStageEvent event) {
 		if(event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
+		sharingViewer.setFrustum(event.getFrustum());
 		if(bridge == null) return;
 		
 		updateWorld();
@@ -246,7 +259,11 @@ public class WaylandCraft {
 	// Item frames holding a window item show the window itself
 	private void onRenderItemInFrame(RenderItemInFrameEvent event) {
 		WLCToplevel toplevel = getToplevel(event.getItemStack());
-		if(toplevel == null) return;
+		if(toplevel == null) {
+			// Another player's shared window
+			if(sharingViewer.renderInFrame(event.getItemStack(), event.getPoseStack(), event.getMultiBufferSource())) event.setCanceled(true);
+			return;
+		}
 		
 		event.setCanceled(true);
 		
@@ -336,6 +353,9 @@ public class WaylandCraft {
 		else if(keyCaptureKeyboard.consumeClick()) {
 			enableKeyboardCapture(false);
 		}
+		else if(keyToggleSharing.consumeClick()) {
+			sharingOwner.toggleFocused();
+		}
 	}
 	
 	private void onClientJoin(Minecraft minecraft) {
@@ -348,6 +368,8 @@ public class WaylandCraft {
 	private void onClientDisconnect() {
 		displays.clear();
 		itemManager.reset();
+		sharingOwner.reset();
+		sharingViewer.reset();
 	}
 	
 	@Nullable
