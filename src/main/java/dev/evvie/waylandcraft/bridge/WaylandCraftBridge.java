@@ -32,7 +32,8 @@ import net.minecraft.util.profiling.ProfilerFiller;
 
 public class WaylandCraftBridge {
 	
-	private long instance;
+	// Zeroed by the shutdown hook, read by the render thread
+	private volatile long instance;
 	private ArrayList<WLCToplevel> toplevels = new ArrayList<WLCToplevel>();
 	private ArrayList<WLCPopup> popups = new ArrayList<WLCPopup>();
 	private ArrayList<WLCSurface> surfaces = new ArrayList<WLCSurface>();
@@ -301,6 +302,10 @@ public class WaylandCraftBridge {
 	}
 	
 	public void update() {
+		// The JVM shutdown hook may already have shut the compositor down (e.g. on SIGTERM)
+		// while the render thread is still running
+		if(instance == 0) return;
+		
 		ProfilerFiller profiler = Minecraft.getInstance().getProfiler();
 		profiler.push("wayland");
 		
