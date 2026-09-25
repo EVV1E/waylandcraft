@@ -41,6 +41,8 @@ public class WindowManagerScreen extends Screen {
 	
 	private WaylandCraft wlc;
 	
+	private static final int SHARED_COLOR = 0xFF5555;
+	
 	private SelectorWidget<WLCToplevel> selector;
 	private ArrayList<Button> buttons = new ArrayList<Button>();
 	private Button grabButton;
@@ -48,6 +50,7 @@ public class WindowManagerScreen extends Screen {
 	private Button hideButton;
 	private Button pinButton;
 	private Button itemButton;
+	private Button shareButton;
 	private Button helpButton;
 	
 	private StringWidget captureModeMessage;
@@ -94,7 +97,10 @@ public class WindowManagerScreen extends Screen {
 		selector = new SelectorWidget<WLCToplevel>(leftMargin - 1, topMargin - 17, areaWidth + 2, 17) {
 			@Override
 			public Component titleForElement(WLCToplevel element) {
-				return Component.literal(Optional.ofNullable(element.title).or(() -> Optional.ofNullable(element.appID)).orElse(""));
+				Component title = Component.literal(Optional.ofNullable(element.title).or(() -> Optional.ofNullable(element.appID)).orElse(""));
+				if(!wlc.sharingOwner.isShared(element)) return title;
+				// Shared windows are marked so it's always clear what other players can see
+				return Component.literal("\u25CF ").withColor(SHARED_COLOR).append(title);
 			}
 			
 			@Override
@@ -159,6 +165,14 @@ public class WindowManagerScreen extends Screen {
 		itemButton.setTooltipDelay(Duration.ofMillis(700));
 		buttons.add(itemButton);
 		
+		shareButton = SpriteIconButton.builder(Component.literal("Share"), this::onSharePressed, true)
+				.sprite(ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "share"), 15, 15)
+				.size(22, 22)
+				.build();
+		shareButton.setPosition(3, topMargin + 90);
+		shareButton.setTooltipDelay(Duration.ofMillis(300));
+		buttons.add(shareButton);
+		
 		helpButton = SpriteIconButton.builder(Component.literal("Help"), this::onHelpPressed, true)
 				.sprite(ResourceLocation.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "help"), 15, 15)
 				.size(22, 22)
@@ -173,6 +187,7 @@ public class WindowManagerScreen extends Screen {
 		addRenderableWidget(hideButton);
 		addRenderableWidget(pinButton);
 		addRenderableWidget(itemButton);
+		addRenderableWidget(shareButton);
 		addRenderableWidget(helpButton);
 		addRenderableWidget(captureModeMessage);
 		addRenderableWidget(captureModeSprite);
@@ -211,6 +226,11 @@ public class WindowManagerScreen extends Screen {
 		
 		if(wlc.pinnedToplevel != focused) wlc.pinnedToplevel = focused;
 		else wlc.pinnedToplevel = null;
+	}
+	
+	private void onSharePressed(Button button) {
+		if(focused == null) return;
+		wlc.sharingOwner.toggle(focused);
 	}
 	
 	private void onItemPressed(Button button) {
@@ -334,6 +354,11 @@ public class WindowManagerScreen extends Screen {
 			hideButton.active = wlc.hasDisplayFor(focused);
 			pinButton.active = true;
 			itemButton.active = true;
+			shareButton.active = true;
+			boolean shared = wlc.sharingOwner.isShared(focused);
+			shareButton.setTooltip(Tooltip.create(Component.literal(shared
+					? "Stop sharing this window"
+					: "Share this window (video and audio) with other players who can see it")));
 		}
 		else {
 			grabButton.active = false;
@@ -341,6 +366,8 @@ public class WindowManagerScreen extends Screen {
 			hideButton.active = false;
 			pinButton.active = false;
 			itemButton.active = false;
+			shareButton.active = false;
+			shareButton.setTooltip(Tooltip.create(Component.literal("Select a window to share it")));
 		}
 		
 		buttons.forEach((b) -> b.visible = true);

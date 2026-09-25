@@ -171,9 +171,16 @@ per window:
 ## Using it
 
 1. **Server:** needs this build of the mod. Singleplayer opened to LAN works too.
-2. **Owner:**
-   - Focus a window and press **N** (Toggle Window Sharing). A chat message confirms it,
-     and a red "● Sharing N windows" indicator stays on the HUD.
+2. **Owner:** choose what to share explicitly.
+   - Open the Window Manager (**B**), select the window's tab and click the share button
+     (the broadcast icon under "Give Window Item"). The same button stops sharing, and
+     its tooltip says which it will do.
+   - Shared windows get a red **●** in front of their tab title. The HUD lists every
+     shared window by title ("● Sharing: <title>").
+   - **N** (Toggle Window Sharing) is a shortcut that toggles the most recently focused
+     window. A chat message confirms every start and stop.
+   - On a server without the mod, sharing is refused with a message instead of silently
+     doing nothing.
    - Show it to others by putting its window item in an item frame, or by placing it in
      the world as usual (use the window item).
 3. **Viewers:** look at it. Audio plays within 24 blocks.

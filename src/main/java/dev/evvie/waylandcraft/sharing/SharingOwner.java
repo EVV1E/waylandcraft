@@ -7,6 +7,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -36,6 +37,7 @@ import dev.evvie.waylandcraft.sharing.SharingNetworking.ShareStatePayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.VideoChunkPayload;
 import dev.evvie.waylandcraft.sharing.SharingNetworking.WindowPose;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 
@@ -110,11 +112,16 @@ public class SharingOwner {
 		this.wlc = wlc;
 	}
 
-	public int sharedCount() {
-		return shared.size();
+	public boolean isShared(WLCToplevel toplevel) {
+		return shared.containsKey(toplevel.getHandle());
 	}
 
-	// Toggles sharing of the most recently focused window
+	// Titles of shared windows, for the HUD
+	public List<String> sharedTitles() {
+		return shared.values().stream().map((window) -> title(window.toplevel)).toList();
+	}
+
+	// Keybind shortcut: toggles sharing of the most recently focused window
 	public void toggleFocused() {
 		if(wlc.bridge == null) return;
 		WLCToplevel toplevel = wlc.bridge.getMostRecentFocus();
@@ -122,17 +129,34 @@ public class SharingOwner {
 			message("No window focused to share");
 			return;
 		}
+		toggle(toplevel);
+	}
 
-		String name = toplevel.title != null ? toplevel.title : "window";
+	// Explicit per-window choice, from the window manager screen or the keybind
+	public void toggle(WLCToplevel toplevel) {
+		if(wlc.bridge == null || !toplevel.isAlive()) return;
+
+		String name = title(toplevel);
 		if(shared.containsKey(toplevel.getHandle())) {
 			stop(toplevel.getHandle());
 			message("Stopped sharing " + name);
 		}
 		else {
+			ClientPacketListener connection = Minecraft.getInstance().getConnection();
+			if(connection == null || !connection.hasChannel(ShareStatePayload.TYPE)) {
+				message("This server doesn't have WaylandCraft window sharing");
+				return;
+			}
 			shared.put(toplevel.getHandle(), new SharedWindow(toplevel, wlc.bridge.getToplevelPID(toplevel)));
 			WaylandCraftNetworking.sendToServer(new ShareStatePayload(toplevel.getHandle(), true));
-			message("Sharing " + name + " (video and audio). Other players see it in item frames or where you place it.");
+			message("Sharing " + name + " (video and audio) with other players who can see it in an item frame or where you place it. Stop it from the window manager or with the share key.");
 		}
+	}
+
+	public static String title(WLCToplevel toplevel) {
+		if(toplevel.title != null && !toplevel.title.isBlank()) return toplevel.title;
+		if(toplevel.appID != null) return toplevel.appID;
+		return "window";
 	}
 
 	public void onDemand(DemandPayload payload) {

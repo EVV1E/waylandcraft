@@ -2,6 +2,7 @@ package dev.evvie.waylandcraft.gui;
 
 import java.awt.Color;
 import java.util.Calendar;
+import java.util.List;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 
@@ -139,14 +140,20 @@ public class WaylandHudRenderer {
 		}
 	}
 	
-	// Always-visible indicator while any window is shared with other players
+	// Always-visible list of windows shared with other players
 	private void renderSharing(GuiGraphics context, DeltaTracker deltaTracker) {
-		int count = wlc.sharingOwner.sharedCount();
-		if(count == 0) return;
+		List<String> titles = wlc.sharingOwner.sharedTitles();
+		if(titles.isEmpty()) return;
 		
 		Font font = Minecraft.getInstance().font;
-		String text = "\u25CF Sharing " + count + (count == 1 ? " window" : " windows");
-		context.drawString(font, text, context.guiWidth() - font.width(text) - 2, 4 + font.lineHeight, 0xFFFF5555, true);
+		int maxWidth = context.guiWidth() / 3;
+		int y = 4 + font.lineHeight;
+		for(String title : titles) {
+			String text = "\u25CF Sharing: " + title;
+			if(font.width(text) > maxWidth) text = font.plainSubstrByWidth(text, maxWidth - font.width("...")) + "...";
+			context.drawString(font, text, context.guiWidth() - font.width(text) - 2, y, 0xFFFF5555, true);
+			y += font.lineHeight + 1;
+		}
 	}
 	
 	private void renderTimeDate(GuiGraphics context, DeltaTracker deltaTracker) {
