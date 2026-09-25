@@ -1,0 +1,25 @@
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "GPL-3.0-only"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${version}"
+displayName = "WaylandCraft"
+description = "Wayland Compositor in Minecraft"
+authors = "EVV1E"
+logoFile = "assets/waylandcraft/icon.png"
+
+[[dependencies.${mod_id}]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neo_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"

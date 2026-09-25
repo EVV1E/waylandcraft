@@ -1,5 +1,5 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.neoforged.moddev' version "${moddev_version}"
 	id 'maven-publish'
 }
 
@@ -13,7 +13,7 @@ base {
 repositories {
 	// Add repositories to retrieve artifacts from in here.
 	// You should only use this when depending on other mods because
-	// Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
+	// ModDevGradle adds the essential maven repositories to download Minecraft and libraries from automatically.
 	// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 	// for more information about repositories.
 
@@ -30,36 +30,49 @@ repositories {
 	}
 }
 
-dependencies {
-	// To change the versions see the gradle.properties file
-	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-	// Fabric API. This is technically optional, but you probably want it anyway.
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	compileOnly "maven.modrinth:iris:${project.iris_version}"
-}
-
-processResources {
-	inputs.property "version", project.version
-
-	filesMatching("fabric.mod.json") {
-		expand "version": inputs.properties.version
+// NeoForge 1.21.1 port in progress: only sources already ported to NeoForge/1.21.1
+// are compiled. Widen these includes as each package is ported (see
+// TODO-PORT-NEOFORGE-1.21.1.md). Fabric-only resources are excluded for the same reason.
+sourceSets {
+	main {
+		java {
+			include 'dev/evvie/waylandcraft/neoforge/**'
+		}
+		resources {
+			exclude 'fabric.mod.json'
+			exclude 'waylandcraft.classtweaker'
+			exclude 'waylandcraft.mixins.json'
+			exclude 'waylandcraft.client.mixins.json'
+		}
 	}
 }
 
-tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+dependencies {
+	// To change the versions see the gradle.properties file
+	// Iris (compileOnly, for IrisCompat) comes back in port step 7:
+	// compileOnly "maven.modrinth:iris:${project.iris_version}"
+}
+
+def modProperties = [
+	mod_id: project.mod_id,
+	version: project.version,
+	minecraft_version_range: project.minecraft_version_range,
+	neo_version_range: project.neo_version_range,
+	loader_version_range: project.loader_version_range,
+]
+
+processResources {
+	inputs.properties modProperties
+
+	filesMatching("META-INF/neoforge.mods.toml") {
+		expand modProperties
+	}
 }
 
 java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
 	withSourcesJar()
 
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	toolchain.languageVersion = JavaLanguageVersion.of(21)
 }
 
 import org.gradle.internal.logging.text.StyledTextOutputFactory;
@@ -109,18 +122,32 @@ jar {
 	}
 }
 
-loom {
+neoForge {
+	version = project.neo_version
+
 	runs {
 		client {
+			client()
+			gameDirectory = project.file('run')
 			// need to append, otherwise we get "Driver does not support OpenGL" in Nix containers
-			environmentVariable("LD_LIBRARY_PATH",
-				["../native/target/debug/", System.getenv("LD_LIBRARY_PATH")]
+			environment("LD_LIBRARY_PATH",
+				[project.file("native/target/debug").absolutePath, System.getenv("LD_LIBRARY_PATH")]
 					.findAll { it }.join(":"))
-			environmentVariable("__GL_THREADED_OPTIMIZATIONS", "0")
-			environmentVariable("RUST_BACKTRACE", "1")
+			environment("__GL_THREADED_OPTIMIZATIONS", "0")
+			environment("RUST_BACKTRACE", "1")
+		}
+		server {
+			server()
+			gameDirectory = project.file('run-server')
+			programArgument '--nogui'
 		}
 	}
-	accessWidenerPath = file("src/main/resources/waylandcraft.classtweaker")
+
+	mods {
+		"${mod_id}" {
+			sourceSet(sourceSets.main)
+		}
+	}
 }
 
 // configure the maven publication

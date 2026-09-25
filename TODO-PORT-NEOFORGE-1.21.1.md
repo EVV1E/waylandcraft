@@ -230,3 +230,24 @@ entrypoints. NeoForge equivalents: `RenderLevelStageEvent`,
 - The window-in-item-frame and window-in-hand features (special model
   renderer, render states) are the most expensive rewrites. Defer them
   until after the core desktop/screen view works.
+
+## Step 2 status (2026-09-25): done
+
+The build uses ModDevGradle 2.0.147 with NeoForge 21.1.251 and a Java 21
+toolchain. `./gradlew build` produces `build/libs/waylandcraft.jar`, and
+`./gradlew runClient` loads the mod (the log shows `WaylandCraft NeoForge
+shell loaded`).
+
+- The entry point is `dev.evvie.waylandcraft.neoforge.WaylandCraftNeoForge`,
+  with metadata in `META-INF/neoforge.mods.toml`, which is expanded from
+  `gradle.properties`.
+- **Only `dev/evvie/waylandcraft/neoforge/**` is compiled.** The `sourceSets`
+  include in `build.gradle` limits compilation to that package, and the
+  Fabric-only resources (`fabric.mod.json`, `classtweaker`, mixin configs)
+  are excluded. Widen the include as each package is ported. The Fabric
+  sources stay in the tree untouched as reference.
+- The Iris `compileOnly` dependency is commented out until step 7. The
+  correct Modrinth version string is `1.8.14-beta.1+1.21.1-neoforge`, not
+  `+mc1.21.1`.
+- The dev client runs from `run/` and the dev server from `run-server/`;
+  both directories are gitignored.
