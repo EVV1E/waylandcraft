@@ -135,3 +135,98 @@ actually landing in their `main`, rather than just having a working
   `packwiz curseforge add` / `packwiz modrinth add` (once published) or
   `packwiz url add` (pointing at a GitHub release asset) from inside
   `pack/`, same as every other mod in that pack.
+
+## Step 1 findings (2026-09-25)
+
+Method: every `net.minecraft.*` / `com.mojang.*` import in `src/` (156
+classes), plus every mixin target method, checked against Mojang's official
+1.21.1 mappings (`client-1.21.1-20240808.144430-mappings.txt`, in the local
+PrismLauncher library cache). Nothing was decompiled; method bodies and
+injection points (`@At` targets, ordinals, locals) are **not** verified
+yet. That happens per mixin in step 5.
+
+### Verdict: partial redesign, not a mechanical port
+
+1.21.1 predates the Blaze3D GPU abstraction. It has no `GpuDevice`,
+`GpuTexture`, `RenderPass`, or `RenderPipeline`. It also predates the
+render-state / submit split (`SubmitNodeCollector`, `*RenderState`,
+`GuiGraphicsExtractor`) and the 1.21.9+ input-event records (`KeyEvent`,
+`MouseButtonInfo`). About 29 of the mod's files (roughly 5.9k of 8.8k
+lines of Java) import at least one of these, so every rendering and GUI
+path needs rewriting against 1.21.1's API: `GuiGraphics`,
+`MultiBufferSource`, `RenderType`, `ShaderInstance`, `RenderTarget`, and
+`GlStateManager`/`RenderSystem` immediate-style calls.
+
+The core technique does survive. Dmabuf → EGLImage → GL texture
+(`BufferTexture`, `egl/`) is raw GL/EGL through LWJGL. Only its wrapping
+into `GlTexture`/`GpuTextureView` is new-API; 1.21.1 can use a raw GL
+texture id directly (e.g. via `AbstractTexture` or `RenderSystem.setShaderTexture(int, int)`).
+`com.mojang.blaze3d.platform.GlStateManager` exists in 1.21.1, in a
+different package than `blaze3d.opengl.GlStateManager`.
+
+### Classes missing in 1.21.1
+
+- **GPU layer:** all of `blaze3d.buffers.*`, `blaze3d.textures.*`,
+  `opengl.GlBackend`/`GlDevice`/`GlTexture`, `systems.GpuDeviceBackend`/`RenderPass`,
+  `pipeline.BlendFunction`/`ColorTargetState`/`DepthStencilState`,
+  `shaders.UniformType`, `RenderPipelines`, `DynamicUniformStorage`,
+  `rendertype.RenderSetup`/`RenderTypes`.
+- **Render-state / submit:** `SubmitNodeCollector`, `ItemFrameRenderState`,
+  `ItemStackRenderState`, `BlockModelRenderState`/`BlockModelResolver`,
+  `special.SpecialModelRenderer(s)`, `item.properties.select.*`,
+  `UseEffects`.
+- **GUI/input:** `GuiGraphicsExtractor` (use `GuiGraphics`),
+  `ScrollableLayout`, `KeyEvent`, `CharacterEvent`, `MouseButtonEvent`,
+  `MouseButtonInfo`.
+- **Renames:** `resources.Identifier` → `ResourceLocation`,
+  `util.Util` → `net.minecraft.Util`, `util.ARGB` → `FastColor.ARGB32`,
+  `platform.SourceFactor`/`DestFactor` → `GlStateManager$SourceFactor`/`$DestFactor`,
+  `rendertype.RenderType` → `renderer.RenderType`.
+- **Other:** `FramerateLimitTracker` (the limit lives on `Window` in 1.21.1),
+  `LightCoordsUtil` (use `LightTexture`), `util.profiling.Profiler`
+  (1.21.1 uses `Minecraft.getProfiler()`).
+- **False positives:** `com.mojang.serialization.*` (DataFixerUpper, a
+  library jar) and the nested classes `PoseStack.Pose`, `Direction.Axis`,
+  and `Item.TooltipContext` all exist.
+
+### Mixins, one by one
+
+| Mixin | 1.21.1 status |
+|---|---|
+| `GlBackendMixin` (`setWindowHints` → EGL context API) | Target gone. Re-hook `Window.<init>` (1.21.1 sets GLFW hints there) to add `GLFW_CONTEXT_CREATION_API = EGL` before `glfwCreateWindow`. **Critical**: dmabuf import depends on it. |
+| `IGlTextureMixin` (`GlTexture.<init>` invoker) | Target gone. Drop it and use raw GL texture ids. |
+| `FramerateLimitTrackerMixin` | Target gone. Hook `Window.getFramerateLimit()` or `Minecraft.getFramerateLimit()` (both exist). |
+| `GuiMixin` (`extractCrosshair`) | Becomes `Gui.renderCrosshair(GuiGraphics, DeltaTracker)`. Redirect `GuiGraphics.blitSprite(ResourceLocation, IIII)` instead. |
+| `ItemFrameRendererMixin` (`submit`, `extractRenderState`) | Redesign against `render(ItemFrame, float, float, PoseStack, MultiBufferSource, int)`. There is no render state, so read the entity directly. |
+| `ItemFrameRenderStateMixin` | Target gone. Store the toplevel on the entity or look it up in `render`. |
+| `ItemInHandRendererMixin` (`renderArmWithItem`) | Exists. Signature uses `MultiBufferSource`, not `SubmitNodeCollector`. |
+| `IItemInHandRendererMixin` (`renderPlayerArm` invoker) | Exists, with the `MultiBufferSource` signature. |
+| `KeyboardHandlerMixin` (`keyPress`) | Exists as `keyPress(long,int,int,int,int)`: raw ints, no `KeyEvent`. The `InputConstants.getKey(KeyEvent)` ordinal target must be re-found. |
+| `MouseHandlerMixin` (`onButton`, `onScroll`, `grabMouse`, `turnPlayer`, `accumulatedDX/DY`) | `onButton` is `onPress(long,int,int,int)` in 1.21.1. The rest exist. All `@At` targets need rechecking. |
+| `IMouseHandlerMixin` (`onMove` invoker) | Exists (`onMove(long,double,double)`). |
+| `MinecraftMixin` (`runTick`, `renderFrame`, `pick`) | `runTick` exists. `renderFrame` is gone (its "present" hook needs a new site in `runTick`). `pick` moved to `GameRenderer.pick(float)`. |
+| `NativeImageMixin` (`<init>` invoker) | Constructors exist. Check which one it invokes. |
+| `TitleScreenMixin` (`init`), `PauseScreenMixin` (`createPauseMenu`) | Both exist. `SpriteIconButton` exists. Recheck the `@Local` ordinals. |
+| `ServerPlayerMixin` (`restoreFrom`) | Exists, same signature. |
+
+### Fabric API surface (9 files)
+
+`client.rendering.v1.level` (5 imports, world-render events) and
+`networking.v1` plus `client.networking.v1` (6) are the largest. The rest:
+lifecycle events, HUD rendering, key mappings, item tooltips, and loader
+entrypoints. NeoForge equivalents: `RenderLevelStageEvent`,
+`RegisterGuiLayersEvent`, `RegisterKeyMappingsEvent`,
+`ItemTooltipEvent`, `ClientTickEvent`/`ServerTickEvent`, and
+`RegisterPayloadHandlersEvent`.
+
+### Implications for later steps
+
+- Steps 2 through 4 are unaffected: shell, AT, and native lib/JNI.
+  `WaylandCraftBridge` imports new render classes, so step 4 will have to
+  stub or port its texture handoff. The JNI signatures can stay as they are.
+- Before step 5, bring up `Window` EGL hint and dmabuf→GL texture first,
+  then draw one window with `GuiGraphics`/`RenderType`. Everything visual
+  depends on it.
+- The window-in-item-frame and window-in-hand features (special model
+  renderer, render states) are the most expensive rewrites. Defer them
+  until after the core desktop/screen view works.
