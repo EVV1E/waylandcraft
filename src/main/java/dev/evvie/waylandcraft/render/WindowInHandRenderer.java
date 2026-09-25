@@ -8,7 +8,7 @@ import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
 import dev.evvie.waylandcraft.mixin.IItemInHandRendererMixin;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
@@ -16,7 +16,7 @@ import net.minecraft.world.phys.Vec3;
 
 public class WindowInHandRenderer {
 	
-	public void render(PoseStack poseStack, SubmitNodeCollector collector, float attack, float handHeight, int light, HumanoidArm humanoidArm, ItemStack itemStack) {
+	public void render(PoseStack poseStack, MultiBufferSource buffers, float attack, float handHeight, int light, HumanoidArm humanoidArm, ItemStack itemStack) {
 		poseStack.pushPose();
 		
 		float h = humanoidArm == HumanoidArm.RIGHT ? 1.0f : -1.0f;
@@ -25,7 +25,7 @@ public class WindowInHandRenderer {
 		if (!Minecraft.getInstance().player.isInvisible()) {
 			poseStack.pushPose();
 			poseStack.mulPose(Axis.ZP.rotationDegrees(h * 10.0f));
-			renderPlayerArm(poseStack, collector, light, handHeight, attack, humanoidArm);
+			renderPlayerArm(poseStack, buffers, light, handHeight, attack, humanoidArm);
 			poseStack.popPose();
 		}
 		
@@ -40,12 +40,12 @@ public class WindowInHandRenderer {
 		poseStack.mulPose(Axis.XP.rotationDegrees(osci * -45.0f));
 		poseStack.mulPose(Axis.YP.rotationDegrees(h * osci * -30.0f));
 		
-		renderWindow(poseStack, collector, h, light, itemStack);
+		renderWindow(poseStack, buffers, h, light, itemStack);
 		
 		poseStack.popPose();
 	}
 	
-	public void renderWindow(PoseStack poseStack, SubmitNodeCollector collector, float sideMult, int light, ItemStack itemStack) {
+	public void renderWindow(PoseStack poseStack, MultiBufferSource buffers, float sideMult, int light, ItemStack itemStack) {
 		WLCToplevel toplevel = WaylandCraft.getToplevel(itemStack);
 		if(toplevel == null) return;
 		if(toplevel.framebuffer == null) return;
@@ -91,11 +91,11 @@ public class WindowInHandRenderer {
 		poseStack.scale(wscale, hscale, 1);
 		poseStack.translate(-0.5, -0.5, 0);
 		
-		RenderUtils.renderFramebuffer(toplevel.framebuffer, poseStack, collector, false, new Vec3(0, 1, 0), new Vec3(1, 0, 0), new Vec3(0, -1, 0));
+		RenderUtils.renderFramebuffer(toplevel.framebuffer, poseStack, buffers, false, new Vec3(0, 1, 0), new Vec3(1, 0, 0), new Vec3(0, -1, 0));
 	}
 	
-	public void renderPlayerArm(PoseStack poseStack, SubmitNodeCollector collector, int light, float handHeight, float attack, HumanoidArm humanoidArm) {
-		((IItemInHandRendererMixin) Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer()).invokeRenderPlayerArm(poseStack, collector, light, handHeight, attack, humanoidArm);
+	public void renderPlayerArm(PoseStack poseStack, MultiBufferSource buffers, int light, float handHeight, float attack, HumanoidArm humanoidArm) {
+		((IItemInHandRendererMixin) Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer()).invokeRenderPlayerArm(poseStack, buffers, light, handHeight, attack, humanoidArm);
 	}
 	
 }

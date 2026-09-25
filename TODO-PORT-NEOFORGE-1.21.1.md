@@ -388,3 +388,24 @@ Still to do:
   launcher (V), the settings screen, keyboard capture (G / ALT-Q),
   pointer capture, move/resize/drag-and-drop grabs, and multiplayer with
   and without the mod on the server.
+
+## Item visuals and Iris (2026-09-25): ported, awaiting in-game check
+
+- The window in hand is drawn from `RenderHandEvent`, which replaces
+  `ItemInHandRendererMixin`. The player arm still goes through the
+  `IItemInHandRendererMixin` invoker.
+- Windows in item frames are drawn from `RenderItemInFrameEvent`, which
+  replaces the render-state mixins. `ItemFrameRendererMixin` now only
+  swaps in the flat map frame model.
+- The item icon: `models/item/window.json` overrides to
+  `models/item/window_icon.json` (a `builtin/entity` model) when the
+  `waylandcraft:window_state` item property is 1. The app icon is drawn by
+  `WindowSpecialRenderer`, a `BlockEntityWithoutLevelRenderer` registered
+  through `RegisterClientExtensionsEvent`. The 26.1-format `items/window.json`
+  is removed. Upstream never used the `broken` state.
+- Iris: the `compileOnly` dependency is back (`1.8.14-beta.1+1.21.1-neoforge`),
+  and `IrisCompat` uses `ModList`. With a shader pack active, windows
+  render through `RenderType.entityCutout` (the window texture in front, a
+  black back face), as upstream does. Smoke-tested: the dev client starts
+  with Iris 1.8.14 + Sodium 0.8.13 and Complementary Reimagined enabled
+  (jars copied into the gitignored `run/mods`).

@@ -36,17 +36,6 @@ repositories {
 sourceSets {
 	main {
 		java {
-			// Window items rendered in hand, in item frames and as item models (render-state API)
-			exclude 'dev/evvie/waylandcraft/render/WindowInHandRenderer.java'
-			exclude 'dev/evvie/waylandcraft/render/WindowInItemFrameRenderer.java'
-			exclude 'dev/evvie/waylandcraft/render/IMyItemFrameRenderState.java'
-			exclude 'dev/evvie/waylandcraft/render/model/**'
-			exclude 'dev/evvie/waylandcraft/mixin/ItemFrameRendererMixin.java'
-			exclude 'dev/evvie/waylandcraft/mixin/ItemFrameRenderStateMixin.java'
-			exclude 'dev/evvie/waylandcraft/mixin/ItemInHandRendererMixin.java'
-			exclude 'dev/evvie/waylandcraft/mixin/IItemInHandRendererMixin.java'
-			// Iris compatibility (port step 7)
-			exclude 'dev/evvie/waylandcraft/compat/**'
 			// Needs checking against 1.21.1's alpha handling before porting
 			exclude 'dev/evvie/waylandcraft/render/WindowTranslucencyHotfix.java'
 		}
@@ -59,8 +48,7 @@ sourceSets {
 
 dependencies {
 	// To change the versions see the gradle.properties file
-	// Iris (compileOnly, for IrisCompat) comes back in port step 7:
-	// compileOnly "maven.modrinth:iris:${project.iris_version}"
+	compileOnly "maven.modrinth:iris:${project.iris_version}"
 }
 
 def modProperties = [

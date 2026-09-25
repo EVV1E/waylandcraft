@@ -2,5 +2,8 @@
 	"parent": "minecraft:item/generated",
 	"textures": {
 		"layer0": "waylandcraft:item/window"
-	}
+	},
+	"overrides": [
+		{ "predicate": { "waylandcraft:window_state": 1 }, "model": "waylandcraft:item/window_icon" }
+	]
 }

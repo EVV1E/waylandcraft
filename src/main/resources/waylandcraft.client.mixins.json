@@ -10,7 +10,9 @@
 		"GameRendererMixin",
 		"GuiMixin",
 		"TitleScreenMixin",
-		"PauseScreenMixin"
+		"PauseScreenMixin",
+		"IItemInHandRendererMixin",
+		"ItemFrameRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

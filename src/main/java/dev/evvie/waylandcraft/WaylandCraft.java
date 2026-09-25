@@ -14,6 +14,7 @@ import org.lwjgl.system.Platform;
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
@@ -38,6 +39,9 @@ import dev.evvie.waylandcraft.item.WindowHandle;
 import dev.evvie.waylandcraft.item.WindowItem;
 import dev.evvie.waylandcraft.item.WindowItemManager;
 import dev.evvie.waylandcraft.render.RenderUtils;
+import dev.evvie.waylandcraft.render.WindowInHandRenderer;
+import dev.evvie.waylandcraft.render.WindowInItemFrameRenderer;
+import dev.evvie.waylandcraft.render.model.WindowItemModel;
 import dev.evvie.waylandcraft.render.WindowShaders;
 import dev.evvie.waylandcraft.settings.WaylandCraftSettings;
 import dev.evvie.waylandcraft.settings.WaylandCraftSettingsManager;
@@ -52,6 +56,8 @@ import net.minecraft.client.gui.screens.Overlay;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
@@ -64,6 +70,8 @@ import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
+import net.neoforged.neoforge.client.event.RenderHandEvent;
+import net.neoforged.neoforge.client.event.RenderItemInFrameEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
@@ -100,6 +108,8 @@ public class WaylandCraft {
 	// Window displays are drawn in their own batch so vanilla's buffered render types keep their order
 	private final MultiBufferSource.BufferSource worldBuffers = MultiBufferSource.immediate(new ByteBufferBuilder(1536));
 	
+	public WindowInHandRenderer windowInHandRenderer = new WindowInHandRenderer();
+	public WindowInItemFrameRenderer windowInItemFrameRenderer = new WindowInItemFrameRenderer();
 	public WaylandHudRenderer hudRenderer = new WaylandHudRenderer(this);
 	
 	public PointerGrabMap pointerGrabs = new PointerGrabMap(this);
@@ -129,6 +139,7 @@ public class WaylandCraft {
 		});
 		modBus.addListener(RegisterShadersEvent.class, WindowShaders::register);
 		modBus.addListener(RegisterShadersEvent.class, RenderUtils::registerShaders);
+		WindowItemModel.register(modBus);
 		
 		settingsManager = new WaylandCraftSettingsManager(this);
 		
@@ -140,6 +151,8 @@ public class WaylandCraft {
 		
 		NeoForge.EVENT_BUS.addListener(RenderFrameEvent.Pre.class, (event) -> update());
 		NeoForge.EVENT_BUS.addListener(RenderLevelStageEvent.class, this::onRenderLevelStage);
+		NeoForge.EVENT_BUS.addListener(RenderHandEvent.class, this::onRenderHand);
+		NeoForge.EVENT_BUS.addListener(RenderItemInFrameEvent.class, this::onRenderItemInFrame);
 		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, (event) -> onClientTick(Minecraft.getInstance()));
 		NeoForge.EVENT_BUS.addListener(ClientTickEvent.Pre.class, (event) -> itemManager.onStartTick(Minecraft.getInstance()));
 		NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingIn.class, (event) -> onClientJoin(Minecraft.getInstance()));
@@ -215,6 +228,34 @@ public class WaylandCraft {
 			else playerUsingWindowItem = false;
 		}
 		playerWasUsingWindowItem = playerUsingWindowItem;
+	}
+	
+	// First-person window items show the window itself instead of the item
+	private void onRenderHand(RenderHandEvent event) {
+		ItemStack itemStack = event.getItemStack();
+		if(!itemStack.is(WindowItem.WINDOW)) return;
+		if(getToplevel(itemStack) == null) return;
+		
+		event.setCanceled(true);
+		
+		HumanoidArm mainArm = Minecraft.getInstance().player.getMainArm();
+		HumanoidArm arm = event.getHand() == InteractionHand.MAIN_HAND ? mainArm : mainArm.getOpposite();
+		windowInHandRenderer.render(event.getPoseStack(), event.getMultiBufferSource(), event.getSwingProgress(), event.getEquipProgress(), event.getPackedLight(), arm, itemStack);
+	}
+	
+	// Item frames holding a window item show the window itself
+	private void onRenderItemInFrame(RenderItemInFrameEvent event) {
+		WLCToplevel toplevel = getToplevel(event.getItemStack());
+		if(toplevel == null) return;
+		
+		event.setCanceled(true);
+		
+		// Match the item scale vanilla applies after this event
+		PoseStack poseStack = event.getPoseStack();
+		poseStack.pushPose();
+		poseStack.scale(0.5f, 0.5f, 0.5f);
+		windowInItemFrameRenderer.render(toplevel, poseStack, event.getMultiBufferSource());
+		poseStack.popPose();
 	}
 	
 	public void updateWorld() {

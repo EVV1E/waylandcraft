@@ -4,12 +4,12 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.phys.Vec3;
 
 public class WindowInItemFrameRenderer {
 	
-	public void render(WLCToplevel toplevel, PoseStack poseStack, SubmitNodeCollector collector) {
+	public void render(WLCToplevel toplevel, PoseStack poseStack, MultiBufferSource buffers) {
 		if(toplevel.framebuffer == null) return;
 		
 		poseStack.pushPose();
@@ -39,7 +39,7 @@ public class WindowInItemFrameRenderer {
 		x += resolution / 2 - width / 2;
 		y += resolution / 2 - height / 2;
 		
-		RenderUtils.renderFramebuffer(toplevel.framebuffer, poseStack, collector, true, new Vec3(x, y, 0), new Vec3(w, 0, 0), new Vec3(0, h, 0));
+		RenderUtils.renderFramebuffer(toplevel.framebuffer, poseStack, buffers, true, new Vec3(x, y, 0), new Vec3(w, 0, 0), new Vec3(0, h, 0));
 		
 		poseStack.popPose();
 	}

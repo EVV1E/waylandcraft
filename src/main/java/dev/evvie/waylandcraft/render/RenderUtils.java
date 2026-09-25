@@ -13,13 +13,17 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 
 import dev.evvie.waylandcraft.WaylandCraftCommon;
+import dev.evvie.waylandcraft.compat.IrisCompat;
 import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderStateShard;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FastColor;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 
@@ -84,6 +88,15 @@ public class RenderUtils {
 	public static void renderFramebuffer(WindowFramebuffer framebuffer, PoseStack poseStack, MultiBufferSource buffers, boolean cutout, Vec3 origin, Vec3 spanX, Vec3 spanY) {
 		if(!framebuffer.isValid()) return;
 		
+		// Shader packs replace custom shaders, so use a vanilla entity render type they support:
+		// the window texture on the front, a black silhouette on the back
+		if(IrisCompat.isShaderActive()) {
+			VertexConsumer buffer = buffers.getBuffer(RenderType.entityCutout(framebuffer.getTextureLocation()));
+			addFramebufferQuadEntity(poseStack.last(), buffer, origin, spanX, spanY, FastColor.ARGB32.colorFromFloat(1.0f, 1.0f, 1.0f, 1.0f), false);
+			addFramebufferQuadEntity(poseStack.last(), buffer, origin, spanX, spanY, FastColor.ARGB32.colorFromFloat(1.0f, 0.0f, 0.0f, 0.0f), true);
+			return;
+		}
+		
 		// Front quad
 		Function<ResourceLocation, RenderType> renderType = cutout ? WINDOW_CUTOUT_ANTIALIAS : WINDOW_TRANSLUCENT_ANTIALIAS;
 		addFramebufferQuad(poseStack.last(), buffers.getBuffer(renderType.apply(framebuffer.getTextureLocation())), origin, spanX, spanY, false);
@@ -110,6 +123,35 @@ public class RenderUtils {
 			buffer.addVertex(pose, br.toVector3f()).setUv(1.0f, 1.0f);
 			buffer.addVertex(pose, bl.toVector3f()).setUv(0.0f, 1.0f);
 			buffer.addVertex(pose, tl.toVector3f()).setUv(0.0f, 0.0f);
+		}
+	}
+	
+	private static void addFramebufferQuadEntity(Pose pose, VertexConsumer buffer, Vec3 origin, Vec3 spanX, Vec3 spanY, int color, boolean reverse) {
+		Vec3 tl = origin;
+		Vec3 bl = tl.add(spanY);
+		Vec3 br = bl.add(spanX);
+		Vec3 tr = tl.add(spanX);
+		Vector3f normal = pose.transformNormal(spanY.cross(spanX).normalize().toVector3f(), new Vector3f());
+		
+		Vector3f p1 = pose.pose().transformPosition(tl.toVector3f());
+		Vector3f p2 = pose.pose().transformPosition(bl.toVector3f());
+		Vector3f p3 = pose.pose().transformPosition(br.toVector3f());
+		Vector3f p4 = pose.pose().transformPosition(tr.toVector3f());
+		
+		int overlay = OverlayTexture.NO_OVERLAY;
+		int light = LightTexture.FULL_BRIGHT;
+		
+		if(!reverse) {
+			buffer.addVertex(p1.x, p1.y, p1.z, color, 0.0f, 0.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(p2.x, p2.y, p2.z, color, 0.0f, 1.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(p3.x, p3.y, p3.z, color, 1.0f, 1.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(p4.x, p4.y, p4.z, color, 1.0f, 0.0f, overlay, light, normal.x, normal.y, normal.z);
+		}
+		else {
+			buffer.addVertex(p4.x, p4.y, p4.z, color, 1.0f, 0.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(p3.x, p3.y, p3.z, color, 1.0f, 1.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(p2.x, p2.y, p2.z, color, 0.0f, 1.0f, overlay, light, normal.x, normal.y, normal.z);
+			buffer.addVertex(p1.x, p1.y, p1.z, color, 0.0f, 0.0f, overlay, light, normal.x, normal.y, normal.z);
 		}
 	}
 	

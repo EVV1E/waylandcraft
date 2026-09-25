@@ -1,12 +1,12 @@
 package dev.evvie.waylandcraft.compat;
 
-import net.fabricmc.loader.api.FabricLoader;
 import net.irisshaders.iris.api.v0.IrisApi;
+import net.neoforged.fml.ModList;
 
 public class IrisCompat {
 	
 	public static boolean isShaderActive() {
-		if(!FabricLoader.getInstance().isModLoaded("iris")) return false;
+		if(!ModList.get().isLoaded("iris")) return false;
 		return IrisApi.getInstance().isShaderPackInUse();
 	}
 	
