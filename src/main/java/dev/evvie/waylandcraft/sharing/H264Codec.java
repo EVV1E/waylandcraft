@@ -14,9 +14,13 @@ import org.jcodec.common.model.Size;
 
 import com.mojang.blaze3d.platform.NativeImage;
 
-/* H.264 for shared window video, through JCodec (pure Java, so every client can decode).
+import dev.evvie.waylandcraft.WaylandCraftCommon;
+
+/* H.264 for shared window video. Viewers decode with JCodec (pure Java, so every client
+ * can decode). Owners encode with x264 from the native library when it's available
+ * (NativeH264Encoder, much smaller frames), and with JCodec otherwise.
  *
- * Measured on 848x480 content: encoding takes 15-25 ms and decoding about 13 ms per frame.
+ * JCodec, measured on 848x480 content: encoding takes 15-25 ms and decoding about 13 ms per frame.
  * Compared with the earlier motion JPEG, a keystroke in a terminal costs about 8 KB instead
  * of about 115 KB, scrolling about 20 KB instead of 120 KB, and moving video about 24 KB
  * instead of 42 KB.
@@ -27,7 +31,31 @@ import com.mojang.blaze3d.platform.NativeImage;
 public class H264Codec {
 
 	// Constant quantizer: steady quality, size follows content (idle deltas are tiny)
-	private static final int QP = 30;
+	static final int QP = 30;
+
+	// Cleared the first time the native encoder can't be used (e.g. an older native library)
+	private static boolean nativeAvailable = true;
+
+	public interface FrameEncoder {
+		boolean matches(int width, int height);
+		// rgba: tightly packed RGBA rows, top row first. Key frames also carry SPS/PPS,
+		// so a fresh decoder can start at any of them.
+		byte[] encode(ByteBuffer rgba, boolean keyFrame);
+		void close();
+	}
+
+	// Prefers x264; falls back to JCodec's encoder for good if the native one fails
+	public static FrameEncoder createEncoder(int width, int height) {
+		if(nativeAvailable) {
+			try {
+				return new NativeH264Encoder(width, height, QP);
+			} catch(UnsatisfiedLinkError | RuntimeException e) {
+				nativeAvailable = false;
+				WaylandCraftCommon.LOGGER.warn("Native x264 encoder unavailable, using JCodec for window sharing: " + e);
+			}
+		}
+		return new Encoder(width, height);
+	}
 
 	static {
 		// JCodec logs decoder warnings to stdout by default
@@ -51,7 +79,7 @@ public class H264Codec {
 		}
 	};
 
-	public static class Encoder {
+	public static class Encoder implements FrameEncoder {
 
 		private final int width;
 		private final int height;
@@ -66,12 +94,12 @@ public class H264Codec {
 			this.out = ByteBuffer.allocate(encoder.estimateBufferSize(picture));
 		}
 
+		@Override
 		public boolean matches(int width, int height) {
 			return this.width == width && this.height == height;
 		}
 
-		// rgba: tightly packed RGBA rows, top row first. Key frames also carry SPS/PPS,
-		// so a fresh decoder can start at any of them.
+		@Override
 		public byte[] encode(ByteBuffer rgba, boolean keyFrame) {
 			rgbaToYuv(rgba, picture);
 			out.clear();
@@ -79,6 +107,10 @@ public class H264Codec {
 			byte[] data = new byte[frame.remaining()];
 			frame.get(data);
 			return data;
+		}
+
+		@Override
+		public void close() {
 		}
 
 	}

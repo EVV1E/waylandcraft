@@ -16,11 +16,22 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: Install dependencies
-      run: sudo apt install -y libxkbcommon-dev
+      run: sudo apt install -y libxkbcommon-dev nasm libclang-dev
+    # x264 (window sharing video) is linked statically so players need no libx264 of a matching version
+    - name: Build static x264
+      run: |
+        git clone --depth 1 --branch stable https://code.videolan.org/videolan/x264.git /tmp/x264
+        cd /tmp/x264
+        ./configure --prefix=/tmp/x264-install --enable-static --enable-pic --disable-cli
+        make -j$(nproc)
+        make install
     - name: Setup rust toolchain
       uses: dtolnay/rust-toolchain@stable
     - name: Compile native library
       working-directory: native/
+      env:
+        PKG_CONFIG_PATH: /tmp/x264-install/lib/pkgconfig
+        SYSTEM_DEPS_X264_LINK: static
       run: cargo build --target=${{ matrix.platform.target }}
     - name: Move native library
       run: |

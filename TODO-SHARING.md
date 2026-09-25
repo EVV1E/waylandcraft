@@ -46,9 +46,46 @@ audio, only while someone is near:
                                                                                       left and right edges
 ```
 
-### Video codec (H.264 through JCodec)
+### Video codec (H.264: x264 on the owner, JCodec on viewers)
 
-Measured at 848×480 on this machine:
+**Owner:** encodes with **x264**, linked into the native library (`native/src/h264.rs`,
+`NativeH264Encoder`).
+- **Settings:** baseline profile, zero-latency tuning, constant QP 30, no B-frames, no
+  scene cuts. Key frames come only on request, and SPS/PPS repeat on every key frame.
+- **Measured at 320×240 test content**, end to end through the real Java and native code
+  into the JCodec decoder:
+
+  | | x264 | JCodec encoder |
+  |---|---|---|
+  | Key frame | about 1.9 KB | 3.6 KB |
+  | Delta frame | 100–220 bytes | 2–3 KB |
+  | Mean color error | 0.8/255 | about 8/255 |
+
+  A late viewer's fresh decoder starts cleanly at an on-demand key frame.
+- **Measured at 848×480 through the `x264` CLI with the same settings:** JCodec decoded
+  all 60 frames of each clip.
+
+  | Content | x264, per frame after the first | JCodec encoder |
+  |---|---|---|
+  | Panning video | 1.5 KB | 24 KB |
+  | Scrolling terminal | 8.7 KB | 20 KB |
+  | Typing in a terminal | 1.8 KB | 8 KB |
+
+- **Fallback:** if the native encoder can't be used (for example, an older native
+  library), the owner falls back to JCodec's encoder for the rest of the session.
+
+**Linking:**
+- **Dev builds** link the system `libx264` dynamically.
+- **Release builds** link a static, position-independent x264. It's built from source in
+  the workflow, and in the Ubuntu 22.04 container with
+  `SYSTEM_DEPS_X264_LINK=static PKG_CONFIG_PATH=<x264>/lib/pkgconfig`.
+  Verified: that library has no `libx264` runtime dependency, needs glibc 2.34, and passes
+  the same round trip.
+- **License:** x264 is GPLv2+, compatible with the mod's GPLv3.
+- **Build requirements:** bindgen, so `libclang` at build time, plus `nasm` for x264.
+
+**Viewers:** decode with **JCodec** (pure Java). JCodec's own encoder measured at
+848×480 on this machine:
 
 | Content | Earlier motion JPEG | H.264, QP 30 |
 |---|---|---|
@@ -163,10 +200,8 @@ a non-Linux viewer, and Iris.
 
 ## Known limitations / next steps
 
-- **H.264:** JCodec's encoder is baseline-only with fairly simple motion search, and even
-  a static frame costs about 8 KB (every macroblock is coded). A native encoder
-  (x264/openh264) on the owner, which is Linux anyway, could cut sizes further, while
-  viewers keep the JCodec decoder.
+- **H.264:** everything is baseline, because the JCodec decoder needs it. Main profile
+  (CABAC) would save roughly another 10–15%, if JCodec's CABAC decoding holds up in tests.
 - **A/V sync:** it follows the audio clock only, and doesn't correct clock drift between
   owner and viewer beyond the 1.5 s fallback. That should be fine for sessions of normal
   length.
@@ -176,5 +211,5 @@ a non-Linux viewer, and Iris.
 - **Audio:** only one stream per app is captured, and playback isn't paused with the game.
 - **Controls:** audio and video are shared together.
 - **Placement:** floating windows are trusted within 64 blocks of their owner.
-- **Licensing:** Concentus is a libopus port under a BSD-style license, and JCodec is
-  BSD (FreeBSD) licensed. Confirm both license files before any release.
+- **Licensing:** Concentus is a libopus port under a BSD-style license, JCodec is BSD
+  (FreeBSD) licensed, and x264 is GPLv2+. Confirm the license files before any release.

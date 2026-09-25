@@ -88,7 +88,7 @@ public class SharingOwner {
 		boolean encoding = false;
 
 		// H.264 state. The encoder itself is only touched on the encoder thread.
-		H264Codec.Encoder encoder = null;
+		H264Codec.FrameEncoder encoder = null;
 		boolean forceKeyFrame = true;
 		int framesSinceKey = 0;
 		int encodedWidth = 0;
@@ -165,7 +165,7 @@ public class SharingOwner {
 		while(it.hasNext()) {
 			SharedWindow window = it.next().getValue();
 			if(!window.toplevel.isAlive()) {
-				if(window.audio != null) window.audio.stop();
+				release(window);
 				WaylandCraftNetworking.sendToServer(new ShareStatePayload(window.toplevel.getHandle(), false));
 				it.remove();
 				continue;
@@ -297,7 +297,10 @@ public class SharingOwner {
 					encoded = encodePng(pixels, width, height);
 				}
 				else {
-					if(window.encoder == null || !window.encoder.matches(width, height)) window.encoder = new H264Codec.Encoder(width, height);
+					if(window.encoder == null || !window.encoder.matches(width, height)) {
+						if(window.encoder != null) window.encoder.close();
+						window.encoder = H264Codec.createEncoder(width, height);
+					}
 					encoded = window.encoder.encode(pixels, kind == SharingNetworking.FRAME_KEY);
 				}
 				Minecraft.getInstance().execute(() -> {
@@ -354,8 +357,17 @@ public class SharingOwner {
 	private void stop(long handle) {
 		SharedWindow window = shared.remove(handle);
 		if(window == null) return;
-		if(window.audio != null) window.audio.stop();
+		release(window);
 		WaylandCraftNetworking.sendToServer(new ShareStatePayload(handle, false));
+	}
+
+	private void release(SharedWindow window) {
+		if(window.audio != null) window.audio.stop();
+		// The encoder belongs to the encoder thread
+		encoder.execute(() -> {
+			if(window.encoder != null) window.encoder.close();
+			window.encoder = null;
+		});
 	}
 
 	private static void message(String text) {

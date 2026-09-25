@@ -47,6 +47,7 @@ use std::sync::Arc;
 
 mod bridge;
 mod ddm;
+mod h264;
 mod java_types;
 mod output;
 mod process;
