@@ -37,12 +37,21 @@ sourceSets {
 	main {
 		java {
 			include 'dev/evvie/waylandcraft/neoforge/**'
+			include 'dev/evvie/waylandcraft/WaylandCraftCommon.java'
+			include 'dev/evvie/waylandcraft/bridge/**'
+			include 'dev/evvie/waylandcraft/egl/**'
+			include 'dev/evvie/waylandcraft/desktop/RawDesktopEntry.java'
+			include 'dev/evvie/waylandcraft/displays/FramebufferRenderable.java'
+			include 'dev/evvie/waylandcraft/render/BufferTexture.java'
+			include 'dev/evvie/waylandcraft/render/WindowFramebuffer.java'
+			include 'dev/evvie/waylandcraft/render/WindowShaders.java'
+			include 'dev/evvie/waylandcraft/utils/CursorShape.java'
+			include 'dev/evvie/waylandcraft/mixin/WindowMixin.java'
 		}
 		resources {
 			exclude 'fabric.mod.json'
 			exclude 'waylandcraft.classtweaker'
 			exclude 'waylandcraft.mixins.json'
-			exclude 'waylandcraft.client.mixins.json'
 		}
 	}
 }

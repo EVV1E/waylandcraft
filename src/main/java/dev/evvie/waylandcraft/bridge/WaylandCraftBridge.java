@@ -14,10 +14,6 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.system.Platform;
 
-import com.mojang.blaze3d.opengl.GlDevice;
-import com.mojang.blaze3d.systems.GpuDeviceBackend;
-import com.mojang.blaze3d.systems.RenderSystem;
-
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.bridge.dmabuf.Dmabuf;
@@ -31,7 +27,7 @@ import dev.evvie.waylandcraft.render.BufferTexture.DmabufImportFailedException;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import dev.evvie.waylandcraft.utils.CursorShape;
-import net.minecraft.util.profiling.Profiler;
+import net.minecraft.client.Minecraft;
 import net.minecraft.util.profiling.ProfilerFiller;
 
 public class WaylandCraftBridge {
@@ -127,20 +123,14 @@ public class WaylandCraftBridge {
 		return bridge;
 	}
 	
+	// 1.21.1 only renders through OpenGL, so the EGL backend is the only backend
 	private static DmabufFeedbackData initBackend() {
-		GpuDeviceBackend deviceBackend = RenderSystem.getDevice().backend;
-		if(deviceBackend instanceof GlDevice) {
-			return initBackendEGL();
-		}
-		
-		WaylandCraftCommon.LOGGER.error("Unsupported graphics backend!");
-		return null;
-	}
-	
-	private static DmabufFeedbackData initBackendEGL() {
 		long eglDisplay = EGL.getEGLDisplay();
 		if(eglDisplay == 0) {
-			throw new RuntimeException("Failed to get EGL display!");
+			// The GL context was not created through EGL, e.g. because NeoForge's early
+			// loading window created it before WindowMixin could set the context API hint
+			WaylandCraftCommon.LOGGER.error("Minecraft's OpenGL context is not an EGL context! Disabling dmabuf functionality. Set earlyWindowControl = false in config/fml.toml to fix this.");
+			return null;
 		}
 		
 		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
@@ -201,7 +191,7 @@ public class WaylandCraftBridge {
 		for(WLCSurface surface : surfaces) {
 			if(surface.getHandle() == handle) return surface;
 		}
-		WLCSurface surface = new WLCSurface(handle);
+		WLCSurface surface = new WLCSurface(this, handle);
 		surfaces.add(surface);
 		return surface;
 	}
@@ -311,7 +301,7 @@ public class WaylandCraftBridge {
 	}
 	
 	public void update() {
-		ProfilerFiller profiler = Profiler.get();
+		ProfilerFiller profiler = Minecraft.getInstance().getProfiler();
 		profiler.push("wayland");
 		
 		// Dispatch wayland client events
@@ -484,8 +474,6 @@ public class WaylandCraftBridge {
 			}
 		}
 		framebuffers.retainAll(usedFramebuffers);
-		
-		WindowFramebuffer.endFrame();
 	}
 	
 	private void updateGeometry(WLCAbstractWindow window) {

@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 
-import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.render.BufferTexture;
 import dev.evvie.waylandcraft.render.BufferTexture.DmabufTexture;
 import net.minecraft.util.Mth;
@@ -50,7 +49,10 @@ public class WLCSurface {
 	
 	private ArrayList<SurfaceDamage> damage = new ArrayList<>();
 	
-	protected WLCSurface(long handle) {
+	private final WaylandCraftBridge bridge;
+	
+	protected WLCSurface(WaylandCraftBridge bridge, long handle) {
+		this.bridge = bridge;
 		this.handle = handle;
 	}
 	
@@ -98,7 +100,7 @@ public class WLCSurface {
 	protected boolean attachDmabuf(long handle) {
 		removeBuffer();
 		
-		DmabufTexture dmabuf = WaylandCraft.instance.bridge.getDmabuf(handle);
+		DmabufTexture dmabuf = bridge.getDmabuf(handle);
 		if(dmabuf == null) return false;
 		
 		this.buffer = dmabuf;

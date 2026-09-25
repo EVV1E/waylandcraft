@@ -270,3 +270,59 @@ As a result, no `META-INF/accesstransformer.cfg` was added. Add one
 (ModDevGradle picks up that path by default) only when a ported file
 actually needs a private vanilla member that a mixin
 `@Accessor`/`@Invoker` can't reasonably provide.
+
+## Step 4 status (2026-09-25): done
+
+The native library (`native/`, unchanged) and the Java bridge now compile
+and run on NeoForge 1.21.1, and the JNI signatures are unchanged. Verified
+with `./gradlew runClient`:
+
+- `libwaylandcraft.so` loads (from `native/target/debug` in dev, and from
+  the jar in `./gradlew build` output), and the compositor starts on
+  `wayland-1`.
+- Wayland clients connect and map. The log shows `Mapped toplevels: 1`,
+  then `2`, with `eglgears_wayland` and `alacritty` pointed at that socket.
+- With `earlyWindowControl = false` in `config/fml.toml`, the GL context
+  is EGL: there are no dmabuf errors and `eglgears_wayland` renders on the
+  GPU (dmabuf path). With the early window on (NeoForge's default), the
+  compositor still works, but dmabuf is disabled with an explicit error
+  and clients fall back to shm.
+- **Not verified yet:** what the offscreen window textures contain. Nothing
+  draws them until step 5, so the first on-screen window render is also
+  the first real test of `WindowFramebuffer`/`BufferTexture`.
+
+What changed:
+
+- **Ported:** the `bridge/`, `egl/`, `RawDesktopEntry`, `CursorShape` and
+  `FramebufferRenderable` code. `WLCSurface` now gets its bridge through its
+  constructor instead of `WaylandCraft.instance.bridge`. The GL-backend
+  check is gone (see step 3), and `Profiler.get()` is replaced by
+  `Minecraft.getProfiler()`.
+- `BufferTexture` and `WindowFramebuffer` were rewritten for 1.21.1. Buffers
+  are raw GL texture ids, window framebuffers are `TextureTarget`s, and
+  compositing uses `ShaderInstance`s (`render/WindowShaders`,
+  `shaders/core/{window,unpremultiply,window_damage}.json`, GLSL 150,
+  registered through `RegisterShadersEvent`). The public API
+  (`getTextureLocation()`, `FramebufferRenderable`) is unchanged for the
+  rendering code that consumes it.
+- `WindowMixin` replaces `GlBackendMixin`. It sets
+  `GLFW_CONTEXT_CREATION_API = EGL` before `ImmediateWindowHandler.setupMinecraftWindow`.
+  `IGlTextureMixin` was deleted because raw texture ids need no `GlTexture` wrapper.
+  `waylandcraft.client.mixins.json` now lists only ported mixins, under
+  `client`, at `JAVA_21`, and `neoforge.mods.toml` registers it.
+- `neoforge/WaylandCraftNeoForgeClient` (`@Mod(dist = CLIENT)`) starts the
+  bridge and updates it on `RenderFrameEvent.Pre`. It is a stand-in for the
+  lifecycle in `WaylandCraft.update()`/`onInitializeClient()`; move this
+  into `WaylandCraft` when that class is ported.
+- `WaylandCraftCommon` is reduced to `MOD_ID` and `LOGGER` until items and
+  networking are ported.
+
+Open issues:
+
+- **The early loading window blocks EGL.** FML's early display creates the
+  GLFW window with the native context API (GLX under X11/XWayland) before
+  any mixin runs. Options: tell users to set `earlyWindowControl = false`
+  (the current log message does), or find a way to hint GLFW before FML's
+  `DisplayWindow` creates the window. Decide before release.
+- Xwayland shows `null` here only because `xwayland-satellite` isn't
+  installed on this machine. That is upstream behavior, not a port issue.
