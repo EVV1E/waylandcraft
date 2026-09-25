@@ -43,3 +43,6 @@ replay_*.log
 
 # directory used by actions runner
 native-libs
+
+# Minecraft logs written by standalone tests run from the repo root
+logs/
