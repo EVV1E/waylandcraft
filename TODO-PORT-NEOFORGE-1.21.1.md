@@ -251,3 +251,22 @@ shell loaded`).
   `+mc1.21.1`.
 - The dev client runs from `run/` and the dev server from `run-server/`;
   both directories are gitignored.
+
+## Step 3 status (2026-09-25): done, no access transformer needed
+
+`waylandcraft.classtweaker` has two entries:
+
+- `accessible class com/mojang/blaze3d/opengl/GlDevice`
+- `accessible field com/mojang/blaze3d/systems/GpuDevice backend`
+
+Neither class exists in 1.21.1 (confirmed against the official 1.21.1
+mappings). The entries have only one purpose: the `RenderSystem.getDevice().backend
+instanceof GlDevice` checks in `WaylandCraftBridge.initBackend()` and
+`BufferTexture.createShmTexture`/`createDmabufTexture`, which choose the
+OpenGL/EGL path. 1.21.1 only has an OpenGL renderer, so step 4 should
+delete those checks and call the GL/EGL path directly. No widening is needed.
+
+As a result, no `META-INF/accesstransformer.cfg` was added. Add one
+(ModDevGradle picks up that path by default) only when a ported file
+actually needs a private vanilla member that a mixin
+`@Accessor`/`@Invoker` can't reasonably provide.
