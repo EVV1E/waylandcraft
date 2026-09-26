@@ -428,8 +428,8 @@ enum BridgeError {
     Init(Box<dyn std::error::Error>),
     #[error("{0}")]
     Null(&'static str),
-    #[error("Null WLC instance handle given. Function: {0}")]
-    NullInstancePtr(&'static str),
+    #[error("Received null WLC instance")]
+    NullInstancePtr,
     #[error("Null wayland surface handle given. Function: {0}")]
     NullSurfacePtr(&'static str),
     #[error("Null toplevel surface handle given. Function: {0}")]
@@ -453,9 +453,9 @@ enum BridgeError {
 }
 
 macro_rules! jptr_to_instance {
-    ($jptr:expr, $location:literal) => {
+    ($jptr:expr) => {
         match jptr_to_mut::<WaylandCraft>($jptr) {
-            None => Err(BridgeError::NullInstancePtr($location)),
+            None => Err(BridgeError::NullInstancePtr),
             Some(wlc) => Ok(wlc),
         }
     };
@@ -579,7 +579,7 @@ fn dispatch_clients<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "dispatchClients")?;
+    let instance = jptr_to_instance!(instance)?;
     instance
         .event_loop
         .dispatch(Some(Duration::ZERO), &mut instance.state)
@@ -593,7 +593,7 @@ fn flush_display<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "flushDisplay")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.display_handle.flush_clients().unwrap();
 
     Ok(())
@@ -604,7 +604,7 @@ fn socket<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JString<'local>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "socket")?;
+    let instance = jptr_to_instance!(instance)?;
     let socket = instance
         .state
         .socket
@@ -619,7 +619,7 @@ fn x11_display<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JString<'local>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "x11Display")?;
+    let instance = jptr_to_instance!(instance)?;
     if let Some(ref s) = instance.state.satellite {
         Ok(JString::new(env, s.get_display())?)
     } else {
@@ -715,7 +715,7 @@ fn toplevels<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "toplevels")?;
+    let instance = jptr_to_instance!(instance)?;
 
     insert_all(
         &mut instance.bridge.toplevels,
@@ -735,7 +735,7 @@ fn popups<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "popups")?;
+    let instance = jptr_to_instance!(instance)?;
 
     insert_all(
         &mut instance.bridge.popups,
@@ -789,7 +789,7 @@ fn minimize_req<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "minimizeReq")?;
+    let instance = jptr_to_instance!(instance)?;
     clear_requests(env, instance, RequestsVec::Minimize)
 }
 
@@ -798,7 +798,7 @@ fn maximize_req<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "maximizeReq")?;
+    let instance = jptr_to_instance!(instance)?;
     clear_requests(env, instance, RequestsVec::Maximize)
 }
 
@@ -807,7 +807,7 @@ fn unmaximize_req<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "unmaximizeReq")?;
+    let instance = jptr_to_instance!(instance)?;
     clear_requests(env, instance, RequestsVec::Unmaximize)
 }
 
@@ -816,7 +816,7 @@ fn fullscreen_req<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "fullscreenReq")?;
+    let instance = jptr_to_instance!(instance)?;
     clear_requests(env, instance, RequestsVec::Fullscreen)
 }
 
@@ -825,7 +825,7 @@ fn unfullscreen_req<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "unfullscreenReq")?;
+    let instance = jptr_to_instance!(instance)?;
     clear_requests(env, instance, RequestsVec::Unfullscreen)
 }
 
@@ -834,7 +834,7 @@ fn move_request<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "moveRequest")?;
+    let instance = jptr_to_instance!(instance)?;
     let serial = instance.state.requests.move_interactive.pop();
 
     let serial = match serial {
@@ -854,7 +854,7 @@ fn resize_request<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "resizeRequest")?;
+    let instance = jptr_to_instance!(instance)?;
     let req = instance.state.requests.resize_interactive.pop();
 
     let (serial, edges) = match req {
@@ -974,7 +974,7 @@ fn check_import_dmabuf<'local>(
     this: WaylandCraftBridge<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "check_import_dmabuf")?;
+    let instance = jptr_to_instance!(instance)?;
     let (dmabuf, notif) = match instance.state.pending_dmabuf_imports.pop() {
         Some(t) => t,
         None => return Ok(()),
@@ -1044,7 +1044,7 @@ fn dmabufs<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "dmabufs")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.bridge.dmabufs.retain(|d| !d.is_gone());
 
     let handles = get_all_handles(&mut instance.bridge.dmabufs);
@@ -1088,7 +1088,7 @@ fn update_surface_data<'local>(
     instance: jlong,
     jsurface: WLCSurface<'local>,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "updateSurfaceData")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let handle = jsurface.handle(env)?;
     let surface = jptr_to_ref::<WlSurface>(handle).ok_or_else(|| {
@@ -1175,7 +1175,7 @@ fn toplevel_surface<'local>(
     instance: jlong,
     toplevel_handle: jlong,
 ) -> Result<jlong, BridgeError> {
-    let instance = jptr_to_instance!(instance, "toplevelSurface")?;
+    let instance = jptr_to_instance!(instance)?;
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelSurface")?;
 
     let surface = toplevel.wl_surface();
@@ -1189,7 +1189,7 @@ fn popup_surface<'local>(
     instance: jlong,
     popup_handle: jlong,
 ) -> Result<jlong, BridgeError> {
-    let instance = jptr_to_instance!(instance, "popupSurface")?;
+    let instance = jptr_to_instance!(instance)?;
     let popup = jptr_to_popup!(popup_handle, "popupSurface")?;
 
     let surface = popup.wl_surface();
@@ -1203,7 +1203,7 @@ fn popup_parent<'local>(
     instance: jlong,
     popup_handle: jlong,
 ) -> Result<jlong, BridgeError> {
-    let instance = jptr_to_instance!(instance, "popupParent")?;
+    let instance = jptr_to_instance!(instance)?;
     let popup = jptr_to_popup!(popup_handle, "popupParent")?;
 
     let parent_surface = match popup.get_parent_surface() {
@@ -1255,7 +1255,7 @@ fn update_surface_tree<'local>(
     instance: jlong,
     surface: WLCSurface<'local>,
 ) -> Result<WLCSurface<'local>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "updateSurfaceTrees")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let handle = surface.handle(env)?;
     let surface = jptr_to_ref::<WlSurface>(handle).ok_or_else(|| {
@@ -1326,7 +1326,7 @@ fn pointer_motion<'local>(
     x: jdouble,
     y: jdouble,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "pointerMotion")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.seat.pointer_motion(x, y);
 
     Ok(())
@@ -1340,7 +1340,7 @@ fn pointer_motion_focus<'local>(
     x: jdouble,
     y: jdouble,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "pointerMotionFocus")?;
+    let instance = jptr_to_instance!(instance)?;
     let surface = jptr_to_ref(surface_handle);
     instance.state.seat.pointer_motion_focus(surface, x, y);
 
@@ -1354,7 +1354,7 @@ fn pointer_rel_motion<'local>(
     dx: jdouble,
     dy: jdouble,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "pointerRelMotion")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.seat.pointer_relative_motion(dx, dy);
 
     Ok(())
@@ -1366,7 +1366,7 @@ fn maybe_pointer_lock<'local>(
     instance: jlong,
     surface_handle: jlong,
 ) -> Result<jboolean, BridgeError> {
-    let instance = jptr_to_instance!(instance, "maybePointerLock")?;
+    let instance = jptr_to_instance!(instance)?;
     let Some(surface) = jptr_to_ref(surface_handle) else {
         return Ok(false);
     };
@@ -1379,7 +1379,7 @@ fn pointer_unlock<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "pointerUnlock")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.seat.pointer_unlock();
 
     Ok(())
@@ -1390,7 +1390,7 @@ fn pointer_leave<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "pointerLeave")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.seat.pointer_motion_focus(None, 0.0, 0.0);
 
     Ok(())
@@ -1403,7 +1403,7 @@ fn pointer_button<'local>(
     button: jint,
     state: jint,
 ) -> Result<jint, BridgeError> {
-    let instance = jptr_to_instance!(instance, "pointerButton")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let state = match state {
         0 => ButtonState::Released,
@@ -1421,7 +1421,7 @@ fn pointer_axis<'local>(
     axis: jint,
     value: jdouble,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "pointerAxis")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let axis = match axis {
         0 => Axis::VerticalScroll,
@@ -1441,7 +1441,7 @@ fn cursor_shape<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<jint, BridgeError> {
-    let instance = jptr_to_instance!(instance, "cursorShape")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let shape = match instance.state.seat.cursor_shape {
         Some(shape) => shape as jint,
@@ -1457,7 +1457,7 @@ fn keyboard_focus<'local>(
     instance: jlong,
     surface_handle: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "keyboardFocus")?;
+    let instance = jptr_to_instance!(instance)?;
     let toplevel: Option<&ToplevelSurface> = jptr_to_ref(surface_handle);
 
     let surface = toplevel.map(|t| t.wl_surface().clone());
@@ -1505,7 +1505,7 @@ fn keyboard_activate<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "keyboardActivate")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.seat.activate_keyboard();
 
     Ok(())
@@ -1516,7 +1516,7 @@ fn keyboard_deactivate<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "keyboardDeactivate")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.seat.deactivate_keyboard();
 
     Ok(())
@@ -1529,7 +1529,7 @@ fn keyboard_input<'local>(
     scancode: jint,
     action: jint,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "keyboardInput")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let scancode = scancode as u32;
     let action = match action {
@@ -1552,7 +1552,7 @@ fn keyboard_update<'local>(
     scancode: jint,
     pressed: jboolean,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "keyboardUpdate")?;
+    let instance = jptr_to_instance!(instance)?;
     instance
         .state
         .seat
@@ -1566,7 +1566,7 @@ fn fullscreened<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jlong>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "fullscreened")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let mut handles: Vec<jlong> = vec![];
     for toplevel in instance.state.xdg_state.toplevel_surfaces() {
@@ -1594,7 +1594,7 @@ fn output_size<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "outputSize")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let size = instance.state.output.size();
     let size: [jint; 2] = [size.w, size.h];
@@ -1609,7 +1609,7 @@ fn output_bounds<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "outputBounds")?;
+    let instance = jptr_to_instance!(instance)?;
 
     let bounds = instance.state.output.bounds();
     let bounds: [jint; 2] = [bounds.w, bounds.h];
@@ -1626,7 +1626,7 @@ fn output_resize<'local>(
     width: jint,
     height: jint,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "outputResize")?;
+    let instance = jptr_to_instance!(instance)?;
     let size = instance.state.output.size();
     let width_changed = size.w != width;
     let height_changed = size.h != height;
@@ -1663,7 +1663,7 @@ fn output_set_bounds<'local>(
     width: jint,
     height: jint,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "outputSetBounds")?;
+    let instance = jptr_to_instance!(instance)?;
     let bounds = instance.state.output.bounds();
     let width_changed = bounds.w != width;
     let height_changed = bounds.h != height;
@@ -1849,7 +1849,7 @@ fn toplevel_maximize<'local>(
     instance: jlong,
     toplevel_handle: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "toplevelMaximize")?;
+    let instance = jptr_to_instance!(instance)?;
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelMaximize")?;
 
     toplevel.with_pending_state(|state| {
@@ -1871,7 +1871,7 @@ fn toplevel_fullscreen<'local>(
     instance: jlong,
     toplevel_handle: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "toplevelFullscreen")?;
+    let instance = jptr_to_instance!(instance)?;
     let toplevel = jptr_to_toplevel!(toplevel_handle, "toplevelFullscreen")?;
 
     toplevel.with_pending_state(|state| {
@@ -1890,7 +1890,7 @@ fn free_surface<'local>(
     instance: jlong,
     surface_handle: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "freeSurface")?;
+    let instance = jptr_to_instance!(instance)?;
     remove_element(&mut instance.bridge.surfaces, surface_handle);
 
     Ok(())
@@ -1902,7 +1902,7 @@ fn free_toplevel<'local>(
     instance: jlong,
     toplevel_handle: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "freeToplevel")?;
+    let instance = jptr_to_instance!(instance)?;
     remove_element(&mut instance.bridge.toplevels, toplevel_handle);
 
     Ok(())
@@ -1914,7 +1914,7 @@ fn free_popup<'local>(
     instance: jlong,
     popup_handle: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "freePopup")?;
+    let instance = jptr_to_instance!(instance)?;
     remove_element(&mut instance.bridge.popups, popup_handle);
 
     Ok(())
@@ -1989,7 +1989,7 @@ fn load_desktop_entry<'local>(
     instance: jlong,
     path: JString<'local>,
 ) -> Result<JRawDesktopEntry<'local>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "loadDesktopEntry")?;
+    let instance = jptr_to_instance!(instance)?;
     let path: PathBuf = path.try_to_string(env)?.into();
     let entry = match instance.xdg.load_entry(path) {
         Some(e) => e,
@@ -2004,7 +2004,7 @@ fn load_desktop_entries<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JObjectArray<'local, JRawDesktopEntry<'local>>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "loadDesktopEntries")?;
+    let instance = jptr_to_instance!(instance)?;
     let entries = instance.xdg.get_raw_entries();
     let entries = entries
         .iter()
@@ -2045,7 +2045,7 @@ fn exec_app<'local>(
     instance: jlong,
     app_id: JString<'local>,
 ) -> Result<jboolean, BridgeError> {
-    let instance = jptr_to_instance!(instance, "execApp")?;
+    let instance = jptr_to_instance!(instance)?;
     let app_id = app_id.try_to_string(env)?;
 
     let mut env_vars = vec![
@@ -2067,7 +2067,7 @@ fn set_preferred_terminal<'local>(
     instance: jlong,
     cmd: JString<'local>,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "setPreferredTerminal")?;
+    let instance = jptr_to_instance!(instance)?;
     let cmd = cmd.try_to_string(env)?;
 
     instance.xdg.set_preferred_terminal(cmd);
@@ -2080,7 +2080,7 @@ fn set_keymap_default<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "setKeymapDefault")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.seat.change_keymap_to_default();
 
     Ok(())
@@ -2091,7 +2091,7 @@ fn export_keymap<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JString<'local>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "exportKeymap")?;
+    let instance = jptr_to_instance!(instance)?;
     let keymap_str = instance.state.seat.export_keymap();
     Ok(JString::new(env, keymap_str)?)
 }
@@ -2102,7 +2102,7 @@ fn set_keymap_from_str<'local>(
     instance: jlong,
     keymap: JString<'local>,
 ) -> Result<jboolean, BridgeError> {
-    let instance = jptr_to_instance!(instance, "setKeymapFromStr")?;
+    let instance = jptr_to_instance!(instance)?;
     let keymap_str = keymap.try_to_string(env)?;
     Ok(instance.state.seat.change_keymap_from_str(keymap_str))
 }
@@ -2112,7 +2112,7 @@ fn check_dnd_request<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<JPrimitiveArray<'local, jint>, BridgeError> {
-    let instance = jptr_to_instance!(instance, "checkDndRequest")?;
+    let instance = jptr_to_instance!(instance)?;
     let serial = match instance.state.data.check_dnd_request() {
         Some(r) => r as jint,
         None => return Ok(JIntArray::null()),
@@ -2128,7 +2128,7 @@ fn check_dnd_active<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<jboolean, BridgeError> {
-    let instance = jptr_to_instance!(instance, "checkDndActive")?;
+    let instance = jptr_to_instance!(instance)?;
     Ok(instance.state.data.dnd.is_some())
 }
 
@@ -2137,7 +2137,7 @@ fn dnd_cancel<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "dndCancel")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.data.dnd_cancel();
 
     Ok(())
@@ -2148,7 +2148,7 @@ fn dnd_drop<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "dndDrop")?;
+    let instance = jptr_to_instance!(instance)?;
     instance.state.data.dnd_drop();
 
     Ok(())
@@ -2162,7 +2162,7 @@ fn dnd_motion<'local>(
     x: jdouble,
     y: jdouble,
 ) -> Result<(), BridgeError> {
-    let instance = jptr_to_instance!(instance, "dndMotion")?;
+    let instance = jptr_to_instance!(instance)?;
     let surface = jptr_to_ref(surface_handle);
     instance.state.data.dnd_motion(surface, x, y);
 
@@ -2174,7 +2174,7 @@ fn dnd_icon<'local>(
     _class: JClass<'local>,
     instance: jlong,
 ) -> Result<jlong, BridgeError> {
-    let instance = jptr_to_instance!(instance, "dndIcon")?;
+    let instance = jptr_to_instance!(instance)?;
     let Some(dnd) = &instance.state.data.dnd else {
         return Ok(0);
     };
