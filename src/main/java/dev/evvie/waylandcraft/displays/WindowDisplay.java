@@ -13,6 +13,7 @@ import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.grabs.MoveGrab;
 import dev.evvie.waylandcraft.math.WorldPlane;
 import dev.evvie.waylandcraft.render.RenderUtils;
+import dev.evvie.waylandcraft.render.WindowFramebuffer;
 import dev.evvie.waylandcraft.utils.WaylandCraftUtils;
 import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import net.minecraft.client.Camera;
@@ -40,7 +41,8 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	
 	@Override
 	public boolean isValid() {
-		return window.isAlive() && window.framebuffer != null && window.framebuffer.isValid();
+		WindowFramebuffer buf = window.getFramebuffer();
+		return window.isAlive() && buf != null && buf.isValid();
 	}
 	
 	@Override
@@ -54,7 +56,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	
 	@Override
 	public void renderFramebuffer(PoseStack poseStack, SubmitNodeCollector collector, Vec3 origin, Vec3 spanX, Vec3 spanY) {
-		RenderUtils.renderFramebuffer(window.framebuffer, poseStack, collector, true, origin, spanX, spanY);
+		RenderUtils.renderFramebuffer(window.getFramebuffer(), poseStack, collector, true, origin, spanX, spanY);
 	}
 	
 	@Override
@@ -83,7 +85,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 	
 	@Override
 	public @Nullable FramebufferRenderable getFramebuffer() {
-		return window.framebuffer;
+		return window.getFramebuffer();
 	}
 	
 	/* Perform ray-window plane intersection
@@ -104,7 +106,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 		WLCSurface hitSurface = null;
 		Vec3 localCoordsRelative = null;
 		
-		for(WLCSurface surface = window.getSurfaceTreeLast(); surface != null; surface = surface.getPrevChild()) {
+		for(WLCSurface surface : window.getRootSurface().getInputTree()) {
 			Vec3 rel = localCoords.subtract(surface.xSubpos, surface.ySubpos, 0);
 			
 			int width = surface.width();
@@ -114,7 +116,7 @@ public class WindowDisplay extends AbstractWindowDisplay {
 				continue;
 			}
 			
-			if(WaylandCraft.instance.bridge.inputRegionContains(surface, rel.x, rel.y)) {
+			if(surface.inputRegionContains(rel.x, rel.y)) {
 				hitSurface = surface;
 				localCoordsRelative = rel;
 				break;

@@ -48,7 +48,9 @@ public class WindowInHandRenderer {
 	public void renderWindow(PoseStack poseStack, SubmitNodeCollector collector, float sideMult, int light, ItemStack itemStack) {
 		WLCToplevel toplevel = WaylandCraft.getToplevel(itemStack);
 		if(toplevel == null) return;
-		if(toplevel.framebuffer == null) return;
+		
+		WindowFramebuffer buf = toplevel.getFramebuffer();
+		if(buf == null) return;
 		
 		float width = toplevel.geometry.width();
 		float height = toplevel.geometry.height();
@@ -91,7 +93,7 @@ public class WindowInHandRenderer {
 		poseStack.scale(wscale, hscale, 1);
 		poseStack.translate(-0.5, -0.5, 0);
 		
-		RenderUtils.renderFramebuffer(toplevel.framebuffer, poseStack, collector, false, new Vec3(0, 1, 0), new Vec3(1, 0, 0), new Vec3(0, -1, 0));
+		RenderUtils.renderFramebuffer(buf, poseStack, collector, false, new Vec3(0, 1, 0), new Vec3(1, 0, 0), new Vec3(0, -1, 0));
 	}
 	
 	public void renderPlayerArm(PoseStack poseStack, SubmitNodeCollector collector, int light, float handHeight, float attack, HumanoidArm humanoidArm) {

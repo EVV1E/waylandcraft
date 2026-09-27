@@ -1,9 +1,9 @@
 use crate::bridge::BridgeState;
-use crate::ddm::WLCDataState;
+use crate::ddm::{DataDeviceHandler, WLCDataState};
+use crate::desktop::DesktopHelper;
 use crate::output::WLCOutput;
 use crate::satellite::SatelliteState;
 use crate::seat::WLCSeatState;
-use crate::desktop::DesktopHelper;
 use libc::dev_t;
 use smithay::{
     backend::allocator::{Format, dmabuf::Dmabuf},
@@ -11,7 +11,9 @@ use smithay::{
     delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_shell,
     reexports::{
         calloop::{self, EventLoop, generic::Generic as GenericEvent},
-        wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
+        wayland_protocols::xdg::shell::server::xdg_toplevel::{
+            ResizeEdge, WmCapabilities,
+        },
         wayland_server::{
             self, Display, DisplayHandle,
             backend::{ClientData, ClientId, DisconnectReason},
@@ -28,8 +30,8 @@ use smithay::{
             CompositorClientState, CompositorHandler, CompositorState,
         },
         dmabuf::{
-            self, DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler,
-            DmabufState,
+            self, get_dmabuf, DmabufFeedbackBuilder, DmabufGlobal,
+            DmabufHandler, DmabufState,
         },
         shell::xdg::{
             PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler,
@@ -47,18 +49,18 @@ use std::sync::Arc;
 
 mod bridge;
 mod ddm;
+mod desktop;
 mod output;
 mod process;
 mod satellite;
 mod seat;
 mod svg;
 mod utils;
-mod desktop;
 
-pub(crate) struct WaylandCraft<'a> {
+// Global compositor state
+pub struct WaylandCraft<'a> {
     pub state: WLCState,
     pub event_loop: EventLoop<'a, WLCState>,
-    pub bridge: BridgeState,
     pub desktop_helper: DesktopHelper,
 }
 
@@ -72,23 +74,11 @@ pub struct WLCState {
     pub single_pixel_buffer_state: SinglePixelBufferState,
     pub dmabuf_state: DmabufState,
     pub dmabuf_global: MaybeUninit<DmabufGlobal>,
-    pub requests: WindowRequests,
     pub seat: WLCSeatState,
     pub data: WLCDataState,
     pub output: WLCOutput,
     pub satellite: Option<SatelliteState>,
-    pub pending_dmabuf_imports: Vec<(Dmabuf, dmabuf::ImportNotifier)>,
-}
-
-#[derive(Default)]
-pub struct WindowRequests {
-    pub minimize: Vec<ToplevelSurface>,
-    pub maximize: Vec<ToplevelSurface>,
-    pub unmaximize: Vec<ToplevelSurface>,
-    pub fullscreen: Vec<ToplevelSurface>,
-    pub unfullscreen: Vec<ToplevelSurface>,
-    pub move_interactive: Vec<Serial>,
-    pub resize_interactive: Vec<(Serial, ResizeEdge)>,
+    pub bridge: BridgeState,
 }
 
 pub struct DmabufFeedbackData {
@@ -99,11 +89,19 @@ pub struct DmabufFeedbackData {
 impl WLCState {
     fn new(
         disp: DisplayHandle,
+        bridge_state: BridgeState,
         dmabuf_feedback: Option<DmabufFeedbackData>,
     ) -> Self {
         let compositor_state = CompositorState::new::<WLCState>(&disp);
         let shm_state = ShmState::new::<WLCState>(&disp, vec![]);
-        let xdg_state = XdgShellState::new::<WLCState>(&disp);
+        let xdg_state = XdgShellState::new_with_capabilities::<WLCState>(
+            &disp,
+            vec![
+                WmCapabilities::Maximize,
+                WmCapabilities::Fullscreen,
+                WmCapabilities::Minimize,
+            ],
+        );
         let viewporter_state = ViewporterState::new::<WLCState>(&disp);
         let single_pixel_buffer_state =
             SinglePixelBufferState::new::<WLCState>(&disp);
@@ -112,11 +110,19 @@ impl WLCState {
         let mut dmabuf_global = MaybeUninit::uninit();
 
         if let Some(feedback) = dmabuf_feedback {
-            dmabuf_global.write(init_dmabuf(
-                &disp,
-                &mut dmabuf_state,
-                feedback,
-            ));
+            let feedback = DmabufFeedbackBuilder::new(
+                feedback.device,
+                feedback.formats,
+            )
+                .build()
+                .unwrap();
+
+            let global = dmabuf_state
+                .create_global_with_default_feedback::<WLCState>(
+                    &disp,
+                    &feedback,
+                );
+            dmabuf_global.write(global);
         }
 
         let seat = WLCSeatState::new();
@@ -138,27 +144,13 @@ impl WLCState {
             single_pixel_buffer_state,
             dmabuf_state,
             dmabuf_global,
-            requests: WindowRequests::default(),
             seat,
             data,
             output,
             satellite: None,
-            pending_dmabuf_imports: vec![],
+            bridge: bridge_state,
         }
     }
-}
-
-fn init_dmabuf(
-    disp: &DisplayHandle,
-    state: &mut DmabufState,
-    feedback_data: DmabufFeedbackData,
-) -> DmabufGlobal {
-    let feedback =
-        DmabufFeedbackBuilder::new(feedback_data.device, feedback_data.formats)
-            .build()
-            .unwrap();
-
-    state.create_global_with_default_feedback::<WLCState>(disp, &feedback)
 }
 
 impl CompositorHandler for WLCState {
@@ -173,11 +165,29 @@ impl CompositorHandler for WLCState {
         &client.get_data::<WLCClient>().unwrap().compositor_state
     }
 
-    fn commit(&mut self, _surface: &WlSurface) {}
+    fn new_surface(&mut self, surface: &WlSurface) {
+        bridge::compositor::new_surface(self, surface);
+    }
+
+    fn destroyed(&mut self, surface: &WlSurface) {
+        bridge::compositor::surface_destroyed(self, surface);
+    }
+
+    fn new_subsurface(&mut self, surface: &WlSurface, parent: &WlSurface) {
+        bridge::compositor::subsurface_created(self, surface, parent);
+    }
+
+    fn commit(&mut self, surface: &WlSurface) {
+        bridge::compositor::surface_commit(self, surface);
+    }
 }
 
 impl BufferHandler for WLCState {
-    fn buffer_destroyed(&mut self, _buffer: &WlBuffer) {}
+    fn buffer_destroyed(&mut self, buffer: &WlBuffer) {
+        if let Ok(dmabuf) = get_dmabuf(buffer) {
+            bridge::dmabuf::free_dmabuf(self, dmabuf);
+        }
+    }
 }
 
 impl ShmHandler for WLCState {
@@ -197,7 +207,22 @@ impl DmabufHandler for WLCState {
         dmabuf: Dmabuf,
         notifier: dmabuf::ImportNotifier,
     ) {
-        self.pending_dmabuf_imports.push((dmabuf, notifier));
+        let imported = match bridge::dmabuf::import_dmabuf(&dmabuf) {
+            Ok(bridge_dmabuf) => bridge_dmabuf,
+            Err(_) => {
+                notifier.failed();
+                return;
+            },
+        };
+
+        match notifier.successful::<WLCState>() {
+            Ok(_buffer) => (),
+            Err(_) => {
+                return;
+            },
+        }
+
+        self.bridge.dmabufs.push(imported);
     }
 }
 
@@ -208,6 +233,11 @@ impl XdgShellHandler for WLCState {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         surface.send_configure();
+        bridge::shell::new_toplevel(self, &surface);
+    }
+
+    fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
+        bridge::shell::toplevel_destroyed(self, &surface);
     }
 
     fn new_popup(
@@ -220,6 +250,12 @@ impl XdgShellHandler for WLCState {
             state.positioner = positioner;
         });
         surface.send_configure().expect("popup initial configure");
+
+        bridge::shell::new_popup(self, &surface);
+    }
+
+    fn popup_destroyed(&mut self, surface: PopupSurface) {
+        bridge::shell::popup_destroyed(self, &surface);
     }
 
     fn grab(&mut self, _surface: PopupSurface, _seat: WlSeat, _serial: Serial) {
@@ -238,16 +274,12 @@ impl XdgShellHandler for WLCState {
         surface.send_repositioned(token);
     }
 
-    fn minimize_request(&mut self, surface: ToplevelSurface) {
-        self.requests.minimize.push(surface);
-    }
-
     fn maximize_request(&mut self, surface: ToplevelSurface) {
-        self.requests.maximize.push(surface);
+        bridge::shell::on_toplevel_maximize(self, &surface);
     }
 
     fn unmaximize_request(&mut self, surface: ToplevelSurface) {
-        self.requests.unmaximize.push(surface);
+        bridge::shell::on_toplevel_unmaximize(self, &surface);
     }
 
     fn fullscreen_request(
@@ -255,30 +287,53 @@ impl XdgShellHandler for WLCState {
         surface: ToplevelSurface,
         _output: Option<WlOutput>,
     ) {
-        self.requests.fullscreen.push(surface);
+        bridge::shell::on_toplevel_fullscreen(self, &surface);
     }
 
     fn unfullscreen_request(&mut self, surface: ToplevelSurface) {
-        self.requests.unfullscreen.push(surface);
+        bridge::shell::on_toplevel_unfullscreen(self, &surface);
+    }
+
+    fn minimize_request(&mut self, surface: ToplevelSurface) {
+        bridge::shell::on_toplevel_minimize(self, &surface);
     }
 
     fn move_request(
         &mut self,
-        _surface: ToplevelSurface,
+        surface: ToplevelSurface,
         _seat: WlSeat,
         serial: Serial,
     ) {
-        self.requests.move_interactive.push(serial);
+        bridge::shell::on_toplevel_move(self, &surface, serial.into());
     }
 
     fn resize_request(
         &mut self,
-        _surface: ToplevelSurface,
+        surface: ToplevelSurface,
         _seat: WlSeat,
         serial: Serial,
         edges: ResizeEdge,
     ) {
-        self.requests.resize_interactive.push((serial, edges));
+        bridge::shell::on_toplevel_resize(
+            self,
+            &surface,
+            serial.into(),
+            edges.into()
+        );
+    }
+
+    fn app_id_changed(&mut self, surface: ToplevelSurface) {
+        bridge::shell::toplevel_update_app_id(&surface);
+    }
+
+    fn title_changed(&mut self, surface: ToplevelSurface) {
+        bridge::shell::toplevel_update_title(&surface);
+    }
+}
+
+impl DataDeviceHandler for WLCState {
+    fn dnd_started(&mut self, serial: u32) {
+        bridge::dnd::start_dnd(self, serial);
     }
 }
 
@@ -300,14 +355,19 @@ impl ClientData for WLCClient {
     fn disconnected(&self, _id: ClientId, _reason: DisconnectReason) {}
 }
 
-pub(crate) fn wlc_init(
+pub fn wlc_init(
+    bridge_state: BridgeState,
     dmabuf_feedback: Option<DmabufFeedbackData>,
 ) -> Result<WaylandCraft<'static>, Box<dyn std::error::Error>> {
     let event_loop: EventLoop<WLCState> = EventLoop::try_new()?;
     let display: Display<WLCState> = Display::new()?;
     let socket = ListeningSocketSource::new_auto()?;
 
-    let mut state = WLCState::new(display.handle(), dmabuf_feedback);
+    let mut state = WLCState::new(
+        display.handle(),
+        bridge_state,
+        dmabuf_feedback
+    );
     state.socket = socket.socket_name().to_os_string();
 
     let ev_handle = event_loop.handle();
@@ -346,7 +406,6 @@ pub(crate) fn wlc_init(
     let instance = WaylandCraft {
         state,
         event_loop,
-        bridge: BridgeState::new(),
         desktop_helper,
     };
     Ok(instance)

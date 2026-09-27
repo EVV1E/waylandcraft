@@ -10,7 +10,8 @@ import net.minecraft.world.phys.Vec3;
 public class WindowInItemFrameRenderer {
 	
 	public void render(WLCToplevel toplevel, PoseStack poseStack, SubmitNodeCollector collector) {
-		if(toplevel.framebuffer == null) return;
+		WindowFramebuffer buf = toplevel.getFramebuffer();
+		if(buf == null) return;
 		
 		poseStack.pushPose();
 		poseStack.translate(1.0f, 1.0f, -0.01f);
@@ -31,15 +32,15 @@ public class WindowInItemFrameRenderer {
 		float scale = 1.0f / resolution;
 		poseStack.scale(scale, scale, 1.0f);
 		
-		int x = -toplevel.framebuffer.getXOff() - toplevel.geometry.x();
-		int y = -toplevel.framebuffer.getYOff() - toplevel.geometry.y();
-		int w = toplevel.framebuffer.getWidth();
-		int h = toplevel.framebuffer.getHeight();
+		int x = -buf.getXOff() - toplevel.geometry.x();
+		int y = -buf.getYOff() - toplevel.geometry.y();
+		int w = buf.getWidth();
+		int h = buf.getHeight();
 		
 		x += resolution / 2 - width / 2;
 		y += resolution / 2 - height / 2;
 		
-		RenderUtils.renderFramebuffer(toplevel.framebuffer, poseStack, collector, true, new Vec3(x, y, 0), new Vec3(w, 0, 0), new Vec3(0, h, 0));
+		RenderUtils.renderFramebuffer(buf, poseStack, collector, true, new Vec3(x, y, 0), new Vec3(w, 0, 0), new Vec3(0, h, 0));
 		
 		poseStack.popPose();
 	}

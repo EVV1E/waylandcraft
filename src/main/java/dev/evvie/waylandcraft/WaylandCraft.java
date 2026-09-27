@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -20,7 +19,6 @@ import dev.evvie.waylandcraft.bridge.WLCPopup;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge;
-import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.ResizeRequest;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
 import dev.evvie.waylandcraft.desktop.XDGDesktopManager;
 import dev.evvie.waylandcraft.displays.WindowDisplay;
@@ -88,6 +86,7 @@ public class WaylandCraft implements ClientModInitializer {
 	public HitResult trueGameHitResult = null;
 	
 	public WLCToplevel pinnedToplevel = null;
+	public WLCSurface dndIcon = null;
 	
 	public WindowItemManager itemManager = new WindowItemManager();
 	public XDGDesktopManager xdgManager;
@@ -160,6 +159,7 @@ public class WaylandCraft implements ClientModInitializer {
 			x11Display = bridge.getX11Display();
 			xdgManager = new XDGDesktopManager(this);
 			registerSettingsResponders();
+			registerRequestHandlers();
 			settingsManager.loadKeymap();
 			
 			WaylandCraftCommon.LOGGER.info("Wayland server started on " + waylandSocket);
@@ -237,8 +237,6 @@ public class WaylandCraft implements ClientModInitializer {
 		if(minecraft.player == null) return;
 		checkKeybinds(minecraft);
 		
-		updateDisplayRequests();
-		
 		itemManager.giveItemsIfMissing(bridge.getNewToplevels());
 		
 		boolean inWMScreen = Minecraft.getInstance().screen instanceof WindowManagerScreen;
@@ -254,6 +252,59 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		
 		updateOutputSize(inWMScreen);
+	}
+	
+	private void registerRequestHandlers() {
+		bridge.requestHandlers.maximizeHandler = (toplevel) -> {
+			toplevel.restoreGeometry = toplevel.geometry;
+			bridge.maximizeToplevel(toplevel);
+		};
+		bridge.requestHandlers.unmaximizeHandler = (toplevel) -> {
+			SurfaceGeometry geometry = toplevel.restoreGeometry;
+			if(geometry == null) geometry = toplevel.geometry;
+			
+			bridge.resizeToplevel(toplevel, geometry.width(), geometry.height());
+			toplevel.restoreGeometry = null;
+		};
+		bridge.requestHandlers.fullscreenHandler = (toplevel) -> {
+			toplevel.restoreGeometry = toplevel.geometry;
+			bridge.fullscreenToplevel(toplevel);
+		};
+		bridge.requestHandlers.unfullscreenHandler = (toplevel) -> {
+			SurfaceGeometry geometry = toplevel.restoreGeometry;
+			if(geometry == null) geometry = toplevel.geometry;
+			
+			bridge.resizeToplevel(toplevel, geometry.width(), geometry.height());
+			toplevel.restoreGeometry = null;
+		};
+		bridge.requestHandlers.minimizeHandler = (toplevel) -> {
+			WindowDisplay display = getDisplay(toplevel);
+			if(display != null) {
+				displays.remove(display);
+			}
+		};
+		bridge.requestHandlers.moveHandler = (_, serial) -> {
+			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(serial);
+			if(implicit != null) {
+				pointerGrabs.startExclusive(new MoveGrab(implicit));
+			}
+		};
+		bridge.requestHandlers.resizeHandler = (_, serial, edges) -> {
+			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(serial);
+			if(implicit != null) {
+				pointerGrabs.startExclusive(new ResizeGrab(implicit, edges));
+			}
+		};
+		bridge.requestHandlers.dndHandler = (serial) -> {
+			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(serial);
+			if(implicit != null) {
+				pointerGrabs.startExclusive(new DNDGrab(implicit));
+			}
+			else {
+				// If matching implicit grab wasn't found, ensure the DND is cancelled
+				bridge.dndCancel();
+			}
+		};
 	}
 	
 	public void startUsingWindowItem() {
@@ -328,93 +379,6 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 	}
 	
-	private void updateDisplayRequests() {
-		// Hide all windows that were minimized and unset minimize requested state
-		displays.removeIf((w) -> w.window instanceof WLCToplevel && ((WLCToplevel) w.window).requests.minimize);
-		Stream.of(bridge.getToplevels()).forEach((t) -> t.requests.minimize = false);
-		
-		// Handle any maximize or unmaximize requests
-		for(WLCToplevel toplevel : bridge.getMappedToplevels()) {
-			if(toplevel.requests.maximize && toplevel.requests.unmaximize) {
-				// Both requests shouldn't happen at the same time
-				toplevel.restoreGeometry = null;
-			}
-			else if(toplevel.requests.maximize) {
-				// Maximize toplevel and store its old geometry
-				toplevel.restoreGeometry = toplevel.geometry;
-				bridge.maximizeToplevel(toplevel);
-			}
-			else if(toplevel.requests.unmaximize) {
-				// Unmaximize toplevel and attempt to restore old geometry
-				SurfaceGeometry newGeometry = toplevel.restoreGeometry;
-				if(newGeometry == null) newGeometry = toplevel.geometry;
-				
-				// resizeToplevel also unsets the maximize flag
-				bridge.resizeToplevel(toplevel, newGeometry.width(), newGeometry.height());
-				toplevel.restoreGeometry = null;
-			}
-			
-			toplevel.requests.maximize = toplevel.requests.unmaximize = false;
-		}
-		
-		// Handle any fullscreen or unfullscreen requests
-		for(WLCToplevel toplevel : bridge.getToplevels()) {
-			if(toplevel.requests.fullscreen && toplevel.requests.unfullscreen) {
-				// Both requests shouldn't happen at the same time
-				toplevel.restoreGeometry = null;
-			}
-			else if(toplevel.requests.fullscreen) {
-				// Fullscreen toplevel and store its old geometry
-				toplevel.restoreGeometry = toplevel.geometry;
-				bridge.fullscreenToplevel(toplevel);
-			}
-			else if(toplevel.requests.unfullscreen) {
-				// Unfullscreen toplevel and attempt to restore old geometry
-				SurfaceGeometry newGeometry = toplevel.restoreGeometry;
-				if(newGeometry == null) newGeometry = toplevel.geometry;
-				
-				// resizeToplevel also unsets the fullscreen flag
-				bridge.resizeToplevel(toplevel, newGeometry.width(), newGeometry.height());
-				toplevel.restoreGeometry = null;
-			}
-			
-			toplevel.requests.fullscreen = toplevel.requests.unfullscreen = false;
-		}
-		
-		Integer moveRequest = bridge.checkMoveRequest();
-		if(moveRequest != null) {
-			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(moveRequest.intValue());
-			if(implicit != null) {
-				// The serial matched an active implicit grab
-				pointerGrabs.startExclusive(new MoveGrab(implicit));
-			}
-		}
-		
-		ResizeRequest resizeRequest = bridge.checkResizeRequest();
-		if(resizeRequest != null) {
-			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(resizeRequest.serial());
-			if(implicit != null) {
-				// The serial matched an active implicit grab
-				pointerGrabs.startExclusive(new ResizeGrab(implicit, resizeRequest.edges()));
-			}
-		}
-		
-		Integer dndRequest = bridge.checkDndRequest();
-		if(dndRequest != null) {
-			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(dndRequest);
-			if(implicit != null) {
-				WaylandCraftCommon.LOGGER.info("DND STARTED");
-				// The serial matched an active implicit grab
-				pointerGrabs.startExclusive(new DNDGrab(implicit));
-			}
-			else {
-				// Couldn't match implicit grab, have to cancel dnd
-				WaylandCraftCommon.LOGGER.info("drag and drop did not match implicit grab");
-				bridge.dndCancel();
-			}
-		}
-	}
-	
 	private void updateOutputSize(boolean inWMScreen) {
 		int outputWidth = Minecraft.getInstance().getWindow().getWidth();
 		int outputHeight = Minecraft.getInstance().getWindow().getHeight();
@@ -470,7 +434,7 @@ public class WaylandCraft implements ClientModInitializer {
 			if(pointerCapture instanceof LockedPointerCapture) this.cursorShape = bridge.getCursorShape();
 			else this.cursorShape = CursorShape.HIDE;
 			
-			boolean locked = pointerCapture.surface != null && bridge.maybeLockPointer(pointerCapture.surface);
+			boolean locked = pointerCapture.surface != null && pointerCapture.surface.isAlive() && bridge.maybeLockPointer(pointerCapture.surface);
 			boolean detach = settings.getDetachCursor();
 			if(pointerCapture instanceof LockedPointerCapture && !locked) {
 				PointerCapture old = pointerCapture;

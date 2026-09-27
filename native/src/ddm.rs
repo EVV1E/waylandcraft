@@ -1,17 +1,21 @@
 use crate::WLCState;
 use crate::utils::{get_time, new_serial, to_fixed2};
-use smithay::reexports::wayland_server::{
-    Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New, Resource,
-    backend::ClientId,
-    protocol::{
-        wl_data_device::{self, WlDataDevice},
-        wl_data_device_manager as wl_ddm,
-        wl_data_device_manager::DndAction,
-        wl_data_device_manager::WlDataDeviceManager as WlDDM,
-        wl_data_offer::{self, WlDataOffer},
-        wl_data_source::{self, WlDataSource},
-        wl_surface::WlSurface,
+use smithay::{
+    reexports::wayland_server::{
+        Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New,
+        Resource,
+        backend::ClientId,
+        protocol::{
+            wl_data_device::{self, WlDataDevice},
+            wl_data_device_manager as wl_ddm,
+            wl_data_device_manager::DndAction,
+            wl_data_device_manager::WlDataDeviceManager as WlDDM,
+            wl_data_offer::{self, WlDataOffer},
+            wl_data_source::{self, WlDataSource},
+            wl_surface::WlSurface,
+        },
     },
+    wayland::compositor,
 };
 use std::ops::DerefMut;
 use std::os::fd::AsFd;
@@ -28,8 +32,6 @@ pub struct WLCDataState {
 // Drag and drop session
 // `dropped` is set when the user successfully performed a drop over a surface
 pub struct WLCDndEvent {
-    pub start_serial: u32,
-    pub request_sent: bool,
     pub client: Client,
     pub source: Option<WlDataSource>,
     pub icon: Option<WlSurface>,
@@ -69,6 +71,8 @@ struct WLCDataDeviceData {
     dnd_offer: Option<WlDataOffer>,
 }
 
+pub const DND_ICON_ROLE: &str = "dnd_icon";
+
 fn with_source_data<F, R>(source: &WlDataSource, f: F) -> R
 where
     F: FnOnce(&mut WLCDataSourceData) -> R,
@@ -94,6 +98,10 @@ where
     let mut guard = device.data::<WLCDataDevice>().unwrap().lock().unwrap();
     let data = guard.deref_mut();
     f(data)
+}
+
+pub trait DataDeviceHandler {
+    fn dnd_started(&mut self, serial: u32);
 }
 
 impl WLCDataState {
@@ -176,15 +184,6 @@ impl WLCDataState {
         println!("\tdropped: {:?}", dnd.dropped);
         */
         let _ = header;
-    }
-
-    pub fn check_dnd_request(&mut self) -> Option<u32> {
-        let dnd = self.dnd.as_mut()?;
-        if dnd.request_sent {
-            return None;
-        }
-        dnd.request_sent = true;
-        Some(dnd.start_serial)
     }
 
     fn dnd_send_offer(
@@ -547,6 +546,17 @@ impl Dispatch<WlDataDevice, WLCDataDevice> for WLCState {
                     });
                 }
 
+                if let Some(ref s) = icon {
+                    let r = compositor::give_role(s, DND_ICON_ROLE);
+                    if r.is_err() {
+                        device.post_error(
+                            wl_data_device::Error::Role,
+                            "dnd icon surface already has another role",
+                        );
+                        return;
+                    }
+                }
+
                 state.data.print_dnd_debug("drag start");
 
                 // Cancel if drag is already active
@@ -558,8 +568,6 @@ impl Dispatch<WlDataDevice, WLCDataDevice> for WLCState {
                 }
 
                 state.data.dnd = Some(WLCDndEvent {
-                    start_serial: serial,
-                    request_sent: false,
                     client: client.clone(),
                     source: source.clone(),
                     icon: icon.clone(),
@@ -568,6 +576,8 @@ impl Dispatch<WlDataDevice, WLCDataDevice> for WLCState {
                     action: DndAction::None,
                     dropped: false,
                 });
+
+                state.dnd_started(serial);
             }
             wl_data_device::Request::SetSelection { source, serial: _ } => {
                 let focus = state.data.clipboard_focus.as_ref();

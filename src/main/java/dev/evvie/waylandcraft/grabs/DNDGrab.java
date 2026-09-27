@@ -14,6 +14,7 @@ public class DNDGrab extends PointerGrab {
 	@Override
 	public void init() throws GrabDroppedException {
 		wlc.bridge.sendMotionOutside();
+		wlc.dndIcon = wlc.bridge.getDndIcon();
 	}
 	
 	@Override
@@ -23,6 +24,7 @@ public class DNDGrab extends PointerGrab {
 		} else {
 			wlc.bridge.dndCancel();
 		}
+		wlc.dndIcon = null;
 	}
 	
 	@Override

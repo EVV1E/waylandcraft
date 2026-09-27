@@ -10,24 +10,13 @@ public class WLCToplevel extends WLCAbstractWindow {
 	@Nullable
 	public String appID;
 	
-	public ToplevelRequests requests = new ToplevelRequests();
 	public boolean fullscreen = false;
 	
 	@Nullable
 	public SurfaceGeometry restoreGeometry = null;
 	
-	public WLCToplevel(long handle) {
-		super(handle);
-	}
-	
-	public static class ToplevelRequests {
-		
-		public boolean minimize = false;
-		public boolean maximize = false;
-		public boolean unmaximize = false;
-		public boolean fullscreen = false;
-		public boolean unfullscreen = false;
-		
+	public WLCToplevel(long handle, WLCSurface surface) {
+		super(handle, surface);
 	}
 	
 }

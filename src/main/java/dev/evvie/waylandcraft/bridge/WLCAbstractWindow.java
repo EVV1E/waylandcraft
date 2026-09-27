@@ -1,58 +1,51 @@
 package dev.evvie.waylandcraft.bridge;
 
-import org.jetbrains.annotations.Nullable;
-
 import dev.evvie.waylandcraft.render.WindowFramebuffer;
 
 public abstract class WLCAbstractWindow {
 	
-	// Set to zero when this window no longer exists
 	private long handle;
 	
-	@Nullable
 	protected WLCSurface surface;
-	
-	@Nullable
-	protected WLCSurface lastChild;
 	
 	protected boolean wasMapped = false;
 	
 	public SurfaceGeometry geometry;
 	
-	@Nullable
-	public WindowFramebuffer framebuffer = null;
-	
-	public WLCAbstractWindow(long handle) {
+	public WLCAbstractWindow(long handle, WLCSurface surface) {
 		this.handle = handle;
-	}
-	
-	public long getHandle() {
-		return this.handle;
-	}
-	
-	protected long takeHandle() {
-		long old = this.handle;
-		this.handle = 0;
-		return old;
+		this.surface = surface;
+		this.geometry = new SurfaceGeometry(0, 0, 0, 0);
 	}
 	
 	public boolean isAlive() {
-		return handle != 0;
+		return getHandle() != 0;
 	}
 	
-	public WLCSurface getSurfaceTree() {
+	public WLCSurface getRootSurface() {
 		return this.surface;
 	}
 	
-	public WLCSurface getSurfaceTreeLast() {
-		return this.lastChild;
+	public WindowFramebuffer getFramebuffer() {
+		return surface.getFramebuffer();
 	}
 	
 	public boolean isMapped() {
-		return isAlive() && getSurfaceTree().getBuffer() != null;
+		return isAlive() && getRootSurface().getBuffer() != null;
 	}
 	
-	public static record SurfaceGeometry(int x, int y, int width, int height) {
+	public long getHandle() {
+		return handle;
 	}
+	
+	protected void defaultGeometry() {
+		this.geometry = new SurfaceGeometry(0, 0, surface.width(), surface.height());
+	}
+	
+	protected void updateGeometry(int x, int y, int width, int height) {
+		this.geometry = new SurfaceGeometry(x, y, width, height);
+	}
+	
+	public static record SurfaceGeometry(int x, int y, int width, int height) {}
 	
 }
