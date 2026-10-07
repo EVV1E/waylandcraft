@@ -185,7 +185,7 @@ public class WaylandCraft implements ClientModInitializer {
 	public void updatePointer() {
 		if(bridge == null) return;
 		
-		Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+		Camera camera = Minecraft.getInstance().gameRenderer.mainCamera();
 		processPointerMotion(camera);
 		
 		if(Minecraft.getInstance().player == null || !Minecraft.getInstance().player.isUsingItem()) playerUsingWindowItem = false;
@@ -453,9 +453,9 @@ public class WaylandCraft implements ClientModInitializer {
 	}
 	
 	public void destroyPointerOverlay() {
-		if(Minecraft.getInstance().getOverlay() instanceof PointerCaptureOverlay overlay) {
+		if(Minecraft.getInstance().gui.overlay() instanceof PointerCaptureOverlay overlay) {
 			overlay.destroy();
-			Minecraft.getInstance().setOverlay(null);
+			Minecraft.getInstance().gui.setOverlay(null);
 		}
 	}
 	
@@ -796,7 +796,7 @@ public class WaylandCraft implements ClientModInitializer {
 		public MotionPointerCapture(WindowDisplay display, Collection<Integer> pressedButtons) {
 			super(display, null, pressedButtons);
 			
-			if(Minecraft.getInstance().getOverlay() == null) Minecraft.getInstance().setOverlay(new PointerCaptureOverlay());
+			if(Minecraft.getInstance().gui.overlay() == null) Minecraft.getInstance().gui.setOverlay(new PointerCaptureOverlay());
 		}
 		
 		public MotionPointerCapture(WindowDisplay display) {
@@ -823,7 +823,7 @@ public class WaylandCraft implements ClientModInitializer {
 		public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 			if(!(pointerCapture instanceof MotionPointerCapture motionCapture)) return;
 			
-			Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+			Camera camera = Minecraft.getInstance().gameRenderer.mainCamera();
 			Camera.NearPlane plane = camera.getNearPlane(Minecraft.getInstance().options.fov().get().intValue());
 			MouseHandler mouseHandler = Minecraft.getInstance().mouseHandler;
 			Window window = Minecraft.getInstance().getWindow();
@@ -846,7 +846,7 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		
 		@Override
-		public boolean isPauseScreen() {
+		public boolean isPausing() {
 			return false;
 		}
 		
