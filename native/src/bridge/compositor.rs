@@ -215,6 +215,7 @@ fn _surface_commit<'local>(
         |_, _, _| true
     );
 
+    // Update root surface framebuffer
     jroot.commit(env)?;
 
     // If this surface is a toplevel, update its state
@@ -230,6 +231,7 @@ fn update_trees<'local>(
     root: &WlSurface,
     jroot: &WLCSurface<'local>,
 ) -> Result<(), BridgeError> {
+    // Set the draw (upward) tree array
     let mut tree_upward: Vec<WlSurface> = vec![];
     with_surface_tree_upward(
         root,
@@ -243,6 +245,7 @@ fn update_trees<'local>(
     let jtree_upward = get_java_surfaces(env, &tree_upward)?;
     jroot.set_surface_draw_tree(env, jtree_upward)?;
 
+    // Set the input (downward) tree array
     let mut tree_downward: Vec<WlSurface> = vec![];
     with_surface_tree_downward(
         root,

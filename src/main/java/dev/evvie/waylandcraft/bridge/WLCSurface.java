@@ -64,15 +64,23 @@ public class WLCSurface {
 	
 	protected void destroy() {
 		removeBuffer();
-		if(framebuffer != null) framebuffer.destroy();
-		framebuffer = null;
+		destroyFramebuffer();
 		System.out.println("destroy: " + this);
 	}
 	
+	private void destroyFramebuffer() {
+		if(framebuffer != null) framebuffer.destroy();
+		framebuffer = null;
+	}
+	
 	protected void commit() {
-		if(parent != null) throw new IllegalStateException("commit() called on subsurface!");
+		if(parent != null) {
+			destroyFramebuffer();
+			return;
+		}
 		if(framebuffer == null) framebuffer = new WindowFramebuffer(this);
 		framebuffer.render();
+//		System.out.println("commit " + this);
 	}
 	
 	public WindowFramebuffer getFramebuffer() {
