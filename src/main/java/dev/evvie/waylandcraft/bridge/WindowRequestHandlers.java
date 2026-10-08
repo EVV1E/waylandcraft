@@ -2,6 +2,15 @@ package dev.evvie.waylandcraft.bridge;
 
 public class WindowRequestHandlers {
 	
+	public MaximizeRequestHandler maximizeHandler = null;
+	public UnmaximizeRequestHandler unmaximizeHandler = null;
+	public FullscreenRequestHandler fullscreenHandler = null;
+	public UnfullscreenRequestHandler unfullscreenHandler = null;
+	public MinimizeRequestHandler minimizeHandler = null;
+	public MoveRequestHandler moveHandler = null;
+	public ResizeRequestHandler resizeHandler = null;
+	public DNDRequestHandler dndHandler = null;
+	
 	@FunctionalInterface
 	public static interface MaximizeRequestHandler {
 		
@@ -47,7 +56,7 @@ public class WindowRequestHandlers {
 	@FunctionalInterface
 	public static interface ResizeRequestHandler {
 		
-		void onResizeRequest(WLCToplevel toplevel, int serial, int edge);
+		void onResizeRequest(WLCToplevel toplevel, int serial, int edges);
 		
 	}
 	

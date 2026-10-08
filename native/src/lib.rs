@@ -11,7 +11,9 @@ use smithay::{
     delegate_single_pixel_buffer, delegate_viewporter, delegate_xdg_shell,
     reexports::{
         calloop::{self, EventLoop, generic::Generic as GenericEvent},
-        wayland_protocols::xdg::shell::server::xdg_toplevel::ResizeEdge,
+        wayland_protocols::xdg::shell::server::xdg_toplevel::{
+            ResizeEdge, WmCapabilities,
+        },
         wayland_server::{
             self, Display, DisplayHandle,
             backend::{ClientData, ClientId, DisconnectReason},
@@ -92,7 +94,14 @@ impl WLCState {
     ) -> Self {
         let compositor_state = CompositorState::new::<WLCState>(&disp);
         let shm_state = ShmState::new::<WLCState>(&disp, vec![]);
-        let xdg_state = XdgShellState::new::<WLCState>(&disp);
+        let xdg_state = XdgShellState::new_with_capabilities::<WLCState>(
+            &disp,
+            vec![
+                WmCapabilities::Maximize,
+                WmCapabilities::Fullscreen,
+                WmCapabilities::Minimize,
+            ],
+        );
         let viewporter_state = ViewporterState::new::<WLCState>(&disp);
         let single_pixel_buffer_state =
             SinglePixelBufferState::new::<WLCState>(&disp);
@@ -265,40 +274,60 @@ impl XdgShellHandler for WLCState {
         surface.send_repositioned(token);
     }
 
-    fn minimize_request(&mut self, _surface: ToplevelSurface) {
+    fn maximize_request(&mut self, surface: ToplevelSurface) {
+        bridge::shell::on_toplevel_maximize(self, &surface);
     }
 
-    fn maximize_request(&mut self, _surface: ToplevelSurface) {
-    }
-
-    fn unmaximize_request(&mut self, _surface: ToplevelSurface) {
+    fn unmaximize_request(&mut self, surface: ToplevelSurface) {
+        bridge::shell::on_toplevel_unmaximize(self, &surface);
     }
 
     fn fullscreen_request(
         &mut self,
-        _surface: ToplevelSurface,
+        surface: ToplevelSurface,
         _output: Option<WlOutput>,
     ) {
+        bridge::shell::on_toplevel_fullscreen(self, &surface);
     }
 
-    fn unfullscreen_request(&mut self, _surface: ToplevelSurface) {
+    fn unfullscreen_request(&mut self, surface: ToplevelSurface) {
+        bridge::shell::on_toplevel_unfullscreen(self, &surface);
+    }
+
+    fn minimize_request(&mut self, surface: ToplevelSurface) {
+        bridge::shell::on_toplevel_minimize(self, &surface);
     }
 
     fn move_request(
         &mut self,
-        _surface: ToplevelSurface,
+        surface: ToplevelSurface,
         _seat: WlSeat,
-        _serial: Serial,
+        serial: Serial,
     ) {
+        bridge::shell::on_toplevel_move(self, &surface, serial.into());
     }
 
     fn resize_request(
         &mut self,
-        _surface: ToplevelSurface,
+        surface: ToplevelSurface,
         _seat: WlSeat,
-        _serial: Serial,
-        _edges: ResizeEdge,
+        serial: Serial,
+        edges: ResizeEdge,
     ) {
+        bridge::shell::on_toplevel_resize(
+            self,
+            &surface,
+            serial.into(),
+            edges.into()
+        );
+    }
+
+    fn app_id_changed(&mut self, surface: ToplevelSurface) {
+        bridge::shell::toplevel_update_app_id(&surface);
+    }
+
+    fn title_changed(&mut self, surface: ToplevelSurface) {
+        bridge::shell::toplevel_update_title(&surface);
     }
 }
 

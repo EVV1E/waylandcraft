@@ -259,6 +259,17 @@ bind_java_type! {
         fn delete_surface(WLCSurface),
         fn add_toplevel(WLCToplevel),
         fn delete_toplevel(WLCToplevel),
+        fn call_on_maximize(WLCToplevel),
+        fn call_on_unmaximize(WLCToplevel),
+        fn call_on_fullscreen(WLCToplevel),
+        fn call_on_unfullscreen(WLCToplevel),
+        fn call_on_minimize(WLCToplevel),
+        fn call_on_move(WLCToplevel, jint),
+        fn call_on_resize(WLCToplevel, jint, jint),
+        fn call_on_dnd {
+            sig = (WLCToplevel, jint),
+            name = "callOnDND",
+        },
     },
 
     constructors {

@@ -14,6 +14,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
 
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow;
+import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
 import dev.evvie.waylandcraft.bridge.WLCPopup;
 import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
@@ -22,7 +23,10 @@ import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
 import dev.evvie.waylandcraft.desktop.XDGDesktopManager;
 import dev.evvie.waylandcraft.displays.WindowDisplay;
 import dev.evvie.waylandcraft.displays.WindowDisplay.DisplayHitResult;
+import dev.evvie.waylandcraft.grabs.MoveGrab;
 import dev.evvie.waylandcraft.grabs.PointerGrabMap;
+import dev.evvie.waylandcraft.grabs.PointerGrabMap.ImplicitGrab;
+import dev.evvie.waylandcraft.grabs.ResizeGrab;
 import dev.evvie.waylandcraft.gui.AppLauncherScreen;
 import dev.evvie.waylandcraft.gui.TestScreen;
 import dev.evvie.waylandcraft.gui.WaylandHudRenderer;
@@ -156,6 +160,7 @@ public class WaylandCraft implements ClientModInitializer {
 			x11Display = bridge.getX11Display();
 			xdgManager = new XDGDesktopManager(this);
 			registerSettingsResponders();
+			registerRequestHandlers();
 			settingsManager.loadKeymap();
 			
 			WaylandCraftCommon.LOGGER.info("Wayland server started on " + waylandSocket);
@@ -248,6 +253,50 @@ public class WaylandCraft implements ClientModInitializer {
 		}
 		
 		updateOutputSize(inWMScreen);
+	}
+	
+	private void registerRequestHandlers() {
+		bridge.requestHandlers.maximizeHandler = (toplevel) -> {
+			toplevel.restoreGeometry = toplevel.geometry;
+			bridge.maximizeToplevel(toplevel);
+		};
+		bridge.requestHandlers.unmaximizeHandler = (toplevel) -> {
+			SurfaceGeometry geometry = toplevel.restoreGeometry;
+			if(geometry == null) geometry = toplevel.geometry;
+			
+			bridge.resizeToplevel(toplevel, geometry.width(), geometry.height());
+			toplevel.restoreGeometry = null;
+		};
+		bridge.requestHandlers.fullscreenHandler = (toplevel) -> {
+			toplevel.restoreGeometry = toplevel.geometry;
+			bridge.fullscreenToplevel(toplevel);
+		};
+		bridge.requestHandlers.unfullscreenHandler = (toplevel) -> {
+			SurfaceGeometry geometry = toplevel.restoreGeometry;
+			if(geometry == null) geometry = toplevel.geometry;
+			
+			bridge.resizeToplevel(toplevel, geometry.width(), geometry.height());
+			toplevel.restoreGeometry = null;
+		};
+		bridge.requestHandlers.minimizeHandler = (toplevel) -> {
+			WindowDisplay display = getDisplay(toplevel);
+			if(display != null) {
+				displays.remove(display);
+			}
+		};
+		bridge.requestHandlers.moveHandler = (_, serial) -> {
+			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(serial);
+			if(implicit != null) {
+				pointerGrabs.startExclusive(new MoveGrab(implicit));
+			}
+		};
+		bridge.requestHandlers.resizeHandler = (_, serial, edges) -> {
+			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(serial);
+			if(implicit != null) {
+				pointerGrabs.startExclusive(new ResizeGrab(implicit, edges));
+			}
+		};
+		bridge.requestHandlers.dndHandler = (_, _) -> System.out.println("dnd");
 	}
 	
 	public void startUsingWindowItem() {

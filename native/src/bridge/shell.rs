@@ -8,7 +8,7 @@ use crate::{
 };
 use jni::{
     Env,
-    objects::{Global, JClass},
+    objects::{Global, JClass, JString},
     sys::{jboolean, jint, jlong},
 };
 use smithay::{
@@ -26,9 +26,11 @@ use smithay::{
         compositor::with_states,
         shell::xdg::{
             PopupSurface, SurfaceCachedState, ToplevelSurface,
+            XdgToplevelSurfaceData,
         },
     },
 };
+use std::ops::Deref;
 use std::sync::Arc;
 
 pub struct MyToplevelInner(pub Global<WLCToplevel<'static>>);
@@ -53,6 +55,7 @@ macro_rules! get_java_toplevel {
         (&$crate::bridge::shell::toplevel_user_data($toplevel).0)
     };
 }
+#[allow(unused)]
 pub use get_java_toplevel;
 
 pub fn new_toplevel(state: &mut WLCState, toplevel: &ToplevelSurface) {
@@ -281,5 +284,203 @@ pub fn toplevel_fullscreen<'local>(
     jtoplevel.set_fullscreen(env, true)?;
 
     toplevel.send_configure();
+    Ok(())
+}
+
+pub fn toplevel_update_app_id(
+    toplevel: &ToplevelSurface,
+) {
+    with_env(|env| _toplevel_update_app_id(env, toplevel))
+}
+
+fn _toplevel_update_app_id(
+    env: &mut Env,
+    toplevel: &ToplevelSurface,
+) -> Result<(), BridgeError> {
+    let app_id = with_states(toplevel.wl_surface(), |data| {
+        data
+            .data_map
+            .get::<XdgToplevelSurfaceData>()
+            .unwrap()
+            .lock()
+            .unwrap()
+            .deref()
+            .app_id
+            .clone()
+    });
+
+    let jtoplevel = get_java_toplevel!(toplevel);
+
+    if let Some(app_id) = app_id {
+        let app_id = env.new_string(app_id)?;
+        jtoplevel.set_app_id(env, app_id)?;
+    } else {
+        jtoplevel.set_app_id(env, JString::null())?;
+    }
+
+    Ok(())
+}
+
+pub fn toplevel_update_title(
+    toplevel: &ToplevelSurface,
+) {
+    with_env(|env| _toplevel_update_title(env, toplevel))
+}
+
+fn _toplevel_update_title(
+    env: &mut Env,
+    toplevel: &ToplevelSurface,
+) -> Result<(), BridgeError> {
+    let app_id = with_states(toplevel.wl_surface(), |data| {
+        data
+            .data_map
+            .get::<XdgToplevelSurfaceData>()
+            .unwrap()
+            .lock()
+            .unwrap()
+            .deref()
+            .app_id
+            .clone()
+    });
+
+    let jtoplevel = get_java_toplevel!(toplevel);
+
+    if let Some(app_id) = app_id {
+        let app_id = env.new_string(app_id)?;
+        jtoplevel.set_app_id(env, app_id)?;
+    } else {
+        jtoplevel.set_app_id(env, JString::null())?;
+    }
+
+    Ok(())
+}
+
+pub fn on_toplevel_maximize(
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) {
+    with_env(|env| _on_toplevel_maximize(env, state, toplevel))
+}
+
+fn _on_toplevel_maximize(
+    env: &mut Env,
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) -> Result<(), BridgeError> {
+    let jtoplevel = get_java_toplevel!(toplevel);
+    state.bridge.java.call_on_maximize(env, jtoplevel)?;
+    Ok(())
+}
+
+pub fn on_toplevel_unmaximize(
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) {
+    with_env(|env| _on_toplevel_unmaximize(env, state, toplevel))
+}
+
+fn _on_toplevel_unmaximize(
+    env: &mut Env,
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) -> Result<(), BridgeError> {
+    let jtoplevel = get_java_toplevel!(toplevel);
+    state.bridge.java.call_on_unmaximize(env, jtoplevel)?;
+    Ok(())
+}
+
+pub fn on_toplevel_fullscreen(
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) {
+    with_env(|env| _on_toplevel_fullscreen(env, state, toplevel))
+}
+
+fn _on_toplevel_fullscreen(
+    env: &mut Env,
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) -> Result<(), BridgeError> {
+    let jtoplevel = get_java_toplevel!(toplevel);
+    state.bridge.java.call_on_fullscreen(env, jtoplevel)?;
+    Ok(())
+}
+
+pub fn on_toplevel_unfullscreen(
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) {
+    with_env(|env| _on_toplevel_unfullscreen(env, state, toplevel))
+}
+
+fn _on_toplevel_unfullscreen(
+    env: &mut Env,
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) -> Result<(), BridgeError> {
+    let jtoplevel = get_java_toplevel!(toplevel);
+    state.bridge.java.call_on_unfullscreen(env, jtoplevel)?;
+    Ok(())
+}
+
+pub fn on_toplevel_minimize(
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) {
+    with_env(|env| _on_toplevel_minimize(env, state, toplevel))
+}
+
+fn _on_toplevel_minimize(
+    env: &mut Env,
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+) -> Result<(), BridgeError> {
+    let jtoplevel = get_java_toplevel!(toplevel);
+    state.bridge.java.call_on_minimize(env, jtoplevel)?;
+    Ok(())
+}
+
+pub fn on_toplevel_move(
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+    serial: u32,
+) {
+    with_env(|env| _on_toplevel_move(env, state, toplevel, serial))
+}
+
+fn _on_toplevel_move(
+    env: &mut Env,
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+    serial: u32,
+) -> Result<(), BridgeError> {
+    let jtoplevel = get_java_toplevel!(toplevel);
+    state.bridge.java.call_on_move(env, jtoplevel, serial as jint)?;
+    Ok(())
+}
+
+pub fn on_toplevel_resize(
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+    serial: u32,
+    edges: u32,
+) {
+    with_env(|env| _on_toplevel_resize(env, state, toplevel, serial, edges))
+}
+
+fn _on_toplevel_resize(
+    env: &mut Env,
+    state: &mut WLCState,
+    toplevel: &ToplevelSurface,
+    serial: u32,
+    edges: u32,
+) -> Result<(), BridgeError> {
+    let jtoplevel = get_java_toplevel!(toplevel);
+    state.bridge.java.call_on_resize(
+        env,
+        jtoplevel,
+        serial as jint,
+        edges as jint
+    )?;
     Ok(())
 }

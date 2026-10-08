@@ -43,6 +43,8 @@ public class WaylandCraftBridge {
 	private @Nullable Integer lastMoveRequestSerial = null;
 	private @Nullable ResizeRequest lastResizeRequest = null;
 	
+	public WindowRequestHandlers requestHandlers = new WindowRequestHandlers();
+	
 	static {
 		boolean loaded = false;
 		InputStream inputStream = openNativeLibraryFromJar();
@@ -591,6 +593,38 @@ public class WaylandCraftBridge {
 	public void sendDndMotion(WLCSurface surface, double x, double y) {
 //		long handle = surface == null ? 0 : surface.getHandle();
 //		dndMotion(instance, handle, x, y);
+	}
+	
+	private void callOnMaximize(WLCToplevel toplevel) {
+		if(requestHandlers.maximizeHandler != null) requestHandlers.maximizeHandler.onMaximizeRequest(toplevel);
+	}
+	
+	private void callOnUnmaximize(WLCToplevel toplevel) {
+		if(requestHandlers.unmaximizeHandler != null) requestHandlers.unmaximizeHandler.onUnmaximizeRequest(toplevel);
+	}
+	
+	private void callOnFullscreen(WLCToplevel toplevel) {
+		if(requestHandlers.fullscreenHandler != null) requestHandlers.fullscreenHandler.onFullscreenRequest(toplevel);
+	}
+	
+	private void callOnUnfullscreen(WLCToplevel toplevel) {
+		if(requestHandlers.unfullscreenHandler != null) requestHandlers.unfullscreenHandler.onUnfullscreenRequest(toplevel);
+	}
+	
+	private void callOnMinimize(WLCToplevel toplevel) {
+		if(requestHandlers.minimizeHandler != null) requestHandlers.minimizeHandler.onMinimizeRequest(toplevel);
+	}
+	
+	private void callOnMove(WLCToplevel toplevel, int serial) {
+		if(requestHandlers.moveHandler != null) requestHandlers.moveHandler.onMoveRequest(toplevel, serial);
+	}
+	
+	private void callOnResize(WLCToplevel toplevel, int serial, int edges) {
+		if(requestHandlers.resizeHandler != null) requestHandlers.resizeHandler.onResizeRequest(toplevel, serial, edges);
+	}
+	
+	private void callOnDND(WLCToplevel toplevel, int serial) {
+		if(requestHandlers.dndHandler != null) requestHandlers.dndHandler.onDNDRequest(toplevel, serial);
 	}
 	
 	public static record Size(int width, int height) {}
