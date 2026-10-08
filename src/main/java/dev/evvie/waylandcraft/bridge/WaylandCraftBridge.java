@@ -513,22 +513,6 @@ public class WaylandCraftBridge {
 		toplevelFullscreen(instance, toplevel);
 	}
 	
-	public Integer checkMoveRequest() {
-//		if(lastMoveRequestSerial == null) return null;
-//		int serial = lastMoveRequestSerial.intValue();
-//		lastMoveRequestSerial = null;
-//		return serial;
-		return null;
-	}
-	
-	public ResizeRequest checkResizeRequest() {
-//		if(lastResizeRequest == null) return null;
-//		ResizeRequest req = lastResizeRequest;
-//		lastResizeRequest = null;
-//		return req;
-		return null;
-	}
-	
 	public void resizeOutput(int width, int height) {
 		outputResize(instance, width, height);
 	}
@@ -573,13 +557,6 @@ public class WaylandCraftBridge {
 	
 	public boolean setKeymapFromStr(String keymap) {
 		return setKeymapFromStr(instance, keymap);
-	}
-	
-	public Integer checkDndRequest() {
-//		int[] serial = checkDndRequest(instance);
-//		if(serial == null) return null;
-//		return serial[0];
-		return null;
 	}
 	
 	public void dndCancel() {
