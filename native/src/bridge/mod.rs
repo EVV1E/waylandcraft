@@ -16,6 +16,7 @@ use std::mem::MaybeUninit;
 use std::time::Duration;
 
 pub mod compositor;
+mod desktop;
 pub mod dnd;
 mod drm;
 pub mod dmabuf;

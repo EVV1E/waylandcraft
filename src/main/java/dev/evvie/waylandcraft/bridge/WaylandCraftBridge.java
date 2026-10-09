@@ -391,27 +391,23 @@ public class WaylandCraftBridge {
 	}
 	
 	public RawDesktopEntry loadDesktopEntry(File path) {
-//		return loadDesktopEntry(instance, path.getAbsolutePath());
-		return null;
+		return loadDesktopEntry(instance, path.getAbsolutePath());
 	}
 	
 	public RawDesktopEntry[] loadSystemDesktopEntries() {
-//		return loadDesktopEntries(instance);
-		return new RawDesktopEntry[] {};
+		return loadDesktopEntries(instance);
 	}
 	
 	public boolean renderSVG(File file, int width, int height, long bufferPtr) {
-//		return renderSVG(file.getAbsolutePath(), width, height, bufferPtr);
-		return false;
+		return renderSVG(file.getAbsolutePath(), width, height, bufferPtr);
 	}
 	
 	public boolean execApp(String appId) {
-//		return execApp(instance, appId);
-		return true;
+		return execApp(instance, appId);
 	}
 	
 	public void setPreferredTerminal(String cmd) {
-//		setPreferredTerminal(instance, cmd);
+		setPreferredTerminal(instance, cmd);
 	}
 	
 	public boolean setKeymapFromStr(String keymap) {
@@ -524,16 +520,11 @@ public class WaylandCraftBridge {
 	private static native void dndMotion(long instance, @Nullable WLCSurface surface, double x, double y);
 	private static native WLCSurface dndIcon(long instance);
 	
-	
-	// TODO: Implement the following stuff (or alternatives to them):
-	/*
+	/* XDG Desktop functionality */
 	private static native RawDesktopEntry loadDesktopEntry(long instance, String path);
 	private static native RawDesktopEntry[] loadDesktopEntries(long instance);
-	
 	private static native boolean renderSVG(String path, int width, int height, long bufferPtr);
-	
 	private static native boolean execApp(long instance, String appId);
 	private static native void setPreferredTerminal(long instance, String cmd);
-	*/
 	
 }

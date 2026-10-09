@@ -466,6 +466,34 @@ bind_java_type! {
             sig = (instance: jlong) -> WLCSurface,
             fn = bridge::dnd::dnd_icon,
         },
+
+        /* Desktop */
+        static extern fn load_desktop_entry {
+            sig = (instance: jlong, path: JString) -> JRawDesktopEntry,
+            fn = bridge::desktop::load_desktop_entry,
+        },
+        static extern fn load_desktop_entries {
+            sig = (instance: jlong) -> JRawDesktopEntry[],
+            fn = bridge::desktop::load_desktop_entries,
+        },
+        static extern fn render_svg {
+            sig = (
+                path: JString,
+                width: jint,
+                height: jint,
+                ptr: jlong
+            ) -> jboolean,
+            name = "renderSVG",
+            fn = bridge::desktop::render_svg,
+        },
+        static extern fn exec_app {
+            sig = (instance: jlong, app_id: JString) -> jboolean,
+            fn = bridge::desktop::exec_app,
+        },
+        static extern fn set_preferred_terminal {
+            sig = (instance: jlong, cmd: JString),
+            fn = bridge::desktop::set_preferred_terminal,
+        },
     },
 }
 
