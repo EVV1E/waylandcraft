@@ -2,7 +2,7 @@ use crate::{
     WLCState,
     bridge::{
         compositor::get_java_surface,
-        java_types::{BridgeError, WLCToplevel},
+        java_types::{BridgeError, WLCPopup, WLCToplevel},
         utils::{jptr_to_instance, with_env},
     },
 };
@@ -13,8 +13,9 @@ use jni::{
 };
 use smithay::{
     reexports::{
-        wayland_protocols::xdg::shell::server::xdg_toplevel::{
-            self, XdgToplevel,
+        wayland_protocols::xdg::shell::server::{
+            xdg_popup::XdgPopup,
+            xdg_toplevel::{self, XdgToplevel},
         },
         wayland_server::{
             Resource, Weak,
@@ -55,8 +56,31 @@ macro_rules! get_java_toplevel {
         (&$crate::bridge::shell::toplevel_user_data($toplevel).0)
     };
 }
-#[allow(unused)]
 pub use get_java_toplevel;
+
+pub struct MyPopupInner(pub Global<WLCPopup<'static>>);
+type MyPopup = Arc<MyPopupInner>;
+
+pub fn popup_user_data(
+    popup: &PopupSurface
+) -> MyPopup {
+    with_states(popup.wl_surface(), |data| {
+        data
+            .data_map
+            .get::<MyPopup>()
+            .unwrap()
+            .clone()
+    })
+}
+
+// Turns &PopupSurface into &WLCPopup
+#[macro_export]
+macro_rules! get_java_popup {
+    ($popup:expr) => {
+        (&$crate::bridge::shell::popup_user_data($popup).0)
+    };
+}
+pub use get_java_popup;
 
 pub fn new_toplevel(state: &mut WLCState, toplevel: &ToplevelSurface) {
     with_env(|env| _new_toplevel(env, state, toplevel))
@@ -178,7 +202,6 @@ pub fn toplevel_from_java_nullable<'local>(
     return Ok(Some(toplevel));
 }
 
-#[allow(unused)]
 pub fn toplevel_from_java<'local>(
     env: &mut Env<'local>,
     state: &mut WLCState,
@@ -188,10 +211,154 @@ pub fn toplevel_from_java<'local>(
         .ok_or(BridgeError::ToplevelNull)
 }
 
-pub fn new_popup(_state: &mut WLCState, _popup: &PopupSurface) {
+pub fn popup_from_java_nullable<'local>(
+    env: &mut Env<'local>,
+    state: &mut WLCState,
+    jpopup: &WLCPopup<'local>,
+) -> Result<Option<PopupSurface>, BridgeError> {
+    if jpopup.is_null() {
+        return Ok(None);
+    }
+
+    let ptr = (jpopup.handle(env)? as usize) as *mut Weak<XdgPopup>;
+    if ptr.is_null() {
+        return Err(BridgeError::PopupGone);
+    }
+
+    let weak = unsafe { &mut *ptr };
+    let xdg_popup = weak.upgrade().map_err(|_| BridgeError::PopupGone)?;
+    let popup = state.xdg_state.get_popup(&xdg_popup).unwrap();
+
+    return Ok(Some(popup));
 }
 
-pub fn popup_destroyed(_state: &mut WLCState, _popup: &PopupSurface) {
+#[allow(unused)]
+pub fn popup_from_java<'local>(
+    env: &mut Env<'local>,
+    state: &mut WLCState,
+    jpopup: &WLCPopup<'local>,
+) -> Result<PopupSurface, BridgeError> {
+    popup_from_java_nullable(env, state, jpopup)?
+        .ok_or(BridgeError::PopupNull)
+}
+
+pub fn new_popup(state: &mut WLCState, popup: &PopupSurface) {
+    with_env(|env| _new_popup(env, state, popup))
+}
+
+fn _new_popup<'local>(
+    env: &mut Env<'local>,
+    state: &mut WLCState,
+    popup: &PopupSurface
+) -> Result<(), BridgeError> {
+    // Create handle from boxed XdgPopup weak reference
+    let weak: Weak<XdgPopup> = popup.xdg_popup().downgrade();
+    let weak = Box::new(weak);
+    let ptr = (Box::into_raw(weak) as usize) as jlong;
+
+    let jsurface = get_java_surface!(popup.wl_surface());
+
+    // Create java popup and insert global reference into popup root
+    // wl_surface data
+    let jpopup = WLCPopup::new(env, ptr, jsurface)?;
+    let jpopup_ref = env.new_global_ref(&jpopup)?;
+    let my_popup = Arc::new(MyPopupInner(jpopup_ref));
+
+    with_states(popup.wl_surface(), |data| {
+        data.data_map.insert_if_missing(|| my_popup);
+    });
+
+    jpopup.set_surface(env, jsurface)?;
+
+    // Find and set parent toplevel or popup
+    if let Some(parent_surf) = popup.get_parent_surface() {
+        if let Some(parent) = popup_for_surface(state, &parent_surf) {
+            let jparent = get_java_popup!(&parent);
+            jpopup.set_parent(env, jparent)?;
+        } else if let Some(parent) = toplevel_for_surface(state, &parent_surf) {
+            let jparent = get_java_toplevel!(&parent);
+            jpopup.set_parent(env, jparent)?;
+        }
+    }
+
+    // Tell the java code about the new popup
+    state.bridge.java.add_popup(env, jpopup)?;
+
+    Ok(())
+}
+
+pub fn popup_destroyed(state: &mut WLCState, popup: &PopupSurface) {
+    with_env(|env| _popup_destroyed(env, state, popup))
+}
+
+fn _popup_destroyed<'local>(
+    env: &mut Env<'local>,
+    state: &mut WLCState,
+    popup: &PopupSurface
+) -> Result<(), BridgeError> {
+    // Remove popup in java bridge code
+    let jpopup = get_java_popup!(popup);
+    state.bridge.java.delete_popup(env, jpopup)?;
+
+    // Remove and destroy its handle
+    let ptr = (jpopup.handle(env)? as usize) as *mut Weak<XdgPopup>;
+    let ptr = unsafe { Box::from_raw(ptr) };
+    drop(ptr);
+    jpopup.set_handle(env, 0)?;
+
+    // The java global reference will get dropped with the popup
+
+    Ok(())
+}
+
+pub fn popup_for_surface(
+    state: &mut WLCState,
+    surface: &WlSurface,
+) -> Option<PopupSurface> {
+    state
+        .xdg_state
+        .popup_surfaces()
+        .iter()
+        .find(|t| t.wl_surface() == surface)
+        .cloned()
+}
+
+pub fn popup_commit<'local>(
+    env: &mut Env<'local>,
+    _state: &mut WLCState,
+    popup: &PopupSurface,
+) -> Result<(), BridgeError> {
+    let jpopup = get_java_popup!(popup);
+    let geometry = with_states(popup.wl_surface(), |states| {
+        let mut guard = states.cached_state.get::<SurfaceCachedState>();
+        guard
+            .current()
+            .geometry
+            .clone()
+    });
+
+    if let Some(geometry) = geometry {
+        jpopup.update_geometry(
+            env,
+            geometry.loc.x,
+            geometry.loc.y,
+            geometry.size.w,
+            geometry.size.h,
+        )?;
+    } else {
+        jpopup.default_geometry(env)?;
+    }
+
+    let offset = popup.with_committed_state(|state| {
+        state.map(|s| s.geometry.loc)
+    });
+
+    if let Some(offset) = offset {
+        jpopup.set_offset_x(env, offset.x)?;
+        jpopup.set_offset_y(env, offset.y)?;
+    }
+
+    Ok(())
 }
 
 pub fn toplevel_resize<'local>(

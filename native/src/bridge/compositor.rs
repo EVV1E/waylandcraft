@@ -3,7 +3,10 @@ use crate::{
     bridge::{
         self, BridgeError,
         java_types::*,
-        shell::{toplevel_for_surface, toplevel_commit},
+        shell::{
+            popup_commit, popup_for_surface, toplevel_commit,
+            toplevel_for_surface,
+        },
         utils::with_env,
     },
     utils::get_time,
@@ -71,7 +74,6 @@ macro_rules! get_java_surface_opt {
         }
     };
 }
-#[allow(unused)]
 pub use get_java_surface_opt;
 
 pub fn get_java_surfaces<'local>(
@@ -221,6 +223,11 @@ fn _surface_commit<'local>(
     // If this surface is a toplevel, update its state
     if let Some(toplevel) = toplevel_for_surface(state, surface) {
         toplevel_commit(env, state, &toplevel)?;
+    }
+
+    // If this surface is a popup, update its state
+    if let Some(popup) = popup_for_surface(state, surface) {
+        popup_commit(env, state, &popup)?;
     }
 
     Ok(())

@@ -204,6 +204,14 @@ public class WaylandCraftBridge {
 		toplevels.remove(toplevel);
 	}
 	
+	protected void addPopup(WLCPopup popup) {
+		popups.add(popup);
+	}
+	
+	protected void deletePopup(WLCPopup popup) {
+		popups.remove(popup);
+	}
+	
 	public WLCSurface[] getAllSurfaces() {
 		return surfaces.toArray(WLCSurface[]::new);
 	}

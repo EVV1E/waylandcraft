@@ -10,11 +10,16 @@ bind_java_type! {
     java_type = dev.evvie.waylandcraft.bridge.WLCToplevel,
 
     type_map {
+        WLCAbstractWindow => dev.evvie.waylandcraft.bridge.WLCAbstractWindow,
         WLCSurface => dev.evvie.waylandcraft.bridge.WLCSurface,
     },
 
     constructors {
         fn new(handle: jlong, surface: WLCSurface),
+    },
+
+    is_instance_of = {
+        abstract_window: WLCAbstractWindow,
     },
 
     fields {
@@ -32,7 +37,6 @@ bind_java_type! {
         fn default_geometry(),
         fn update_geometry(x: jint, y: jint, width: jint, height: jint),
     },
-
 }
 
 bind_java_type! {
@@ -48,12 +52,21 @@ bind_java_type! {
         fn new(handle: jlong, surface: WLCSurface),
     },
 
+    is_instance_of = {
+        abstract_window: WLCAbstractWindow,
+    },
+
     fields {
         handle: jlong,
         surface: WLCSurface,
         parent: WLCAbstractWindow,
         offset_x: jint,
         offset_y: jint,
+    },
+
+    methods {
+        fn default_geometry(),
+        fn update_geometry(x: jint, y: jint, width: jint, height: jint),
     },
 }
 
@@ -259,6 +272,8 @@ bind_java_type! {
         fn delete_surface(WLCSurface),
         fn add_toplevel(WLCToplevel),
         fn delete_toplevel(WLCToplevel),
+        fn add_popup(WLCPopup),
+        fn delete_popup(WLCPopup),
         fn call_on_maximize(WLCToplevel),
         fn call_on_unmaximize(WLCToplevel),
         fn call_on_fullscreen(WLCToplevel),
@@ -474,6 +489,10 @@ pub enum BridgeError {
     ToplevelGone,
     #[error("Toplevel is null")]
     ToplevelNull,
+    #[error("Popup is already gone")]
+    PopupGone,
+    #[error("Popup is null")]
+    PopupNull,
     #[error("Unknown pointer button {0} received")]
     UnknownPointerButton(jint),
     #[error("Unknown scroll direction {0} received")]
