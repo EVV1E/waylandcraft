@@ -498,7 +498,7 @@ fn _toplevel_update_title(
     env: &mut Env,
     toplevel: &ToplevelSurface,
 ) -> Result<(), BridgeError> {
-    let app_id = with_states(toplevel.wl_surface(), |data| {
+    let title = with_states(toplevel.wl_surface(), |data| {
         data
             .data_map
             .get::<XdgToplevelSurfaceData>()
@@ -506,17 +506,17 @@ fn _toplevel_update_title(
             .lock()
             .unwrap()
             .deref()
-            .app_id
+            .title
             .clone()
     });
 
     let jtoplevel = get_java_toplevel!(toplevel);
 
-    if let Some(app_id) = app_id {
-        let app_id = env.new_string(app_id)?;
-        jtoplevel.set_app_id(env, app_id)?;
+    if let Some(title) = title {
+        let title = env.new_string(title)?;
+        jtoplevel.set_title(env, title)?;
     } else {
-        jtoplevel.set_app_id(env, JString::null())?;
+        jtoplevel.set_title(env, JString::null())?;
     }
 
     Ok(())
