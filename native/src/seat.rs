@@ -34,6 +34,7 @@ use smithay::{
             },
         },
     },
+    wayland::compositor,
     utils::SealedFile,
 };
 use std::collections::HashSet;
@@ -103,6 +104,8 @@ pub struct RMLVO {
     pub variant: String,
     pub options: String,
 }
+
+pub const CURSOR_IMAGE_ROLE: &str = "cursor_image";
 
 fn with_pointer_data<F, R>(pointer: &WlPointer, f: F) -> R
 where
@@ -694,6 +697,17 @@ impl Dispatch<WlPointer, WLCPointer> for WLCState {
             wl_pointer::Request::SetCursor {
                 serial, surface, ..
             } => {
+                if let Some(ref s) = surface {
+                    let r = compositor::give_role(s, CURSOR_IMAGE_ROLE);
+                    if r.is_err() {
+                        pointer.post_error(
+                            wl_pointer::Error::Role,
+                            "cursor image surface already has another role",
+                        );
+                        return;
+                    }
+                }
+
                 let last_enter =
                     with_pointer_data(pointer, |data| data.last_enter);
                 if last_enter.is_none() {

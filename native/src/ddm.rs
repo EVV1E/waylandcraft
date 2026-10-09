@@ -1,17 +1,21 @@
 use crate::WLCState;
 use crate::utils::{get_time, new_serial, to_fixed2};
-use smithay::reexports::wayland_server::{
-    Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New, Resource,
-    backend::ClientId,
-    protocol::{
-        wl_data_device::{self, WlDataDevice},
-        wl_data_device_manager as wl_ddm,
-        wl_data_device_manager::DndAction,
-        wl_data_device_manager::WlDataDeviceManager as WlDDM,
-        wl_data_offer::{self, WlDataOffer},
-        wl_data_source::{self, WlDataSource},
-        wl_surface::WlSurface,
+use smithay::{
+    reexports::wayland_server::{
+        Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New,
+        Resource,
+        backend::ClientId,
+        protocol::{
+            wl_data_device::{self, WlDataDevice},
+            wl_data_device_manager as wl_ddm,
+            wl_data_device_manager::DndAction,
+            wl_data_device_manager::WlDataDeviceManager as WlDDM,
+            wl_data_offer::{self, WlDataOffer},
+            wl_data_source::{self, WlDataSource},
+            wl_surface::WlSurface,
+        },
     },
+    wayland::compositor,
 };
 use std::ops::DerefMut;
 use std::os::fd::AsFd;
@@ -68,6 +72,8 @@ struct WLCDataDeviceData {
     // Currently active data offer. May be present even when no dnd_focus set
     dnd_offer: Option<WlDataOffer>,
 }
+
+pub const DND_ICON_ROLE: &str = "dnd_icon";
 
 fn with_source_data<F, R>(source: &WlDataSource, f: F) -> R
 where
@@ -545,6 +551,17 @@ impl Dispatch<WlDataDevice, WLCDataDevice> for WLCState {
                         }
                         data.usage = SourceUsage::Drag;
                     });
+                }
+
+                if let Some(ref s) = icon {
+                    let r = compositor::give_role(s, DND_ICON_ROLE);
+                    if r.is_err() {
+                        device.post_error(
+                            wl_data_device::Error::Role,
+                            "dnd icon surface already has another role",
+                        );
+                        return;
+                    }
                 }
 
                 state.data.print_dnd_debug("drag start");
