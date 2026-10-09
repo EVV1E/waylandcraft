@@ -34,8 +34,8 @@ use smithay::{
             },
         },
     },
-    wayland::compositor,
     utils::SealedFile,
+    wayland::compositor,
 };
 use std::collections::HashSet;
 use std::ffi::CString;

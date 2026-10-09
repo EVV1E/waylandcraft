@@ -1,15 +1,11 @@
-use crate::bridge::{
-    java_types::BridgeError,
-    utils::jptr_to_instance,
-};
+use crate::bridge::{java_types::BridgeError, utils::jptr_to_instance};
 use jni::{
     Env,
     objects::{JClass, JIntArray, JPrimitiveArray},
     sys::{jint, jlong},
 };
 use smithay::{
-    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel,
-    utils::Size,
+    reexports::wayland_protocols::xdg::shell::server::xdg_toplevel, utils::Size,
 };
 
 pub fn output_size<'local>(
@@ -111,4 +107,3 @@ pub fn output_set_bounds<'local>(
 
     Ok(())
 }
-

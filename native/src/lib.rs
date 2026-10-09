@@ -30,8 +30,8 @@ use smithay::{
             CompositorClientState, CompositorHandler, CompositorState,
         },
         dmabuf::{
-            self, get_dmabuf, DmabufFeedbackBuilder, DmabufGlobal,
-            DmabufHandler, DmabufState,
+            self, DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler,
+            DmabufState, get_dmabuf,
         },
         shell::xdg::{
             PopupSurface, PositionerState, ToplevelSurface, XdgShellHandler,
@@ -110,17 +110,14 @@ impl WLCState {
         let mut dmabuf_global = MaybeUninit::uninit();
 
         if let Some(feedback) = dmabuf_feedback {
-            let feedback = DmabufFeedbackBuilder::new(
-                feedback.device,
-                feedback.formats,
-            )
-                .build()
-                .unwrap();
+            let feedback =
+                DmabufFeedbackBuilder::new(feedback.device, feedback.formats)
+                    .build()
+                    .unwrap();
 
             let global = dmabuf_state
                 .create_global_with_default_feedback::<WLCState>(
-                    &disp,
-                    &feedback,
+                    &disp, &feedback,
                 );
             dmabuf_global.write(global);
         }
@@ -212,14 +209,14 @@ impl DmabufHandler for WLCState {
             Err(_) => {
                 notifier.failed();
                 return;
-            },
+            }
         };
 
         match notifier.successful::<WLCState>() {
             Ok(_buffer) => (),
             Err(_) => {
                 return;
-            },
+            }
         }
 
         self.bridge.dmabufs.push(imported);
@@ -318,7 +315,7 @@ impl XdgShellHandler for WLCState {
             self,
             &surface,
             serial.into(),
-            edges.into()
+            edges.into(),
         );
     }
 
@@ -363,11 +360,8 @@ pub fn wlc_init(
     let display: Display<WLCState> = Display::new()?;
     let socket = ListeningSocketSource::new_auto()?;
 
-    let mut state = WLCState::new(
-        display.handle(),
-        bridge_state,
-        dmabuf_feedback
-    );
+    let mut state =
+        WLCState::new(display.handle(), bridge_state, dmabuf_feedback);
     state.socket = socket.socket_name().to_os_string();
 
     let ev_handle = event_loop.handle();

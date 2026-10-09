@@ -19,39 +19,32 @@ use jni::{
 use smithay::{
     backend::allocator::Buffer,
     reexports::wayland_server::{
-        Resource, Weak,
-        protocol::wl_buffer::WlBuffer,
+        Resource, Weak, protocol::wl_buffer::WlBuffer,
         protocol::wl_surface::WlSurface,
     },
     utils::{Logical, Point, Size},
     wayland::{
         compositor::{
-            get_children, get_parent, is_sync_subsurface, with_states,
-            with_surface_tree_upward, with_surface_tree_downward,
             BufferAssignment, SubsurfaceCachedState, SurfaceAttributes,
-            SurfaceData, TraversalAction,
+            SurfaceData, TraversalAction, get_children, get_parent,
+            is_sync_subsurface, with_states, with_surface_tree_downward,
+            with_surface_tree_upward,
         },
-        single_pixel_buffer::get_single_pixel_buffer,
-        shm::{self, with_buffer_contents},
-        viewporter::{ensure_viewport_valid, ViewportCachedState},
         dmabuf::get_dmabuf,
+        shm::{self, with_buffer_contents},
+        single_pixel_buffer::get_single_pixel_buffer,
+        viewporter::{ViewportCachedState, ensure_viewport_valid},
     },
 };
-use std::sync::Arc;
 use std::ops::DerefMut;
+use std::sync::Arc;
 
 pub struct MySurfaceInner(pub Global<WLCSurface<'static>>);
 type MySurface = Arc<MySurfaceInner>;
 
-pub fn surface_user_data(
-    surface: &WlSurface
-) -> MySurface {
+pub fn surface_user_data(surface: &WlSurface) -> MySurface {
     with_states(surface, |data| {
-        data
-            .data_map
-            .get::<MySurface>()
-            .unwrap()
-            .clone()
+        data.data_map.get::<MySurface>().unwrap().clone()
     })
 }
 
@@ -78,7 +71,7 @@ pub use get_java_surface_opt;
 
 pub fn get_java_surfaces<'local>(
     env: &mut Env<'local>,
-    surfaces: &[WlSurface]
+    surfaces: &[WlSurface],
 ) -> Result<JObjectArray<'local, WLCSurface<'local>>, BridgeError> {
     let array = JObjectArray::<WLCSurface>::new(
         env,
@@ -101,7 +94,7 @@ pub fn new_surface(state: &mut WLCState, surface: &WlSurface) {
 fn _new_surface<'local>(
     env: &mut Env<'local>,
     state: &mut WLCState,
-    surface: &WlSurface
+    surface: &WlSurface,
 ) -> Result<(), BridgeError> {
     // Create handle from boxed WlSurface weak reference
     let weak: Weak<WlSurface> = surface.downgrade();
@@ -130,7 +123,7 @@ pub fn surface_destroyed(state: &mut WLCState, surface: &WlSurface) {
 fn _surface_destroyed<'local>(
     env: &mut Env<'local>,
     state: &mut WLCState,
-    surface: &WlSurface
+    surface: &WlSurface,
 ) -> Result<(), BridgeError> {
     // Remove surface in java bridge code
     let jsurface = get_java_surface!(surface);
@@ -150,7 +143,7 @@ fn _surface_destroyed<'local>(
 pub fn subsurface_created(
     state: &mut WLCState,
     surface: &WlSurface,
-    parent: &WlSurface
+    parent: &WlSurface,
 ) {
     with_env(|env| _subsurface_created(env, state, surface, parent));
 }
@@ -159,7 +152,7 @@ fn _subsurface_created<'local>(
     env: &mut Env<'local>,
     _state: &mut WLCState,
     surface: &WlSurface,
-    parent: &WlSurface
+    parent: &WlSurface,
 ) -> Result<(), BridgeError> {
     let jsurface = get_java_surface!(surface);
     let jparent = get_java_surface!(parent);
@@ -169,10 +162,7 @@ fn _subsurface_created<'local>(
     Ok(())
 }
 
-pub fn surface_commit(
-    state: &mut WLCState,
-    surface: &WlSurface
-) {
+pub fn surface_commit(state: &mut WLCState, surface: &WlSurface) {
     with_env(|env| _surface_commit(env, state, surface));
 }
 
@@ -202,7 +192,9 @@ fn _surface_commit<'local>(
     update_trees(env, &root, jroot)?;
     jroot.calculate_subpos(env)?;
 
-    if is_sync_subsurface(surface) { return Ok(()) }
+    if is_sync_subsurface(surface) {
+        return Ok(());
+    }
 
     // Update surface data from this subsurface tree
     with_surface_tree_upward(
@@ -214,7 +206,7 @@ fn _surface_commit<'local>(
             update_surface_data(env, state, surface, data, jsurface)
                 .expect("update_surface_data");
         },
-        |_, _, _| true
+        |_, _, _| true,
     );
 
     // Update root surface framebuffer
@@ -247,7 +239,7 @@ fn update_trees<'local>(
         |s, _, _| {
             tree_upward.push(s.clone());
         },
-        |_, _, _| true
+        |_, _, _| true,
     );
     let jtree_upward = get_java_surfaces(env, &tree_upward)?;
     jroot.set_surface_draw_tree(env, jtree_upward)?;
@@ -261,7 +253,7 @@ fn update_trees<'local>(
         |s, _, _| {
             tree_downward.push(s.clone());
         },
-        |_, _, _| true
+        |_, _, _| true,
     );
     let jtree_downward = get_java_surfaces(env, &tree_downward)?;
     jroot.set_surface_input_tree(env, jtree_downward)?;
@@ -276,7 +268,7 @@ fn update_surface_data<'local>(
     data: &SurfaceData,
     jsurface: &WLCSurface<'local>,
 ) -> Result<(), BridgeError> {
-    let (sx,sy) = if data.cached_state.has::<SubsurfaceCachedState>() {
+    let (sx, sy) = if data.cached_state.has::<SubsurfaceCachedState>() {
         let mut subattr_guard =
             data.cached_state.get::<SubsurfaceCachedState>();
         let subattr = subattr_guard.deref_mut().current();
@@ -312,10 +304,9 @@ fn update_surface_data<'local>(
     let vp_data = vp_data_guard.deref_mut().current();
 
     if let Some(src) = vp_data.src {
-        jsurface
-            .set_viewport_src(
-                env, src.loc.x, src.loc.y, src.size.w, src.size.h,
-            )?;
+        jsurface.set_viewport_src(
+            env, src.loc.x, src.loc.y, src.size.w, src.size.h,
+        )?;
     } else {
         jsurface.unset_viewport_src(env)?;
     }
@@ -422,8 +413,7 @@ fn try_attach_buffer(
     buf: &WlBuffer,
     surf_data: &SurfaceData,
 ) -> BufferAttachResult {
-    let funcs =
-        [try_attach_shm, try_attach_single_pixel, try_attach_dmabuf];
+    let funcs = [try_attach_shm, try_attach_single_pixel, try_attach_dmabuf];
     for func in funcs {
         let result = func(state, env, jsurface, buf, surf_data);
         match result {
@@ -488,7 +478,7 @@ pub fn input_region_contains<'local>(
         Some(s) => s,
         None => {
             return Ok(false);
-        },
+        }
     };
 
     let point: Point<f64, Logical> = Point::new(x, y);

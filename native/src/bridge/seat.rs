@@ -43,7 +43,10 @@ pub fn pointer_motion_focus<'local>(
 ) -> Result<(), BridgeError> {
     let instance = jptr_to_instance!(instance)?;
     let surface = surface_from_java_nullable(env, &jsurface)?;
-    instance.state.seat.pointer_motion_focus(surface.as_ref(), x, y);
+    instance
+        .state
+        .seat
+        .pointer_motion_focus(surface.as_ref(), x, y);
 
     Ok(())
 }
@@ -157,11 +160,8 @@ pub fn keyboard_focus<'local>(
     jtoplevel: WLCToplevel<'local>,
 ) -> Result<(), BridgeError> {
     let instance = jptr_to_instance!(instance)?;
-    let toplevel = toplevel_from_java_nullable(
-        env,
-        &mut instance.state,
-        &jtoplevel
-    )?;
+    let toplevel =
+        toplevel_from_java_nullable(env, &mut instance.state, &jtoplevel)?;
 
     let surface = toplevel.as_ref().map(|t| t.wl_surface().clone());
 

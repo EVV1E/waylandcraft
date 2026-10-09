@@ -17,10 +17,7 @@ use smithay::{
             xdg_popup::XdgPopup,
             xdg_toplevel::{self, XdgToplevel},
         },
-        wayland_server::{
-            Resource, Weak,
-            protocol::wl_surface::WlSurface,
-        },
+        wayland_server::{Resource, Weak, protocol::wl_surface::WlSurface},
     },
     utils::Size,
     wayland::{
@@ -37,15 +34,9 @@ use std::sync::Arc;
 pub struct MyToplevelInner(pub Global<WLCToplevel<'static>>);
 type MyToplevel = Arc<MyToplevelInner>;
 
-pub fn toplevel_user_data(
-    toplevel: &ToplevelSurface
-) -> MyToplevel {
+pub fn toplevel_user_data(toplevel: &ToplevelSurface) -> MyToplevel {
     with_states(toplevel.wl_surface(), |data| {
-        data
-            .data_map
-            .get::<MyToplevel>()
-            .unwrap()
-            .clone()
+        data.data_map.get::<MyToplevel>().unwrap().clone()
     })
 }
 
@@ -61,15 +52,9 @@ pub use get_java_toplevel;
 pub struct MyPopupInner(pub Global<WLCPopup<'static>>);
 type MyPopup = Arc<MyPopupInner>;
 
-pub fn popup_user_data(
-    popup: &PopupSurface
-) -> MyPopup {
+pub fn popup_user_data(popup: &PopupSurface) -> MyPopup {
     with_states(popup.wl_surface(), |data| {
-        data
-            .data_map
-            .get::<MyPopup>()
-            .unwrap()
-            .clone()
+        data.data_map.get::<MyPopup>().unwrap().clone()
     })
 }
 
@@ -89,7 +74,7 @@ pub fn new_toplevel(state: &mut WLCState, toplevel: &ToplevelSurface) {
 fn _new_toplevel<'local>(
     env: &mut Env<'local>,
     state: &mut WLCState,
-    toplevel: &ToplevelSurface
+    toplevel: &ToplevelSurface,
 ) -> Result<(), BridgeError> {
     // Create handle from boxed XdgToplevel weak reference
     let weak: Weak<XdgToplevel> = toplevel.xdg_toplevel().downgrade();
@@ -123,7 +108,7 @@ pub fn toplevel_destroyed(state: &mut WLCState, toplevel: &ToplevelSurface) {
 fn _toplevel_destroyed<'local>(
     env: &mut Env<'local>,
     state: &mut WLCState,
-    toplevel: &ToplevelSurface
+    toplevel: &ToplevelSurface,
 ) -> Result<(), BridgeError> {
     // Remove toplevel in java bridge code
     let jtoplevel = get_java_toplevel!(toplevel);
@@ -160,10 +145,7 @@ pub fn toplevel_commit<'local>(
     let jtoplevel = get_java_toplevel!(toplevel);
     let geometry = with_states(toplevel.wl_surface(), |states| {
         let mut guard = states.cached_state.get::<SurfaceCachedState>();
-        guard
-            .current()
-            .geometry
-            .clone()
+        guard.current().geometry.clone()
     });
 
     if let Some(geometry) = geometry {
@@ -238,8 +220,7 @@ pub fn popup_from_java<'local>(
     state: &mut WLCState,
     jpopup: &WLCPopup<'local>,
 ) -> Result<PopupSurface, BridgeError> {
-    popup_from_java_nullable(env, state, jpopup)?
-        .ok_or(BridgeError::PopupNull)
+    popup_from_java_nullable(env, state, jpopup)?.ok_or(BridgeError::PopupNull)
 }
 
 pub fn new_popup(state: &mut WLCState, popup: &PopupSurface) {
@@ -249,7 +230,7 @@ pub fn new_popup(state: &mut WLCState, popup: &PopupSurface) {
 fn _new_popup<'local>(
     env: &mut Env<'local>,
     state: &mut WLCState,
-    popup: &PopupSurface
+    popup: &PopupSurface,
 ) -> Result<(), BridgeError> {
     // Create handle from boxed XdgPopup weak reference
     let weak: Weak<XdgPopup> = popup.xdg_popup().downgrade();
@@ -294,7 +275,7 @@ pub fn popup_destroyed(state: &mut WLCState, popup: &PopupSurface) {
 fn _popup_destroyed<'local>(
     env: &mut Env<'local>,
     state: &mut WLCState,
-    popup: &PopupSurface
+    popup: &PopupSurface,
 ) -> Result<(), BridgeError> {
     // Remove popup in java bridge code
     let jpopup = get_java_popup!(popup);
@@ -331,10 +312,7 @@ pub fn popup_commit<'local>(
     let jpopup = get_java_popup!(popup);
     let geometry = with_states(popup.wl_surface(), |states| {
         let mut guard = states.cached_state.get::<SurfaceCachedState>();
-        guard
-            .current()
-            .geometry
-            .clone()
+        guard.current().geometry.clone()
     });
 
     if let Some(geometry) = geometry {
@@ -349,9 +327,8 @@ pub fn popup_commit<'local>(
         jpopup.default_geometry(env)?;
     }
 
-    let offset = popup.with_committed_state(|state| {
-        state.map(|s| s.geometry.loc)
-    });
+    let offset =
+        popup.with_committed_state(|state| state.map(|s| s.geometry.loc));
 
     if let Some(offset) = offset {
         jpopup.set_offset_x(env, offset.x)?;
@@ -454,9 +431,7 @@ pub fn toplevel_fullscreen<'local>(
     Ok(())
 }
 
-pub fn toplevel_update_app_id(
-    toplevel: &ToplevelSurface,
-) {
+pub fn toplevel_update_app_id(toplevel: &ToplevelSurface) {
     with_env(|env| _toplevel_update_app_id(env, toplevel))
 }
 
@@ -465,8 +440,7 @@ fn _toplevel_update_app_id(
     toplevel: &ToplevelSurface,
 ) -> Result<(), BridgeError> {
     let app_id = with_states(toplevel.wl_surface(), |data| {
-        data
-            .data_map
+        data.data_map
             .get::<XdgToplevelSurfaceData>()
             .unwrap()
             .lock()
@@ -488,9 +462,7 @@ fn _toplevel_update_app_id(
     Ok(())
 }
 
-pub fn toplevel_update_title(
-    toplevel: &ToplevelSurface,
-) {
+pub fn toplevel_update_title(toplevel: &ToplevelSurface) {
     with_env(|env| _toplevel_update_title(env, toplevel))
 }
 
@@ -499,8 +471,7 @@ fn _toplevel_update_title(
     toplevel: &ToplevelSurface,
 ) -> Result<(), BridgeError> {
     let title = with_states(toplevel.wl_surface(), |data| {
-        data
-            .data_map
+        data.data_map
             .get::<XdgToplevelSurfaceData>()
             .unwrap()
             .lock()
@@ -522,10 +493,7 @@ fn _toplevel_update_title(
     Ok(())
 }
 
-pub fn on_toplevel_maximize(
-    state: &mut WLCState,
-    toplevel: &ToplevelSurface,
-) {
+pub fn on_toplevel_maximize(state: &mut WLCState, toplevel: &ToplevelSurface) {
     with_env(|env| _on_toplevel_maximize(env, state, toplevel))
 }
 
@@ -590,10 +558,7 @@ fn _on_toplevel_unfullscreen(
     Ok(())
 }
 
-pub fn on_toplevel_minimize(
-    state: &mut WLCState,
-    toplevel: &ToplevelSurface,
-) {
+pub fn on_toplevel_minimize(state: &mut WLCState, toplevel: &ToplevelSurface) {
     with_env(|env| _on_toplevel_minimize(env, state, toplevel))
 }
 
@@ -622,7 +587,10 @@ fn _on_toplevel_move(
     serial: u32,
 ) -> Result<(), BridgeError> {
     let jtoplevel = get_java_toplevel!(toplevel);
-    state.bridge.java.call_on_move(env, jtoplevel, serial as jint)?;
+    state
+        .bridge
+        .java
+        .call_on_move(env, jtoplevel, serial as jint)?;
     Ok(())
 }
 
@@ -647,7 +615,7 @@ fn _on_toplevel_resize(
         env,
         jtoplevel,
         serial as jint,
-        edges as jint
+        edges as jint,
     )?;
     Ok(())
 }

@@ -1,10 +1,11 @@
 use crate::{
-    wlc_init, WaylandCraft,
+    WaylandCraft,
     bridge::{
-        dmabuf::{dmabuf_feedback_from_java, BridgeDmabuf},
+        dmabuf::{BridgeDmabuf, dmabuf_feedback_from_java},
         java_types::*,
         utils::*,
     },
+    wlc_init,
 };
 use jni::{
     Env,
@@ -17,9 +18,9 @@ use std::time::Duration;
 
 pub mod compositor;
 mod desktop;
+pub mod dmabuf;
 pub mod dnd;
 mod drm;
-pub mod dmabuf;
 mod java_types;
 mod output;
 mod seat;
@@ -54,8 +55,8 @@ fn init<'local>(
         dmabufs: vec![],
     };
 
-    let instance = wlc_init(bridge_state, dmabuf_feedback)
-        .map_err(BridgeError::Init)?;
+    let instance =
+        wlc_init(bridge_state, dmabuf_feedback).map_err(BridgeError::Init)?;
 
     // Write instance to the memory allocated earlier
     // After this any calls accessing the state using jptr_to_instance are O.K.

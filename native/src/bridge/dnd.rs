@@ -8,7 +8,7 @@ use crate::{
 };
 use jni::{
     Env,
-    objects::{JClass},
+    objects::JClass,
     sys::{jdouble, jint, jlong},
 };
 
@@ -64,10 +64,7 @@ pub fn dnd_icon<'local>(
     }
 }
 
-pub fn start_dnd(
-    state: &mut WLCState,
-    serial: u32,
-) {
+pub fn start_dnd(state: &mut WLCState, serial: u32) {
     with_env(|env| _start_dnd(env, state, serial))
 }
 
