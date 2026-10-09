@@ -63,7 +63,7 @@ public class WindowRequestHandlers {
 	@FunctionalInterface
 	public static interface DNDRequestHandler {
 		
-		void onDNDRequest(WLCToplevel toplevel, int serial);
+		void onDNDRequest(int serial);
 		
 	}
 	

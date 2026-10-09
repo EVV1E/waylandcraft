@@ -34,8 +34,6 @@ public class WaylandCraftBridge {
 	private ArrayList<WLCPopup> popups = new ArrayList<WLCPopup>();
 	private ArrayList<WLCSurface> surfaces = new ArrayList<WLCSurface>();
 	
-	public WLCSurface dndIcon = null;
-	
 	private LinkedList<WLCToplevel> focusOrder = new LinkedList<WLCToplevel>();
 	
 	private ArrayList<WLCToplevel> newToplevels = new ArrayList<WLCToplevel>();
@@ -175,9 +173,6 @@ public class WaylandCraftBridge {
 		
 		// Update focus order of toplevels
 		updateFocusOrder();
-		
-		// Remove dnd icon if its surface was destroyed
-		if(dndIcon != null && !dndIcon.isAlive()) dndIcon = null;
 		
 		// Do client frame callbacks
 		for(WLCSurface surface : surfaces) {
@@ -560,16 +555,19 @@ public class WaylandCraftBridge {
 	}
 	
 	public void dndCancel() {
-//		dndCancel(instance);
+		dndCancel(instance);
 	}
 	
 	public void dndDrop() {
-//		dndDrop(instance);
+		dndDrop(instance);
 	}
 	
-	public void sendDndMotion(WLCSurface surface, double x, double y) {
-//		long handle = surface == null ? 0 : surface.getHandle();
-//		dndMotion(instance, handle, x, y);
+	public void sendDndMotion(@Nullable WLCSurface surface, double x, double y) {
+		dndMotion(instance, surface, x, y);
+	}
+	
+	public WLCSurface getDndIcon() {
+		return dndIcon(instance);
 	}
 	
 	private void callOnMaximize(WLCToplevel toplevel) {
@@ -600,8 +598,8 @@ public class WaylandCraftBridge {
 		if(requestHandlers.resizeHandler != null) requestHandlers.resizeHandler.onResizeRequest(toplevel, serial, edges);
 	}
 	
-	private void callOnDND(WLCToplevel toplevel, int serial) {
-		if(requestHandlers.dndHandler != null) requestHandlers.dndHandler.onDNDRequest(toplevel, serial);
+	private void callOnDND(int serial) {
+		if(requestHandlers.dndHandler != null) requestHandlers.dndHandler.onDNDRequest(serial);
 	}
 	
 	public static record Size(int width, int height) {}
@@ -656,6 +654,12 @@ public class WaylandCraftBridge {
 	private static native void outputResize(long instance, int width, int height);
 	private static native void outputSetBounds(long instance, int width, int height);
 	
+	/* Drag and Drop functionality */
+	private static native void dndCancel(long instance);
+	private static native void dndDrop(long instance);
+	private static native void dndMotion(long instance, @Nullable WLCSurface surface, double x, double y);
+	private static native WLCSurface dndIcon(long instance);
+	
 	
 	// TODO: Implement the following stuff (or alternatives to them):
 	/*
@@ -675,13 +679,6 @@ public class WaylandCraftBridge {
 	
 	private static native boolean execApp(long instance, String appId);
 	private static native void setPreferredTerminal(long instance, String cmd);
-	
-	private static native int[] checkDndRequest(long instance);
-	private static native boolean checkDndActive(long instance);
-	private static native void dndCancel(long instance);
-	private static native void dndDrop(long instance);
-	private static native void dndMotion(long instance, long surfaceHandle, double x, double y);
-	private static native long dndIcon(long instance);
 	*/
 	
 }

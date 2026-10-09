@@ -16,6 +16,7 @@ use std::mem::MaybeUninit;
 use std::time::Duration;
 
 pub mod compositor;
+pub mod dnd;
 mod drm;
 pub mod dmabuf;
 mod java_types;

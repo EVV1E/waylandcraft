@@ -23,6 +23,7 @@ import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
 import dev.evvie.waylandcraft.desktop.XDGDesktopManager;
 import dev.evvie.waylandcraft.displays.WindowDisplay;
 import dev.evvie.waylandcraft.displays.WindowDisplay.DisplayHitResult;
+import dev.evvie.waylandcraft.grabs.DNDGrab;
 import dev.evvie.waylandcraft.grabs.MoveGrab;
 import dev.evvie.waylandcraft.grabs.PointerGrabMap;
 import dev.evvie.waylandcraft.grabs.PointerGrabMap.ImplicitGrab;
@@ -85,6 +86,7 @@ public class WaylandCraft implements ClientModInitializer {
 	public HitResult trueGameHitResult = null;
 	
 	public WLCToplevel pinnedToplevel = null;
+	public WLCSurface dndIcon = null;
 	
 	public WindowItemManager itemManager = new WindowItemManager();
 	public XDGDesktopManager xdgManager;
@@ -293,7 +295,16 @@ public class WaylandCraft implements ClientModInitializer {
 				pointerGrabs.startExclusive(new ResizeGrab(implicit, edges));
 			}
 		};
-		bridge.requestHandlers.dndHandler = (_, _) -> System.out.println("dnd");
+		bridge.requestHandlers.dndHandler = (serial) -> {
+			ImplicitGrab implicit = pointerGrabs.dropImplicitMatching(serial);
+			if(implicit != null) {
+				pointerGrabs.startExclusive(new DNDGrab(implicit));
+			}
+			else {
+				// If matching implicit grab wasn't found, ensure the DND is cancelled
+				bridge.dndCancel();
+			}
+		};
 	}
 	
 	public void startUsingWindowItem() {

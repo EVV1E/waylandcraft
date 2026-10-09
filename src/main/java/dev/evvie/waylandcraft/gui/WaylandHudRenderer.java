@@ -9,7 +9,6 @@ import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.WaylandCraft.KeyboardCaptureMode;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
 import dev.evvie.waylandcraft.bridge.WLCAbstractWindow.SurfaceGeometry;
-import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.desktop.DesktopEntry;
 import dev.evvie.waylandcraft.render.RenderUtils;
@@ -119,10 +118,13 @@ public class WaylandHudRenderer {
 	private void extractDNDIconRenderState(GuiGraphicsExtractor context, DeltaTracker tracker) {
 		int guiScale = (int) Minecraft.getInstance().getWindow().getGuiScale();
 		
-		WLCSurface dndIcon = wlc.bridge.dndIcon;
-		if(dndIcon == null) return;
+		if(wlc.dndIcon == null) return;
+		if(!wlc.dndIcon.isAlive()) {
+			wlc.dndIcon = null;
+			return;
+		}
 		
-		WindowFramebuffer buf = dndIcon.getFramebuffer();
+		WindowFramebuffer buf = wlc.dndIcon.getFramebuffer();
 		if(buf == null) return;
 		
 		int x = -buf.getXOff();

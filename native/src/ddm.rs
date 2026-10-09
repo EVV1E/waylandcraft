@@ -32,8 +32,6 @@ pub struct WLCDataState {
 // Drag and drop session
 // `dropped` is set when the user successfully performed a drop over a surface
 pub struct WLCDndEvent {
-    pub start_serial: u32,
-    pub request_sent: bool,
     pub client: Client,
     pub source: Option<WlDataSource>,
     pub icon: Option<WlSurface>,
@@ -100,6 +98,10 @@ where
     let mut guard = device.data::<WLCDataDevice>().unwrap().lock().unwrap();
     let data = guard.deref_mut();
     f(data)
+}
+
+pub trait DataDeviceHandler {
+    fn dnd_started(&mut self, serial: u32);
 }
 
 impl WLCDataState {
@@ -182,15 +184,6 @@ impl WLCDataState {
         println!("\tdropped: {:?}", dnd.dropped);
         */
         let _ = header;
-    }
-
-    pub fn check_dnd_request(&mut self) -> Option<u32> {
-        let dnd = self.dnd.as_mut()?;
-        if dnd.request_sent {
-            return None;
-        }
-        dnd.request_sent = true;
-        Some(dnd.start_serial)
     }
 
     fn dnd_send_offer(
@@ -575,8 +568,6 @@ impl Dispatch<WlDataDevice, WLCDataDevice> for WLCState {
                 }
 
                 state.data.dnd = Some(WLCDndEvent {
-                    start_serial: serial,
-                    request_sent: false,
                     client: client.clone(),
                     source: source.clone(),
                     icon: icon.clone(),
@@ -585,6 +576,8 @@ impl Dispatch<WlDataDevice, WLCDataDevice> for WLCState {
                     action: DndAction::None,
                     dropped: false,
                 });
+
+                state.dnd_started(serial);
             }
             wl_data_device::Request::SetSelection { source, serial: _ } => {
                 let focus = state.data.clipboard_focus.as_ref();

@@ -1,5 +1,5 @@
 use crate::bridge::BridgeState;
-use crate::ddm::WLCDataState;
+use crate::ddm::{DataDeviceHandler, WLCDataState};
 use crate::desktop::DesktopHelper;
 use crate::output::WLCOutput;
 use crate::satellite::SatelliteState;
@@ -328,6 +328,12 @@ impl XdgShellHandler for WLCState {
 
     fn title_changed(&mut self, surface: ToplevelSurface) {
         bridge::shell::toplevel_update_title(&surface);
+    }
+}
+
+impl DataDeviceHandler for WLCState {
+    fn dnd_started(&mut self, serial: u32) {
+        bridge::dnd::start_dnd(self, serial);
     }
 }
 

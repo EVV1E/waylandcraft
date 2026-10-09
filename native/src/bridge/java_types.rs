@@ -267,7 +267,7 @@ bind_java_type! {
         fn call_on_move(WLCToplevel, jint),
         fn call_on_resize(WLCToplevel, jint, jint),
         fn call_on_dnd {
-            sig = (WLCToplevel, jint),
+            sig = (jint),
             name = "callOnDND",
         },
     },
@@ -427,6 +427,29 @@ bind_java_type! {
         static extern fn output_set_bounds {
             sig = (instance: jlong, width: jint, height: jint),
             fn = bridge::output::output_set_bounds,
+        },
+
+        /* DND */
+        static extern fn dnd_cancel {
+            sig = (instance: jlong),
+            fn = bridge::dnd::dnd_cancel,
+        },
+        static extern fn dnd_drop {
+            sig = (instance: jlong),
+            fn = bridge::dnd::dnd_drop,
+        },
+        static extern fn dnd_motion {
+            sig = (
+                instance: jlong,
+                surface: WLCSurface,
+                x: jdouble,
+                y: jdouble,
+            ),
+            fn = bridge::dnd::dnd_motion,
+        },
+        static extern fn dnd_icon {
+            sig = (instance: jlong) -> WLCSurface,
+            fn = bridge::dnd::dnd_icon,
         },
     },
 }
