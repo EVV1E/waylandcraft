@@ -140,8 +140,12 @@ public class RenderUtils {
 		if(!framebuffer.isValid()) return;
 		
 		if(IrisCompat.isShaderActive()) {
-			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutoutCull(framebuffer.getTextureLocation()), new FramebufferRenderInstanceEntity(origin, spanX, spanY, ARGB.white(1.0f), OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, false));
-			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutoutCull(framebuffer.getTextureLocation()), new FramebufferRenderInstanceEntity(origin, spanX, spanY, ARGB.black(1.0f), OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, true));
+			int light = LightCoordsUtil.FULL_SKY;
+			int colorFront = ARGB.white(1.0f);
+			int colorBack = ARGB.black(1.0f);
+			
+			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutoutCull(framebuffer.getTextureLocation()), new FramebufferRenderInstanceEntity(origin, spanX, spanY, colorFront, OverlayTexture.NO_OVERLAY, light, false));
+			collector.submitCustomGeometry(poseStack, RenderTypes.entityCutoutCull(framebuffer.getTextureLocation()), new FramebufferRenderInstanceEntity(origin, spanX, spanY, colorBack, OverlayTexture.NO_OVERLAY, light, true));
 			return;
 		}
 		
