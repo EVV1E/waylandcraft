@@ -314,6 +314,7 @@ public class WaylandCraft implements ClientModInitializer {
 	public void enableKeyboardCapture(boolean hardCapture) {
 		if(keyboardCaptureMode != KeyboardCaptureMode.NONE) return;
 		
+		KeyMapping.releaseAll();
 		keyboardCaptureMode = hardCapture ? KeyboardCaptureMode.HARD_CAPTURE : KeyboardCaptureMode.CAPTURE;
 		bridge.activateKeyboard();
 	}
