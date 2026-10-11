@@ -6,7 +6,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import com.llamalad7.mixinextras.sugar.Local;
-import com.llamalad7.mixinextras.sugar.ref.LocalRef;
 import com.mojang.blaze3d.vertex.PoseStack;
 
 import dev.evvie.waylandcraft.WaylandCraft;
@@ -34,14 +33,14 @@ public abstract class ItemInHandRendererMixin {
 		SubmitNodeCollector collector,
 		int light,
 		CallbackInfo info,
-		@Local LocalRef<HumanoidArm> humanoidArmRef
+		@Local HumanoidArm arm
 	) {
 		if(!itemStack.is(WindowItem.WINDOW)) return;
 		if(WaylandCraft.getToplevel(itemStack) == null) return;
 		
 		info.cancel();
 		
-		WaylandCraft.instance.windowInHandRenderer.render(poseStack, collector, attack, handHeight, light, humanoidArmRef.get(), itemStack);
+		WaylandCraft.instance.windowInHandRenderer.render(poseStack, collector, attack, handHeight, light, arm, itemStack);
 	}
 	
 }

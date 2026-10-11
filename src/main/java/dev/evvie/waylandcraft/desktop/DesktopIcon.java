@@ -15,7 +15,7 @@ import com.mojang.blaze3d.textures.TextureFormat;
 
 import dev.evvie.waylandcraft.WaylandCraft;
 import dev.evvie.waylandcraft.WaylandCraftCommon;
-import dev.evvie.waylandcraft.mixin.NativeImageMixin;
+import dev.evvie.waylandcraft.mixin.INativeImageMixin;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -64,7 +64,7 @@ public class DesktopIcon {
 			long addr = MemoryUtil.memAddress(buf);
 			
 			if(wlc.bridge.renderSVG(file, width, height, addr)) {
-				this.image = IconImage.direct(NativeImageMixin.createImage(NativeImage.Format.RGBA, width, height, false, addr), buf);
+				this.image = IconImage.direct(INativeImageMixin.createImage(NativeImage.Format.RGBA, width, height, false, addr), buf);
 			}
 		}
 	}

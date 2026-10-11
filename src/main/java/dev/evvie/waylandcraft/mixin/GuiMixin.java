@@ -4,9 +4,10 @@ import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 
 import dev.evvie.waylandcraft.WaylandCraft;
@@ -34,13 +35,12 @@ public class GuiMixin {
 	private static final Identifier ZOOM_IN_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/zoom_in");
 	private static final Identifier ZOOM_OUT_CROSSHAIR = Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "crosshair/zoom_out");
 	
-	@Redirect(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V", ordinal = 0))
-	public void crosshairBlitSprite(GuiGraphicsExtractor context, RenderPipeline pipeline, Identifier original, int x, int y, int width, int height) {
-		CursorShape cursor = WaylandCraft.instance.cursorShape;
-		Identifier crosshair = crosshairForCursor(cursor);
-		if(crosshair == null) crosshair = original;
+	@WrapOperation(method = "extractCrosshair", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/blaze3d/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V", ordinal = 0))
+	private void changeCrosshairSprite(GuiGraphicsExtractor context, RenderPipeline pipeline, Identifier originalSprite, int x, int y, int width, int height, Operation<Void> original) {
+		Identifier sprite = crosshairForCursor(WaylandCraft.instance.cursorShape);
 		
-		context.blitSprite(pipeline, crosshair, x, y, width, height);
+		if(sprite != null) original.call(context, pipeline, sprite, x, y, width, height);
+		else original.call(context, pipeline, originalSprite, x, y, width, height);
 	}
 	
 	@Inject(method = "extractCrosshair", at = @At("HEAD"), cancellable = true)
