@@ -7,6 +7,10 @@
 	"authors": [
 		"EVV1E"
 	],
+	"contact": {
+		"homepage": "https://github.com/EVV1E/waylandcraft"
+	},
+	"license": "GPL-3.0-or-later",
 	"icon": "assets/waylandcraft/icon.png",
 	"environment": "*",
 	"accessWidener": "waylandcraft.classtweaker",
@@ -26,7 +30,7 @@
 		}
 	],
 	"depends": {
-		"fabricloader": ">=0.19.2",
+		"fabricloader": ">=0.19.5",
 		"minecraft": "~26.1.2",
 		"java": ">=25",
 		"fabric-api": "*"
