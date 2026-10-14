@@ -68,6 +68,7 @@ import net.minecraft.world.phys.Vec3;
 
 public class WaylandCraft implements ClientModInitializer {
 	
+	@SuppressWarnings("deprecation")
 	private static final KeyMapping.Category KEYBIND_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "keys"));
 	
 	public static WaylandCraft instance;

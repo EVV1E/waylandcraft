@@ -1,43 +1,44 @@
-# gradle
-
-.gradle/
+### Gradle ###
+.gradle
 build/
-out/
-classes/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/**/build/
 
-# eclipse
-
-*.launch
-
-# idea
-
+### IntelliJ IDEA ###
 .idea/
+*.iws
 *.iml
 *.ipr
-*.iws
+out/
+!**/src/**/out/
 
-# vscode
+.run/
 
-.settings/
-.vscode/
-bin/
+### Eclipse ###
+.apt_generated
 .classpath
+.eclipse/
+.factorypath
 .project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/**/bin/
+*.launch
 
-# macos
+### VS Code ###
+.vscode/
 
-*.DS_Store
+### Mac OS ###
+.DS_Store
 
-# fabric
-
+### Minecraft Modding ###
 run/
+!**/src/**/run/
+**/src/generated/**/.cache/
+repo/
+!**/src/**/repo/
 
-# java
-
-hs_err_*.log
-replay_*.log
-*.hprof
-*.jfr
-
-# directory used by actions runner
+### Directory used by actions runner ###
 native-libs

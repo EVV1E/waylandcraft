@@ -34,5 +34,8 @@
 		"minecraft": "~26.1.2",
 		"java": ">=25",
 		"fabric-api": "*"
+	},
+	"custom": {
+		"launchpad:compatible": true
 	}
 }

@@ -29,6 +29,8 @@ public class MinecraftMixin {
 	
 	@Inject(method = "pick", at = @At("TAIL"))
 	public void pick(float partialTicks, CallbackInfo info) {
+		if(Minecraft.getInstance().player == null) return;
+		
 		HitResult result = Minecraft.getInstance().hitResult;
 		Vec3 pos = Minecraft.getInstance().player.getEyePosition(partialTicks);
 		
