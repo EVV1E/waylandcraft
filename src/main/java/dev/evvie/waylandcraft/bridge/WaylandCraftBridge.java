@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
 import org.jspecify.annotations.NonNull;
+import org.lwjgl.opengl.GL33;
 import org.lwjgl.system.Platform;
 
 import com.mojang.blaze3d.opengl.GlDevice;
@@ -139,6 +140,16 @@ public class WaylandCraftBridge {
 		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
 		if(renderNodePath == null) {
 			WaylandCraftCommon.LOGGER.error("Failed to query for drm render node! This could indicate a software renderer. Disabling dmabuf functionality.");
+			String renderer = GL33.glGetString(GL33.GL_RENDERER);
+			String preload = System.getenv("LD_PRELOAD");
+			if(renderer != null && renderer.contains("llvmpipe") && preload != null
+				&& Stream.of(preload.split("[:\\s]+"))
+					.anyMatch(library -> library.equals("libobs_glcapture.so") || library.endsWith("/libobs_glcapture.so"))) {
+				WaylandCraftCommon.LOGGER.warn("OBS OpenGL capture is preloaded while Minecraft is using '{}'. "
+					+ "OBS capture can interfere with NVIDIA EGL initialization under X11. "
+					+ "Try fully exiting your launcher and starting it without obs-gamecapture "
+					+ "(on Nobara, use /usr/bin/prismlauncher instead of prismlauncher-nobara).", renderer);
+			}
 			return null;
 		}
 		
