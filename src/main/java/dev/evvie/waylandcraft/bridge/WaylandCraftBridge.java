@@ -138,7 +138,10 @@ public class WaylandCraftBridge {
 		
 		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
 		if(renderNodePath == null) {
-			WaylandCraftCommon.LOGGER.error("Failed to query for drm render node! This could indicate a software renderer. Disabling dmabuf functionality.");
+			WaylandCraftCommon.LOGGER.error("Failed to query for drm render node! Dmabuf functionality is disabled.");
+			WaylandCraftCommon.LOGGER.error("This usually means you are on a software renderer like llvmpipe or using programs that hook into OpenGL.");
+			WaylandCraftCommon.LOGGER.error("Make sure to disable or reconfigure things like mangohud, obs-gamecapture or Zink.");
+			WaylandCraftCommon.LOGGER.error("For more information, visit the waylandcraft Github and consult the README.");
 			return null;
 		}
 		
