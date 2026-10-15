@@ -42,6 +42,12 @@ public class WindowItem extends Item {
 	}
 	
 	@Override
+	public int getUseDuration(ItemStack itemStack, LivingEntity user) {
+		// One hour in ticks. Same value is usually used by the game for items that you can hold "indefinitely"
+		return 3600 * 20;
+	}
+	
+	@Override
 	public InteractionResult use(Level level, Player player, InteractionHand interactionHand) {
 		ItemStack item = player.getItemInHand(interactionHand);
 		WindowItemInteractionProvider provider = WaylandCraftCommon.instance.windowItemInteractionProvider;
@@ -50,16 +56,6 @@ public class WindowItem extends Item {
 		
 		player.startUsingItem(interactionHand);
 		return InteractionResult.CONSUME;
-	}
-	
-	@Override
-	public void onUseTick(Level level, LivingEntity livingEntity, ItemStack itemStack, int i) {
-		if(!level.isClientSide()) return;
-		
-		WindowItemInteractionProvider provider = WaylandCraftCommon.instance.windowItemInteractionProvider;
-		if(provider != null) {
-			provider.useTick(livingEntity, itemStack);
-		}
 	}
 	
 }
