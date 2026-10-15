@@ -11,7 +11,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 
 public class WindowItemManager implements WindowItemInteractionProvider, ClientTickEvents.StartTick {
@@ -73,12 +72,6 @@ public class WindowItemManager implements WindowItemInteractionProvider, ClientT
 		if(name == null) return UNKNOWN_WINDOW_TEXT;
 		
 		return Component.literal(name);
-	}
-	
-	@Override
-	public void useTick(LivingEntity entity, ItemStack itemStack) {
-		if(entity != Minecraft.getInstance().player) return;
-		WaylandCraft.instance.startUsingWindowItem();
 	}
 	
 }
