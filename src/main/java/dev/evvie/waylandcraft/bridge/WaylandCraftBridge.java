@@ -133,7 +133,10 @@ public class WaylandCraftBridge {
 	private static DmabufFeedbackData initBackendEGL() {
 		long eglDisplay = EGL.getEGLDisplay();
 		if(eglDisplay == 0) {
-			throw new RuntimeException("Failed to get EGL display!");
+			WaylandCraftCommon.LOGGER.error("Failed to get EGL display! Dmabuf functionality is disabled.");
+			WaylandCraftCommon.LOGGER.error("This could be because of the NeoForge early loading screen.");
+			WaylandCraftCommon.LOGGER.error("Make sure to set earlyWindowControl = false in config/fml.toml in your minecraft directory.");
+			return null;
 		}
 		
 		String renderNodePath = EGLHelper.queryRenderNodePath(eglDisplay);
