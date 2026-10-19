@@ -55,7 +55,6 @@ public class WLCSurface {
 	
 	private WLCSurface(long handle) {
 		this.handle = handle;
-		System.out.println("new surface: " + this);
 	}
 	
 	public boolean isAlive() {
@@ -65,7 +64,6 @@ public class WLCSurface {
 	protected void destroy() {
 		removeBuffer();
 		destroyFramebuffer();
-		System.out.println("destroy: " + this);
 	}
 	
 	private void destroyFramebuffer() {
@@ -80,7 +78,6 @@ public class WLCSurface {
 		}
 		if(framebuffer == null) framebuffer = new WindowFramebuffer(this);
 		framebuffer.render();
-//		System.out.println("commit " + this);
 	}
 	
 	public WindowFramebuffer getFramebuffer() {
