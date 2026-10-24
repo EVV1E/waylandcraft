@@ -1,0 +1,20 @@
+license="GPL-3.0-or-later"
+
+[[mods]]
+modId="waylandcraft"
+version="2.1.0"
+displayName="waylandcraft"
+authors="EVV1E"
+description='''
+Wayland Compositor in Minecraft
+'''
+
+[properties]
+"launchpad:placeholder"=true
+
+[[dependencies.waylandcraft]]
+modId="launchpad"
+type="required"
+versionRange="*"
+ordering="NONE"
+side="BOTH"
