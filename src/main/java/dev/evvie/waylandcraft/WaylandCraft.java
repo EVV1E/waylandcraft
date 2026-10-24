@@ -8,7 +8,6 @@ import java.util.List;
 
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-import org.lwjgl.system.Platform;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.blaze3d.platform.Window;
@@ -20,6 +19,7 @@ import dev.evvie.waylandcraft.bridge.WLCSurface;
 import dev.evvie.waylandcraft.bridge.WLCToplevel;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge;
 import dev.evvie.waylandcraft.bridge.WaylandCraftBridge.Size;
+import dev.evvie.waylandcraft.bridge.WaylandCraftNativeLibLoader;
 import dev.evvie.waylandcraft.desktop.XDGDesktopManager;
 import dev.evvie.waylandcraft.displays.WindowDisplay;
 import dev.evvie.waylandcraft.displays.WindowDisplay.DisplayHitResult;
@@ -71,7 +71,7 @@ public class WaylandCraft implements ClientModInitializer {
 	private static final KeyMapping.Category KEYBIND_CATEGORY = KeyMapping.Category.register(Identifier.fromNamespaceAndPath(WaylandCraftCommon.MOD_ID, "keys"));
 	
 	public static WaylandCraft instance;
-	public static boolean fallbackMode = false;
+	public static boolean fallbackMode;
 	
 	public WaylandCraftSettingsManager settingsManager;
 	public WaylandCraftSettings settings;
@@ -127,9 +127,9 @@ public class WaylandCraft implements ClientModInitializer {
 		
 		settingsManager = new WaylandCraftSettingsManager(this);
 		
-		if(Platform.get() != Platform.LINUX) {
+		fallbackMode = WaylandCraftNativeLibLoader.fallbackMode;
+		if(fallbackMode) {
 			WaylandCraftCommon.LOGGER.error("Invalid platform detected! Most mod features will be disabled");
-			WaylandCraft.fallbackMode = true;
 			return;
 		}
 		

@@ -20,6 +20,9 @@
 		],
 		"client": [
 			"dev.evvie.waylandcraft.WaylandCraft"
+		],
+		"preLaunch": [
+			"dev.evvie.waylandcraft.bridge.WaylandCraftNativeLibLoader"
 		]
 	},
 	"mixins": [
