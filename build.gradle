@@ -134,6 +134,44 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 
+jar {
+    //
+    // Include native library in the jar file
+    //
+
+    def natives = []
+
+    // Add native library built for host
+    def hostNative = file("native/target/debug/libwaylandcraft.so")
+    natives.add(hostNative)
+
+    // Add native libraries built by actions runner
+    def targets = [
+        "linux-gnu-x86_64",
+        "linux-gnu-arm64"
+    ];
+    for(def target in targets) {
+        def f = file("native-libs/libwaylandcraft-${target}.so")
+        natives.add(f)
+    }
+
+    // Add natives to copy spec
+    from(natives)
+
+    // Make sure at least one native got included in the jar
+    doLast {
+        def sourceFiles = source.getFiles();
+        def haveNative = false
+        for(def n in natives) {
+            if(sourceFiles.contains(n)) {
+                haveNative = true
+                break
+            }
+        }
+        if(!haveNative) throw new GradleException("Native library not built")
+    }
+}
+
 dependencies {
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
